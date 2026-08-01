@@ -1,28 +1,101 @@
-<?php include_once("../config.php");$pagegen = new page_gen();$pagegen->round_to = 4;$pagegen->start();$s = new Game();function getRecruiter($link){$q="SELECT * FROM `userdata` ";$v=mysql_query($q);while($row=mysql_fetch_array($v)){	$q2="SELECT * FROM `userdata` WHERE `link` = '".$row['link']."'";	$v2=mysql_query($q2);	$temp=mysql_fetch_array($v2);	$r="SELECT * FROM `recruit_ips` WHERE `uid` = '".$temp['uid']."' AND `ip` = '".$_SERVER['REMOTE_ADDR']."'";	$r2=mysql_query($r);	$count=mysql_num_rows($r2);		if($count<=0){$q4="INSERT INTO `recruit_ips` (`recruitID`,`uid`,`ip`) VALUES ('','".$temp['uid']."','".$_SERVER['REMOTE_ADDR']."');";		$q3="UPDATE `units` SET `untrained` = `untrained` + 4 WHERE `uid` = '".$temp['uid']."'";		mysql_query($q3);		mysql_query($q4);				return $temp;}else{	return "Error";	}	}}
-$recruit=$_GET['id'];
-$recruiter=getRecruiter($recruit);
-if($recruiter=="Error"){
-//header("Location: index.php?strErr=user with that recruit link does not exist!");
-}
-$msg=$_GET['strErr'];
+<?php
+include_once("../config.php");
 
+$pagegen = new page_gen();
+$pagegen->round_to = 4;
+$pagegen->start();
+
+$s = new Game();
+$db = $s->db_link;
+
+$db->query("CREATE TABLE IF NOT EXISTS `recruit_ips` (
+    `id` int(11) NOT NULL AUTO_INCREMENT,
+    `recruitID` int(11) NOT NULL DEFAULT 0,
+    `uid` int(11) NOT NULL,
+    `ip` varchar(45) NOT NULL,
+    PRIMARY KEY (`id`),
+    UNIQUE KEY `uid_ip` (`uid`,`ip`)
+) ENGINE=InnoDB DEFAULT CHARSET=latin1");
+
+$recruitLink = $s->clean_sql($_GET['id'] ?? '', 0);
+$msg = $_GET['strErr'] ?? '';
+$recruiterName = '';
+$error = false;
+
+if ($recruitLink !== '') {
+    $stmt = $db->prepare("SELECT u.uid, u.uname FROM users u
+        INNER JOIN userdata ud ON ud.uid=u.uid
+        WHERE ud.link=? LIMIT 1");
+    $stmt->bind_param("s", $recruitLink);
+    $stmt->execute();
+    $recruiter = $stmt->get_result()->fetch_object();
+
+    if (!$recruiter) {
+        $error = true;
+        $msg = 'That recruit link does not exist.';
+    } else {
+        $recruiterUID  = (int)$recruiter->uid;
+        $recruiterName = $recruiter->uname;
+        $clientIP      = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+        $stmt = $db->prepare("SELECT id FROM recruit_ips WHERE uid=? AND ip=? LIMIT 1");
+        $stmt->bind_param("is", $recruiterUID, $clientIP);
+        $stmt->execute();
+        $already = $stmt->get_result()->fetch_object();
+
+        if ($already) {
+            $error = true;
+            $msg = 'Your IP has already used this recruit link.';
+        } else {
+            $db->begin_transaction();
+            try {
+                $stmt = $db->prepare("UPDATE units SET untrained=untrained+4 WHERE uid=? LIMIT 1");
+                $stmt->bind_param("i", $recruiterUID);
+                $stmt->execute();
+
+                $stmt = $db->prepare("INSERT IGNORE INTO recruit_ips (recruitID, uid, ip) VALUES (0, ?, ?)");
+                $stmt->bind_param("is", $recruiterUID, $clientIP);
+                $stmt->execute();
+
+                $db->commit();
+            } catch (Throwable $e) {
+                $db->rollback();
+                $error = true;
+                $msg = 'Could not process recruit link. Please try again.';
+            }
+        }
+    }
+}
 ?>
 <html>
-<head>
-</head>
+<head><title>Recruit - <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe: Empires at War') ?></title></head>
 <body>
-<center><Table width=100% cellspacing=1 cellpadding=5>
-<tr>
+<center>
+<table width="60%" cellspacing="1" cellpadding="8">
+<tr><td>
+  <?php if ($msg): ?>
+    <p><strong><?= htmlspecialchars($msg) ?></strong></p>
+  <?php endif; ?>
 
-  <div align="left"><?php print("<center><b><i>".$msg."</i></b></center>"); ?>
-    <p><br>    <?php if($recruiter=="Error"){//header("Location: index.php?strErr=user with that recruit link does not exist!");?>
-        <strong>Welcome To <?=$subs['{TITLE}'] ?> NewCommer! </strong></p>
-    <p>it is a pleasure to have you here. Although i regret to inform you <br>
-      That your ip has already clicked this link.<br>
-      How bout you join up, if not already, Get others to click your link.<br>
-      <a href="index.php">Join Now
-      </a><br>
-      </p><?php }else{?>        <strong>Welcome To <?=$subs['{TITLE}'] ?> NewCommer! </strong></p>    <p>it is a pleasure to have you here. by clicking this enlistment link you have recruited<br>      4 troops into the armies of <?php print($recruiter['uname']); ?>.<br>      if you would like to continue to form your empire click the link below.<br>      <a href="index.php">Join Now      </a><br>      </p>	  <?php }?>
-  </div></td>
-</tr></Table><br>
- <?php echo "Query Count: ".$s->queryCount."<br>";$pagegen->stop();print('page generation time: ' . $pagegen->gen());?>
+  <?php if ($error || $recruitLink === ''): ?>
+    <strong>Welcome to <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe: Empires at War') ?>!</strong>
+    <p>We are sorry, but your IP has already used this enlistment link, or the link is invalid.<br>
+    Why not join and get others to click your own link?<br>
+    <a href="../index.php">Join Now</a></p>
+  <?php else: ?>
+    <strong>Welcome to <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe: Empires at War') ?>!</strong>
+    <p>By clicking this enlistment link you have recruited 4 troops into the armies of
+    <strong><?= htmlspecialchars($recruiterName) ?></strong>.<br>
+    Join up and build your own empire!<br>
+    <a href="../index.php">Join Now</a></p>
+  <?php endif; ?>
+</td></tr>
+</table>
+</center>
+</body>
+</html>
+<?php
+echo "Query Count: " . $s->queryCount . "<br>";
+$pagegen->stop();
+print('page generation time: ' . $pagegen->gen());
+?>

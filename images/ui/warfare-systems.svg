@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Warfare Systems">
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#1a0b0b" stroke="#b44e4e" stroke-width="3"/>
+  <path d="M32 10l16 10v12c0 12-7 20-16 22-9-2-16-10-16-22V20z" fill="#7d2323"/>
+  <path d="M24 34l6 6 10-14" fill="none" stroke="#ffd0d0" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>

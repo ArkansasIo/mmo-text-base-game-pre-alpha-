@@ -24,7 +24,7 @@
   * configuration: the location of the style fragments, and 
   * a list of available styles.
   */
- $style_dir = '/home/realmbat/public_html/SGWnew/progress/';
+ $style_dir = dirname(__DIR__) . '/progress/';
  $styles = array('solaris');
 
  /*

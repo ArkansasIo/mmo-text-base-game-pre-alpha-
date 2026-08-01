@@ -6,10 +6,7 @@ $pagegen->round_to = 4;
 $pagegen->start();
 
 $s = new Game();
-if (!$s->loggedIn || !$_GET['time']) {
-    header("Location: https://realmbattles.org/SGWnew/index.php?");
-    exit;
-}
+if (!$s->loggedIn) { header("Location: ../index.php"); exit; }
 $s->updatePower($_SESSION['userid']);
 ?>
 <center>
@@ -19,7 +16,8 @@ $s->updatePower($_SESSION['userid']);
     <a href="javascript:void(0)" onclick="sendData('logs','get','id','sab');return false">Sabotage</a>
 </center>
 <?php
-$s->actionLog($_GET['atype']);
+$atype = in_array($_GET['atype'] ?? '', ['attack','raid','spy','sab']) ? $_GET['atype'] : 'attack';
+$s->actionLog($atype);
 
 echo "Query Count: " . $s->queryCount . "<br>";
 $pagegen->stop();

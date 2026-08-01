@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Economy and Research">
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#121a0a" stroke="#9fc053" stroke-width="3"/>
+  <circle cx="24" cy="24" r="8" fill="#b7d972"/>
+  <circle cx="40" cy="24" r="8" fill="#8ab14c"/>
+  <rect x="18" y="36" width="28" height="12" rx="4" fill="#d2eba0"/>
+  <path d="M22 42h20" stroke="#4f6d26" stroke-width="3"/>
+</svg>

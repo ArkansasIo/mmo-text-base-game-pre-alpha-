@@ -6,7 +6,7 @@ $pagegen->round_to = 4;
 $pagegen->start();
 
 $s = new Game();
-if (!$s->loggedIn || !$_GET['time']){ header("Location: https://realmbattles.org/SGWnew/index.php?"); }
+if (!$s->loggedIn || !$_GET['time']){ header("Location: ../index.php"); exit; }
 $s->updatePower($_SESSION['userid']);
 if ($_GET['page']) 
 {

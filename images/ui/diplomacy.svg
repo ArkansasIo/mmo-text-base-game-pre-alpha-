@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Diplomacy">
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#101625" stroke="#6881c0" stroke-width="3"/>
+  <path d="M18 34c4-6 8-9 14-9s10 3 14 9" fill="none" stroke="#c2d5ff" stroke-width="4"/>
+  <circle cx="24" cy="24" r="4" fill="#c2d5ff"/>
+  <circle cx="40" cy="24" r="4" fill="#c2d5ff"/>
+</svg>

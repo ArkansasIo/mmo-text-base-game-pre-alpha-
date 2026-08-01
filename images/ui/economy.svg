@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Economy">
+  <rect x="4" y="4" width="56" height="56" rx="12" fill="#101d0d" stroke="#6ca859" stroke-width="3"/>
+  <circle cx="32" cy="32" r="14" fill="#8dc778"/>
+  <path d="M26 32h12M32 26v12" stroke="#1f4f16" stroke-width="3"/>
+</svg>

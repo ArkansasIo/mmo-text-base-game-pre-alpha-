@@ -1143,6 +1143,7 @@ echo '<h3>' . h($title) . ' - ' . h($subTitle) . '</h3>';
 echo '<p>Page: ' . h($main) . ' / ' . h($sub) . ' | Player: ' . h($_SESSION['username']) . '</p>';
 echo '</div>';
 
+echo '<div class="page-subnav-title">Sub Pages</div>';
 echo '<div class="page-subnav">';
 foreach ($subLabels[$main] as $subKey => $subName) {
     $activeClass = ($subKey === $sub) ? ' class="active"' : '';
@@ -1215,7 +1216,8 @@ $featureButtons = [
 ];
 
 if (isset($featureButtons[$main]) && count($featureButtons[$main]) > 0) {
-    echo '<div class="page-subnav">';
+    echo '<div class="page-subnav-title">Feature Actions</div>';
+    echo '<div class="page-subnav feature-subnav">';
     foreach ($featureButtons[$main] as $btn) {
         echo '<a href="javascript:void(0)" onclick="' . h($btn['js']) . '">' . h($btn['label']) . '</a>';
     }
