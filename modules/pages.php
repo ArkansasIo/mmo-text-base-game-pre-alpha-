@@ -7,7 +7,7 @@ $pagegen->start();
 
 $s = new Game();
 if (!$s->loggedIn || !$_GET['time']) {
-    header("Location: index.php?");
+    header("Location: ../index.php");
     exit;
 }
 
@@ -1467,7 +1467,7 @@ if ($main === 'universe') {
         $totalPages = max(1, (int)ceil($totalWorlds / $worldsPerPage));
 
         echo '<div class="card full"><h4>Planet and Moon Registry (50 Per Page)</h4>';
-        echo '<p>Total Worlds: ' . fnum($totalWorlds) . ' | Pages: ' . fnum($totalPages) . '</p>';
+        echo '<p>Total Worlds: ' . fnum($totalWorlds) . ' | Pages: ' . fnum($totalPages) . ' &mdash; <em>Click any planet or moon to view details</em></p>';
         echo '<p>';
         for ($p = 1; $p <= $totalPages; $p++) {
             echo '<a href="javascript:void(0)" onclick="showGalaxyPage(' . $p . ',' . $totalPages . '); return false" style="margin-right:8px;">Page ' . $p . '</a>';
@@ -1481,7 +1481,30 @@ if ($main === 'universe') {
             echo '<table class="mini-table" border="0" width="100%">';
             echo '<tr><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Moon Class</th><th align="left">Status</th></tr>';
             foreach ($slice as $w) {
-                echo '<tr><td>' . h($w['coord']) . '</td><td>' . h($w['name']) . '</td><td>' . h($w['type']) . '</td><td>' . h($w['biome']) . '</td><td>' . fnum($w['habitability']) . '%</td><td>' . fnum($w['moons']) . '</td><td>' . h($w['moonClass']) . '</td><td>' . h($w['owner']) . '</td></tr>';
+                $pd = htmlspecialchars(json_encode([
+                    'coord'  => $w['coord'],  'name'  => $w['name'],  'type'  => $w['type'],
+                    'biome'  => $w['biome'],  'hab'   => $w['habitability'], 'slots' => $w['slots'],
+                    'metal'  => $w['metal'],  'crystal' => $w['crystal'], 'deut' => $w['deut'],
+                    'moons'  => $w['moons'],  'moonClass' => $w['moonClass'], 'owner' => $w['owner'],
+                ]), ENT_QUOTES);
+                $moonOnclick = '';
+                if ($w['moons'] > 0) {
+                    $md = htmlspecialchars(json_encode([
+                        'parent' => $w['name'], 'coord' => $w['coord'],
+                        'count'  => $w['moons'], 'class' => $w['moonClass'],
+                    ]), ENT_QUOTES);
+                    $moonOnclick = ' onclick="showMoonDetail(' . $md . ')" style="cursor:pointer;text-decoration:underline;color:#8cf"';
+                }
+                echo '<tr>';
+                echo '<td>' . h($w['coord']) . '</td>';
+                echo '<td><a href="javascript:void(0)" onclick="showPlanetDetail(' . $pd . ')" style="color:#adf">' . h($w['name']) . '</a></td>';
+                echo '<td>' . h($w['type']) . '</td>';
+                echo '<td>' . h($w['biome']) . '</td>';
+                echo '<td>' . fnum($w['habitability']) . '%</td>';
+                echo '<td' . $moonOnclick . '>' . fnum($w['moons']) . '</td>';
+                echo '<td' . $moonOnclick . '>' . h($w['moonClass']) . '</td>';
+                echo '<td>' . h($w['owner']) . '</td>';
+                echo '</tr>';
             }
             echo '</table>';
             echo '</div>';
@@ -1514,11 +1537,35 @@ if ($main === 'universe') {
         echo '</div>';
 
         echo '<div class="card full"><h4>Planet, Moon, and Biome Registry</h4>';
+        echo '<p><em>Click any planet or moon count to view details</em></p>';
         echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Resource Signature</th><th align="left">Status</th></tr>';
         foreach (array_slice($universe['worlds'], 0, 48) as $w) {
             $resSig = 'M' . fnum($w['metal']) . ' / C' . fnum($w['crystal']) . ' / D' . fnum($w['deut']);
             $moonSig = ($w['moons'] > 0) ? (fnum($w['moons']) . ' (' . h($w['moonClass']) . ')') : '0';
-            echo '<tr><td>' . h($w['coord']) . '</td><td>' . h($w['name']) . '</td><td>' . h($w['type']) . '</td><td>' . h($w['biome']) . '</td><td>' . fnum($w['habitability']) . '%</td><td>' . $moonSig . '</td><td>' . $resSig . '</td><td>' . h($w['owner']) . '</td></tr>';
+            $pd = htmlspecialchars(json_encode([
+                'coord'  => $w['coord'],  'name'  => $w['name'],  'type'  => $w['type'],
+                'biome'  => $w['biome'],  'hab'   => $w['habitability'], 'slots' => $w['slots'],
+                'metal'  => $w['metal'],  'crystal' => $w['crystal'], 'deut' => $w['deut'],
+                'moons'  => $w['moons'],  'moonClass' => $w['moonClass'], 'owner' => $w['owner'],
+            ]), ENT_QUOTES);
+            $moonOnclick = '';
+            if ($w['moons'] > 0) {
+                $md = htmlspecialchars(json_encode([
+                    'parent' => $w['name'], 'coord' => $w['coord'],
+                    'count'  => $w['moons'], 'class' => $w['moonClass'],
+                ]), ENT_QUOTES);
+                $moonOnclick = ' onclick="showMoonDetail(' . $md . ')" style="cursor:pointer;text-decoration:underline;color:#8cf"';
+            }
+            echo '<tr>';
+            echo '<td>' . h($w['coord']) . '</td>';
+            echo '<td><a href="javascript:void(0)" onclick="showPlanetDetail(' . $pd . ')" style="color:#adf">' . h($w['name']) . '</a></td>';
+            echo '<td>' . h($w['type']) . '</td>';
+            echo '<td>' . h($w['biome']) . '</td>';
+            echo '<td>' . fnum($w['habitability']) . '%</td>';
+            echo '<td' . $moonOnclick . '>' . $moonSig . '</td>';
+            echo '<td>' . $resSig . '</td>';
+            echo '<td>' . h($w['owner']) . '</td>';
+            echo '</tr>';
         }
         echo '</table></div>';
     }
@@ -1779,6 +1826,73 @@ renderFeatureWorkbenches($main, $sub, $baseData, $personnel, $bank, $userStats, 
 
 echo '</div>';
 echo '</div>';
+
+// Planet / moon detail modal (shared across galaxy and planets tabs)
+?>
+<div id="sgw-detail-modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.75);z-index:9999;overflow:auto;">
+  <div style="background:#1a1a2e;color:#ccc;border:1px solid #555;border-radius:6px;max-width:520px;margin:60px auto;padding:24px;position:relative;">
+    <button onclick="document.getElementById('sgw-detail-modal').style.display='none'" style="position:absolute;top:10px;right:14px;background:none;border:none;color:#aaa;font-size:18px;cursor:pointer;">&#x2715;</button>
+    <div id="sgw-detail-body"></div>
+  </div>
+</div>
+<script type="text/javascript">
+function showPlanetDetail(d){
+    var hab = d.hab || 0;
+    var habCol = hab >= 70 ? '#6f6' : (hab >= 45 ? '#ff9' : '#f77');
+    var moonStr = d.moons > 0
+        ? '<span style="cursor:pointer;color:#8cf;text-decoration:underline" onclick="showMoonDetail({parent:\''+esc(d.name)+'\',coord:\''+esc(d.coord)+'\',count:'+d.moons+',\'class\':\''+esc(d.moonClass)+'\'})">'+d.moons+' &times; '+esc(d.moonClass)+'</span>'
+        : '<em>None</em>';
+    var colonizeBtn = (d.owner === 'Unclaimed' && hab >= 48)
+        ? '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'expedition\'); closeSgwModal();" style="color:#6cf">&#x1F680; Plan Colonization Mission</a></p>'
+        : '';
+    document.getElementById('sgw-detail-body').innerHTML =
+        '<h3 style="margin-top:0;color:#adf">&#127760; '+esc(d.name)+'</h3>'+
+        '<table style="width:100%;border-collapse:collapse;font-size:.9em">'+
+        row('Coordinate', esc(d.coord))+
+        row('World Type', esc(d.type))+
+        row('Biome', esc(d.biome))+
+        row('Habitability', '<span style="color:'+habCol+'">'+hab+'%</span>')+
+        row('Build Slots', d.slots)+
+        row('Metal Deposit', num(d.metal))+
+        row('Crystal Deposit', num(d.crystal))+
+        row('Deuterium Deposit', num(d.deut))+
+        row('Moons', moonStr)+
+        row('Status', esc(d.owner))+
+        '</table>'+colonizeBtn;
+    document.getElementById('sgw-detail-modal').style.display = 'block';
+}
+function showMoonDetail(d){
+    var moonClasses = {
+        Rocky:   {desc:'Dense basalt crust — ideal for sensor arrays and early bunker construction.',  bonus:'Defense +3%, Scanner range +1'},
+        Icy:     {desc:'Frozen volatiles — rich in deuterium ice extraction potential.',               bonus:'Deuterium rate +8%'},
+        Metallic:{desc:'High-grade ore concentration — excellent mining substrate.',                   bonus:'Metal rate +6%, Crystal rate +4%'},
+        Ruined:  {desc:'Ancient wreckage of unknown origin — yields artefact anomalies on excavation.',bonus:'Expedition anomaly chance +12%'},
+    };
+    var cls = d['class'] || d.class || '?';
+    var info = moonClasses[cls] || {desc:'Unknown lunar body.', bonus:'No data'};
+    var moons = [];
+    for(var i=1;i<=d.count;i++){
+        moons.push('<li>Moon '+i+' &mdash; <strong>'+esc(cls)+'</strong></li>');
+    }
+    document.getElementById('sgw-detail-body').innerHTML =
+        '<h3 style="margin-top:0;color:#8cf">&#127761; '+esc(d.parent)+' &mdash; Moon System</h3>'+
+        '<p><strong>Parent Coordinate:</strong> '+esc(d.coord)+'</p>'+
+        '<ul style="padding-left:18px">'+moons.join('')+'</ul>'+
+        '<table style="width:100%;border-collapse:collapse;font-size:.9em">'+
+        row('Moon Class', esc(cls))+
+        row('Classification', info.desc)+
+        row('Strategic Bonus', '<span style="color:#8f8">'+info.bonus+'</span>')+
+        '</table>'+
+        '<p style="margin-top:12px"><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); closeSgwModal();" style="color:#6cf">&#x1F6F8; Open Station Command</a></p>';
+    document.getElementById('sgw-detail-modal').style.display = 'block';
+}
+function closeSgwModal(){ document.getElementById('sgw-detail-modal').style.display='none'; }
+function row(label, val){ return '<tr><td style="padding:4px 8px;border-bottom:1px solid #333;color:#888;width:45%">'+label+'</td><td style="padding:4px 8px;border-bottom:1px solid #333">'+val+'</td></tr>'; }
+function esc(s){ var d=document.createElement('div');d.appendChild(document.createTextNode(String(s)));return d.innerHTML; }
+function num(n){ return Number(n).toLocaleString(); }
+document.getElementById('sgw-detail-modal').addEventListener('click',function(e){ if(e.target===this){ closeSgwModal(); } });
+</script>
+<?php
 
 echo "Query Count: " . $s->queryCount . "<br>";
 $pagegen->stop();
