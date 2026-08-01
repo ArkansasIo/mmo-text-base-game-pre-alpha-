@@ -32,10 +32,14 @@ class Game extends User
 	
 	public function getRaces(): array
 	{
-		$query = "SELECT `r_name`,`rid` FROM `race` LIMIT 30";
+		$this->ensureRaceCatalog();
+		$query = "SELECT `r_name`,`rid` FROM `race` WHERE `r_group`='player' ORDER BY `rid` ASC LIMIT 30";
 		$q = $this->query($query);		
 		if(!$q) {
-			return [];
+			$q = $this->query("SELECT `r_name`,`rid` FROM `race` ORDER BY `rid` ASC LIMIT 30");
+			if(!$q) {
+				return [];
+			}
 		}
 		$list = [];
 		$counter = 0;
@@ -47,12 +51,56 @@ class Game extends User
 		}
 		return $list;
 	}
+
+	private function ensureRaceCatalog(): void
+	{
+		$this->query("CREATE TABLE IF NOT EXISTS `race` (
+			`rid` int(11) NOT NULL AUTO_INCREMENT,
+			`r_name` varchar(32) NOT NULL,
+			`income_bonus` int(11) NOT NULL DEFAULT 0,
+			`up_bonus` int(11) NOT NULL DEFAULT 0,
+			`r_group` varchar(16) NOT NULL DEFAULT 'player',
+			PRIMARY KEY (`rid`)
+		) ENGINE=InnoDB DEFAULT CHARSET=latin1");
+		$this->query("ALTER TABLE `race` ADD COLUMN IF NOT EXISTS `r_group` varchar(16) NOT NULL DEFAULT 'player'");
+
+		$playerRaces = [
+			1 => 'Ancient',
+			2 => 'Nox',
+			3 => 'Tau\'ri',
+			4 => 'Asgard',
+			5 => 'Tok\'ra',
+		];
+		$npcRaces = [
+			6 => 'Goa\'uld',
+			7 => 'Replicator',
+			8 => 'Wraith',
+			9 => 'Ori',
+			10 => 'Genii',
+			11 => 'Jaffa',
+			12 => 'Unas',
+			13 => 'Reetou',
+			14 => 'Vanir',
+		];
+
+		foreach ($playerRaces as $rid => $name) {
+			$safe = $this->real_escape_string($name);
+			$this->query("INSERT INTO `race` (`rid`,`r_name`,`income_bonus`,`up_bonus`,`r_group`) VALUES (" . (int)$rid . ", '" . $safe . "', 0, 0, 'player')
+				ON DUPLICATE KEY UPDATE `r_name`=VALUES(`r_name`), `r_group`='player'");
+		}
+
+		foreach ($npcRaces as $rid => $name) {
+			$safe = $this->real_escape_string($name);
+			$this->query("INSERT INTO `race` (`rid`,`r_name`,`income_bonus`,`up_bonus`,`r_group`) VALUES (" . (int)$rid . ", '" . $safe . "', 0, 0, 'npc')
+				ON DUPLICATE KEY UPDATE `r_name`=VALUES(`r_name`), `r_group`='npc'");
+		}
+	}
 	
 	public function autoLoad(): string
 	{
 		if (!isset($_SESSION['userid']) || (int)$_SESSION['userid'] <= 0) {
 			$gameTime = date("F jS H:i:s");
-			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
+			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
 		}
 
 		$query = "SELECT rank.overall AS isRank,
@@ -77,7 +125,7 @@ class Game extends User
 		$auto = $q->fetch_object();
 		if (!$auto) {
 			$gameTime = date("F jS H:i:s");
-			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
+			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
 		}
 
 		$metal = 0;
@@ -86,9 +134,15 @@ class Game extends User
 		$food = 0;
 		$water = 0;
 		$population = 0;
+		$energy = 0;
 		$resTable = $this->query("SHOW TABLES LIKE 'player_resources'");
 		if ($resTable && $resTable->num_rows > 0) {
-			$resQ = $this->query("SELECT metal,crystal,deuterium,food,water,population FROM player_resources WHERE uid=" . (int)$_SESSION['userid'] . " LIMIT 1");
+			$energyCol = $this->query("SHOW COLUMNS FROM player_resources LIKE 'energy'");
+			if ($energyCol && $energyCol->num_rows > 0) {
+				$resQ = $this->query("SELECT metal,crystal,deuterium,food,water,population,energy FROM player_resources WHERE uid=" . (int)$_SESSION['userid'] . " LIMIT 1");
+			} else {
+				$resQ = $this->query("SELECT metal,crystal,deuterium,food,water,population FROM player_resources WHERE uid=" . (int)$_SESSION['userid'] . " LIMIT 1");
+			}
 			if ($resQ && $resQ->num_rows > 0) {
 				$res = $resQ->fetch_object();
 				$metal = (int)($res->metal ?? 0);
@@ -97,6 +151,7 @@ class Game extends User
 				$food = (int)($res->food ?? 0);
 				$water = (int)($res->water ?? 0);
 				$population = (int)($res->population ?? 0);
+				$energy = (int)($res->energy ?? 0);
 			}
 		}
 		$gameTime 	= date("F jS H:i:s");
@@ -104,7 +159,7 @@ class Game extends User
 		       .number_format($auto->isRank)."\",\"".number_format($auto->actionTurns)."\",\""
 			   .$gameTime."\",\"".number_format($auto->messageCount)."\",\"".$this->nextTurn()." minutes\",\""
 			   .number_format($metal)."\",\"".number_format($crystal)."\",\"".number_format($deuterium)."\",\""
-			   .number_format($food)."\",\"".number_format($water)."\",\"".number_format($population)."\")";
+			   .number_format($food)."\",\"".number_format($water)."\",\"".number_format($population)."\",\"".number_format($energy)."\")";
 		$_SESSION['money'] = $auto->onHand;
 		return $str;
 	}	

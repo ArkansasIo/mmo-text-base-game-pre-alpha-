@@ -285,9 +285,11 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
         food BIGINT NOT NULL DEFAULT 55000,
         water BIGINT NOT NULL DEFAULT 55000,
         population BIGINT NOT NULL DEFAULT 120000,
+        energy BIGINT NOT NULL DEFAULT 50000,
         last_tick_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
+    $s->query("ALTER TABLE player_resources ADD COLUMN IF NOT EXISTS energy BIGINT NOT NULL DEFAULT 50000");
 
     $s->query("INSERT IGNORE INTO player_resources (uid) VALUES (" . (int)$uid . ")");
     $s->query("CREATE TABLE IF NOT EXISTS resource_structures (
@@ -298,11 +300,13 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
         hydroponics INT NOT NULL DEFAULT 1,
         water_plant INT NOT NULL DEFAULT 1,
         habitat_dome INT NOT NULL DEFAULT 1,
+        energy_reactor INT NOT NULL DEFAULT 1,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
+    $s->query("ALTER TABLE resource_structures ADD COLUMN IF NOT EXISTS energy_reactor INT NOT NULL DEFAULT 1");
     $s->query("INSERT IGNORE INTO resource_structures (uid) VALUES (" . (int)$uid . ")");
 
-    $strQ = $s->query("SELECT metal_mine,crystal_lab,deuterium_refinery,hydroponics,water_plant,habitat_dome FROM resource_structures WHERE uid=" . (int)$uid . " LIMIT 1");
+    $strQ = $s->query("SELECT metal_mine,crystal_lab,deuterium_refinery,hydroponics,water_plant,habitat_dome,energy_reactor FROM resource_structures WHERE uid=" . (int)$uid . " LIMIT 1");
     $structures = $strQ ? $strQ->fetch_object() : (object)[
         'metal_mine' => 1,
         'crystal_lab' => 1,
@@ -310,8 +314,9 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
         'hydroponics' => 1,
         'water_plant' => 1,
         'habitat_dome' => 1,
+        'energy_reactor' => 1,
     ];
-    $resQ = $s->query("SELECT metal,crystal,deuterium,food,water,population,last_tick_at FROM player_resources WHERE uid=" . (int)$uid . " LIMIT 1");
+    $resQ = $s->query("SELECT metal,crystal,deuterium,food,water,population,energy,last_tick_at FROM player_resources WHERE uid=" . (int)$uid . " LIMIT 1");
     $res = $resQ ? $resQ->fetch_object() : (object)[
         'metal' => 80000,
         'crystal' => 60000,
@@ -319,6 +324,7 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
         'food' => 55000,
         'water' => 55000,
         'population' => 120000,
+        'energy' => 50000,
         'last_tick_at' => date('Y-m-d H:i:s'),
     ];
 
@@ -335,6 +341,7 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
         'food' => (int)round((($incomeBase * 0.14) + ($planetCount * 220) + ($techIncome * 9)) * (1 + ((int)$structures->hydroponics * 0.10))),
         'water' => (int)round((($incomeBase * 0.12) + ($planetCount * 240) + ($techIncome * 8)) * (1 + ((int)$structures->water_plant * 0.10))),
         'population' => max(25, (int)round((($planetCount * 30) + ($upBase * 0.35)) * (1 + ((int)$structures->habitat_dome * 0.08)))),
+        'energy' => (int)round((($incomeBase * 0.22) + ($planetCount * 160) + ($techProd * 14) + ($techIncome * 10)) * (1 + ((int)$structures->energy_reactor * 0.13))),
     ];
 
     $lastTickTs = strtotime((string)$res->last_tick_at);
@@ -352,14 +359,17 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
         $food = max(0, (int)$res->food + ($rates['food'] * $ticks));
         $water = max(0, (int)$res->water + ($rates['water'] * $ticks));
         $population = max(0, (int)$res->population + ($rates['population'] * $ticks));
+        $energy = max(0, (int)$res->energy + ($rates['energy'] * $ticks));
 
         $foodUse = (int)round($population * 0.008 * $ticks);
         $waterUse = (int)round($population * 0.007 * $ticks);
+        $energyUse = (int)round($population * 0.005 * $ticks);
 
         $food = max(0, $food - $foodUse);
         $water = max(0, $water - $waterUse);
+        $energy = max(0, $energy - $energyUse);
 
-        if ($food === 0 || $water === 0) {
+        if ($food === 0 || $water === 0 || $energy === 0) {
             $popDrop = (int)round($population * 0.02);
             $population = max(0, $population - max(150, $popDrop));
         }
@@ -371,6 +381,7 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
             food=" . (int)$food . ",
             water=" . (int)$water . ",
             population=" . (int)$population . ",
+            energy=" . (int)$energy . ",
             last_tick_at=NOW()
             WHERE uid=" . (int)$uid . " LIMIT 1");
 
@@ -381,6 +392,7 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
             'food' => $food,
             'water' => $water,
             'population' => $population,
+            'energy' => $energy,
         ];
     }
 
@@ -392,6 +404,7 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
             'food' => (int)($res->food ?? 0),
             'water' => (int)($res->water ?? 0),
             'population' => (int)($res->population ?? 0),
+            'energy' => (int)($res->energy ?? 0),
         ],
         'rates' => $rates,
         'structures' => [
@@ -401,6 +414,7 @@ function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $te
             'hydroponics' => (int)$structures->hydroponics,
             'water_plant' => (int)$structures->water_plant,
             'habitat_dome' => (int)$structures->habitat_dome,
+            'energy_reactor' => (int)$structures->energy_reactor,
         ],
         'ticksApplied' => $ticks,
     ];
@@ -798,13 +812,13 @@ $subLabels = [
     'empire' => ['overview' => 'Overview', 'planets' => 'Planets', 'command' => 'Command', 'progress' => 'Progression'],
     'military' => ['personnel' => 'Personnel', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet'],
     'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs'],
-    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub'],
+    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'OGame Buildings'],
     'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain'],
     'intel' => ['rankings' => 'Rankings', 'reports' => 'Battle Reports', 'threats' => 'Threat Matrix', 'map' => 'Sector Map'],
     'community' => ['forums' => 'Forums', 'updates' => 'Updates', 'contact' => 'Contact', 'faq' => 'FAQ'],
     'help' => ['newplayer' => 'New Player', 'mechanics' => 'Mechanics', 'glossary' => 'Glossary', 'support' => 'Support'],
-    'universe' => ['galaxies' => 'Galaxies', 'planets' => 'Planets & Moons', 'objects' => 'Interstellar Objects', 'expedition' => 'Expedition', 'bases' => 'Stations & Bases'],
-    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'classes' => 'Class Library', 'talents' => 'Talent Library'],
+    'universe' => ['galaxies' => 'Galaxies', 'planets' => 'Planets & Moons', 'objects' => 'Interstellar Objects', 'expedition' => 'Expedition', 'bases' => 'Stations & Bases', 'travel' => 'Jumpgate & Hyperspace'],
+    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'classes' => 'Class Library', 'talents' => 'Talent Library', 'stargate' => 'Stargate Tech'],
 ];
 
 $systemDetails = [
@@ -916,6 +930,12 @@ $systemDetails = [
             'functions' => ['Track 5 strategic resources', 'Upgrade production structures', 'Trade resources for tactical needs'],
             'features' => ['Resource stockpile view', 'Production rates by line', 'Structure level overview and controls'],
             'logic' => ['Resources tick on 30-minute cadence', 'Structure levels amplify resource rates', 'Food and water shortages reduce population'],
+        ],
+        'buildings' => [
+            'brief' => 'Central OGame-style construction control for economy, facilities, lunar structures, and defense lines.',
+            'functions' => ['Upgrade building catalog entries', 'Allocate strategic resources to infrastructure', 'Coordinate economy and military construction timing'],
+            'features' => ['Category-based building matrix', 'Live level tracking and next-cost preview', 'Direct integration with Resource HQ, Fleet, and Hyperspace systems'],
+            'logic' => ['Each building scales with tiered cost formulas', 'Energy supports advanced construction programs', 'Balanced building progression improves empire efficiency and survivability'],
         ],
     ],
     'diplomacy' => [
@@ -1053,6 +1073,12 @@ $systemDetails = [
             'features' => ['Persistent base levels', 'Resource-based upgrade controls', 'Integration with fleet and expedition modules'],
             'logic' => ['Space Stations unlock deep-space logistics', 'Starbases require station maturity and improve defense projection', 'Moon Bases require Starbases and boost scan/survival multipliers'],
         ],
+        'travel' => [
+            'brief' => 'Hyperspace command layer for Jump Gates, Stargates, and interstellar lane routing.',
+            'functions' => ['Upgrade gate infrastructure', 'Map travel routes by threat and distance', 'Launch transfer, expedition, and colonization transits'],
+            'features' => ['Persistent travel routes', 'Transit queue with ETA/return states', 'Fuel and sustainment cost simulation'],
+            'logic' => ['Jump Gates bootstrap lane access', 'Stargates improve deep-route safety and throughput', 'Hyperspace Core levels reduce cooldown and improve long-haul efficiency'],
+        ],
     ],
     'research' => [
         'tree' => [
@@ -1078,6 +1104,12 @@ $systemDetails = [
             'functions' => ['Browse research talents', 'Browse technology talents', 'Review tier and effect progression'],
             'features' => ['240 talent index', 'Branch and tier filtering table', 'Effect strings for planning'],
             'logic' => ['Talent tiers scale in progression bands', 'Branch choice impacts growth profile', 'Effects stack with tech and level systems'],
+        ],
+        'stargate' => [
+            'brief' => 'Full Stargate technology command for gate science, power systems, fleet integration, and threat-response research.',
+            'functions' => ['Upgrade Stargate-specific technologies', 'Spend Naquadah plus strategic resources on research', 'Scale deep-space mobility and defensive doctrine'],
+            'features' => ['Multi-domain Stargate tech catalog', 'Per-tech level tracking', 'Integrated economy and hyperspace dependencies'],
+            'logic' => ['Each upgrade scales in cost by level', 'Energy and deuterium become core late-tier constraints', 'Technology compounding improves interstellar campaign tempo'],
         ],
     ],
 ];
@@ -1118,6 +1150,78 @@ foreach ($subLabels[$main] as $subKey => $subName) {
 }
 echo '</div>';
 
+$featureButtons = [
+    'empire' => [
+        ['label' => 'Base', 'js' => "sendData('base','get','mainDisplay'); return false"],
+        ['label' => 'Progress', 'js' => "sendData('progress','get','mainDisplay'); return false"],
+        ['label' => 'Bank', 'js' => "sendData('bank','get','mainDisplay'); return false"],
+        ['label' => 'Research', 'js' => "sendData('pages','get','research','tree'); return false"],
+    ],
+    'military' => [
+        ['label' => 'Armory', 'js' => "sendData('armory','get','mainDisplay'); return false"],
+        ['label' => 'Training', 'js' => "sendData('train','get','mainDisplay'); return false"],
+        ['label' => 'Fleet Dock', 'js' => "sendData('fleetdock','get','mainDisplay'); return false"],
+        ['label' => 'Mega Forge', 'js' => "sendData('megaforge','get','mainDisplay'); return false"],
+        ['label' => 'Stations', 'js' => "sendData('stations','get','mainDisplay'); return false"],
+        ['label' => 'Hyperspace', 'js' => "sendData('hyperspace','get','mainDisplay'); return false"],
+    ],
+    'operations' => [
+        ['label' => 'Targets', 'js' => "sendData('rank','get','mainDisplay'); return false"],
+        ['label' => 'Spy', 'js' => "sendData('spy','get','mainDisplay'); return false"],
+        ['label' => 'Combat Logs', 'js' => "sendData('logs','get','mainDisplay'); return false"],
+        ['label' => 'Action Reports', 'js' => "sendData('actionLogs','get','mainDisplay'); return false"],
+    ],
+    'economy' => [
+        ['label' => 'Bank', 'js' => "sendData('bank','get','mainDisplay'); return false"],
+        ['label' => 'Market', 'js' => "sendData('market','get','mainDisplay'); return false"],
+        ['label' => 'Resource HQ', 'js' => "sendData('resourcehq','get','mainDisplay'); return false"],
+        ['label' => 'OGame Buildings', 'js' => "sendData('ogamebuildings','get','mainDisplay'); return false"],
+        ['label' => 'Technology', 'js' => "sendData('technology','get','mainDisplay'); return false"],
+        ['label' => 'Stargate Tech', 'js' => "sendData('stargatetech','get','mainDisplay'); return false"],
+    ],
+    'diplomacy' => [
+        ['label' => 'Messages', 'js' => "sendData('messages','get','mainDisplay'); return false"],
+        ['label' => 'Alliance', 'js' => "sendData('ally_mlist','get','mainDisplay'); return false"],
+        ['label' => 'Relations', 'js' => "sendData('pages','get','diplomacy','relations'); return false"],
+    ],
+    'intel' => [
+        ['label' => 'Rankings', 'js' => "sendData('rank','get','mainDisplay'); return false"],
+        ['label' => 'Reports', 'js' => "sendData('actionLogs','get','mainDisplay'); return false"],
+        ['label' => 'Spy', 'js' => "sendData('spy','get','mainDisplay'); return false"],
+    ],
+    'community' => [
+        ['label' => 'Forums', 'js' => "window.open('forums/','_blank'); return false"],
+        ['label' => 'Updates', 'js' => "sendData('faq','get','mainDisplay'); return false"],
+        ['label' => 'Contact', 'js' => "sendData('messages','get','mainDisplay'); return false"],
+    ],
+    'help' => [
+        ['label' => 'Guide', 'js' => "sendData('pages','get','help','newplayer'); return false"],
+        ['label' => 'Mechanics', 'js' => "sendData('pages','get','help','mechanics'); return false"],
+        ['label' => 'Glossary', 'js' => "sendData('pages','get','help','glossary'); return false"],
+    ],
+    'universe' => [
+        ['label' => 'Galaxy Map', 'js' => "sendData('pages','get','universe','galaxies'); return false"],
+        ['label' => 'Stations', 'js' => "sendData('stations','get','mainDisplay'); return false"],
+        ['label' => 'Hyperspace', 'js' => "sendData('hyperspace','get','mainDisplay'); return false"],
+        ['label' => 'Expedition', 'js' => "sendData('pages','get','universe','expedition'); return false"],
+    ],
+    'research' => [
+        ['label' => 'Research Tree', 'js' => "sendData('pages','get','research','tree'); return false"],
+        ['label' => 'Technology Tree', 'js' => "sendData('pages','get','research','techlib'); return false"],
+        ['label' => 'Classes', 'js' => "sendData('pages','get','research','classes'); return false"],
+        ['label' => 'Talents', 'js' => "sendData('pages','get','research','talents'); return false"],
+        ['label' => 'Stargate Tech', 'js' => "sendData('stargatetech','get','mainDisplay'); return false"],
+    ],
+];
+
+if (isset($featureButtons[$main]) && count($featureButtons[$main]) > 0) {
+    echo '<div class="page-subnav">';
+    foreach ($featureButtons[$main] as $btn) {
+        echo '<a href="javascript:void(0)" onclick="' . h($btn['js']) . '">' . h($btn['label']) . '</a>';
+    }
+    echo '</div>';
+}
+
 echo '<div class="page-grid">';
 
 if ($main === 'empire' && $sub === 'overview') {
@@ -1133,7 +1237,7 @@ if ($main === 'empire' && $sub === 'overview') {
     echo '<p><a href="javascript:void(0)" onclick="sendData(\'progress\',\'get\',\'mainDisplay\'); return false">Open Progress</a></p>';
     echo '</div>';
 
-    echo '<div class="card full"><h4>Five-Resource Command Stockpile</h4>';
+    echo '<div class="card full"><h4>Seven-Resource Command Stockpile</h4>';
     echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Resource</th><th align="left">Current</th><th align="left">Production / Turn</th></tr>';
     echo '<tr><td>Metal</td><td>' . fnum($resourceHub['current']['metal']) . '</td><td>' . fnum($resourceHub['rates']['metal']) . '</td></tr>';
     echo '<tr><td>Crystal</td><td>' . fnum($resourceHub['current']['crystal']) . '</td><td>' . fnum($resourceHub['rates']['crystal']) . '</td></tr>';
@@ -1141,6 +1245,7 @@ if ($main === 'empire' && $sub === 'overview') {
     echo '<tr><td>Food</td><td>' . fnum($resourceHub['current']['food']) . '</td><td>' . fnum($resourceHub['rates']['food']) . '</td></tr>';
     echo '<tr><td>Water</td><td>' . fnum($resourceHub['current']['water']) . '</td><td>' . fnum($resourceHub['rates']['water']) . '</td></tr>';
     echo '<tr><td>Population</td><td>' . fnum($resourceHub['current']['population']) . '</td><td>' . fnum($resourceHub['rates']['population']) . '</td></tr>';
+    echo '<tr><td>Energy</td><td>' . fnum($resourceHub['current']['energy']) . '</td><td>' . fnum($resourceHub['rates']['energy']) . '</td></tr>';
     echo '</table></div>';
 }
 
@@ -1203,6 +1308,7 @@ if ($main === 'military') {
         echo '<div class="card"><h4>Fleet Operations</h4><p>Deploy, reposition, and monitor fleet readiness.</p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'objects\'); return false">Scan Debris Fields</a></p></div>';
         echo '<div class="card"><h4>Shipyard and Mothership Controls</h4><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_shipyard\'); return false">Upgrade Shipyard</a></p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_bay\'); return false">Upgrade Mothership Bay</a></p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Starship Build Console</a></p><p><a href="javascript:void(0)" onclick="sendData(\'megaforge\',\'get\',\'mainDisplay\'); return false">Open 90-Class Mega Forge</a></p></div>';
         echo '<div class="card"><h4>Orbital Installations</h4><p>Expand stations and bases to improve fleet staging and defensive projection.</p><p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Open Stations Command</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'bases\'); return false">Open Universe Base Matrix</a></p></div>';
+        echo '<div class="card"><h4>Interstellar Travel Network</h4><p>Use Jump Gates, Stargates, and hyperspace lanes for long-range force projection.</p><p><a href="javascript:void(0)" onclick="sendData(\'hyperspace\',\'get\',\'mainDisplay\'); return false">Open Hyperspace Transit Command</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'travel\'); return false">Open Universe Travel Matrix</a></p></div>';
     }
 }
 
@@ -1231,18 +1337,19 @@ if ($main === 'economy') {
 
         echo '<div class="card full"><h4>Resource Vaults</h4>';
         echo '<p><strong>Metal:</strong> ' . fnum($resourceHub['current']['metal']) . ' | <strong>Crystal:</strong> ' . fnum($resourceHub['current']['crystal']) . ' | <strong>Deuterium:</strong> ' . fnum($resourceHub['current']['deuterium']) . '</p>';
-        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
+        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . ' | <strong>Energy:</strong> ' . fnum($resourceHub['current']['energy']) . '</p>';
         echo '</div>';
     }
     if ($sub === 'market') {
         echo '<div class="card"><h4>Market Trade</h4><p>Buy and sell resources to tune your economy.</p><p><a href="javascript:void(0)" onclick="sendData(\'market\',\'get\',\'mainDisplay\'); return false">Open Market</a></p></div>';
     }
     if ($sub === 'technology') {
-        echo '<div class="card"><h4>Technology Tree</h4><p>Advance economy, combat, and covert capabilities.</p><p><a href="javascript:void(0)" onclick="sendData(\'technology\',\'get\',\'mainDisplay\'); return false">Open Technology</a></p></div>';
+        echo '<div class="card"><h4>Technology Tree</h4><p>Advance economy, combat, covert, and Stargate-era systems.</p><p><a href="javascript:void(0)" onclick="sendData(\'technology\',\'get\',\'mainDisplay\'); return false">Open Technology</a></p><p><a href="javascript:void(0)" onclick="sendData(\'stargatetech\',\'get\',\'mainDisplay\'); return false">Open Stargate Technology Command</a></p></div>';
     }
     if ($sub === 'production') {
         echo '<div class="card"><h4>Production Planning</h4><p>Focus on unit production and mining throughput to scale your empire.</p><ul><li>Upgrade UP first for faster growth</li><li>Balance miners vs combat readiness</li><li>Protect income assets with defense</li></ul></div>';
         echo '<div class="card"><h4>Resource Command</h4><p><a href="javascript:void(0)" onclick="sendData(\'resourcehq\',\'get\',\'mainDisplay\'); return false">Open Resource HQ</a></p></div>';
+        echo '<div class="card"><h4>Infrastructure Build Grid</h4><p><a href="javascript:void(0)" onclick="sendData(\'ogamebuildings\',\'get\',\'mainDisplay\'); return false">Open OGame Buildings Command</a></p></div>';
 
         echo '<div class="card full"><h4>OGame-Style Resource Output Grid</h4>';
         echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Line</th><th align="left">Per Turn</th><th align="left">Notes</th></tr>';
@@ -1252,6 +1359,7 @@ if ($main === 'economy') {
         echo '<tr><td>Hydroponics (Food)</td><td>' . fnum($resourceHub['rates']['food']) . '</td><td>Population upkeep and colony stability.</td></tr>';
         echo '<tr><td>Atmospheric Condensers (Water)</td><td>' . fnum($resourceHub['rates']['water']) . '</td><td>Life support and growth multiplier.</td></tr>';
         echo '<tr><td>Population Growth</td><td>' . fnum($resourceHub['rates']['population']) . '</td><td>Workforce growth with food/water dependence.</td></tr>';
+        echo '<tr><td>Energy Reactors</td><td>' . fnum($resourceHub['rates']['energy']) . '</td><td>Power grid output for gates, bases, and industry.</td></tr>';
         echo '</table></div>';
     }
 
@@ -1268,12 +1376,35 @@ if ($main === 'economy') {
         echo '<p><strong>Hydroponics:</strong> ' . fnum($resourceHub['structures']['hydroponics']) . '</p>';
         echo '<p><strong>Water Plant:</strong> ' . fnum($resourceHub['structures']['water_plant']) . '</p>';
         echo '<p><strong>Habitat Dome:</strong> ' . fnum($resourceHub['structures']['habitat_dome']) . '</p>';
+        echo '<p><strong>Energy Reactor:</strong> ' . fnum($resourceHub['structures']['energy_reactor']) . '</p>';
         echo '</div>';
 
         echo '<div class="card full"><h4>Resource Status</h4>';
         echo '<p><strong>Metal:</strong> ' . fnum($resourceHub['current']['metal']) . ' | <strong>Crystal:</strong> ' . fnum($resourceHub['current']['crystal']) . ' | <strong>Deuterium:</strong> ' . fnum($resourceHub['current']['deuterium']) . '</p>';
-        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
+        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . ' | <strong>Energy:</strong> ' . fnum($resourceHub['current']['energy']) . '</p>';
         echo '</div>';
+    }
+
+    if ($sub === 'buildings') {
+        echo '<div class="card"><h4>OGame Building Matrix</h4>';
+        echo '<p>Build and upgrade classic structures across resources, facilities, lunar systems, and defenses.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'ogamebuildings\',\'get\',\'mainDisplay\'); return false">Open OGame Buildings Command</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Build Strategy</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'resourcehq\',\'get\',\'mainDisplay\'); return false">Resource HQ</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Fleet Dock</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'hyperspace\',\'get\',\'mainDisplay\'); return false">Hyperspace Transit</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Infrastructure Guidance</h4>';
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">Priority</th><th align="left">Why</th><th align="left">Typical Phase</th></tr>';
+        echo '<tr><td>Resource Buildings</td><td>Drive compounding growth and sustain all other build lines.</td><td>Early game foundation</td></tr>';
+        echo '<tr><td>Facilities</td><td>Improve construction speed and unlock advanced systems.</td><td>Early-mid transition</td></tr>';
+        echo '<tr><td>Lunar Structures</td><td>Enable long-range deployment and strategic mobility.</td><td>Mid game expansion</td></tr>';
+        echo '<tr><td>Defense Layers</td><td>Protect economy and fleets from raid pressure.</td><td>Any phase under threat</td></tr>';
+        echo '</table></div>';
     }
 }
 
@@ -1328,6 +1459,36 @@ if ($main === 'universe') {
             echo '<tr><td>' . h($gal['name']) . '</td><td>' . fnum($gal['sectors']) . '</td><td>' . fnum($gal['worlds']) . '</td><td>' . fnum($gal['avgHab']) . '%</td><td>' . fnum($gal['moons']) . '</td></tr>';
         }
         echo '</table></div>';
+
+        $worldsPerPage = 50;
+        $totalWorlds = count($universe['worlds']);
+        $totalPages = max(1, (int)ceil($totalWorlds / $worldsPerPage));
+
+        echo '<div class="card full"><h4>Planet and Moon Registry (50 Per Page)</h4>';
+        echo '<p>Total Worlds: ' . fnum($totalWorlds) . ' | Pages: ' . fnum($totalPages) . '</p>';
+        echo '<p>';
+        for ($p = 1; $p <= $totalPages; $p++) {
+            echo '<a href="javascript:void(0)" onclick="showGalaxyPage(' . $p . ',' . $totalPages . '); return false" style="margin-right:8px;">Page ' . $p . '</a>';
+        }
+        echo '</p>';
+
+        for ($p = 1; $p <= $totalPages; $p++) {
+            $slice = array_slice($universe['worlds'], ($p - 1) * $worldsPerPage, $worldsPerPage);
+            $display = ($p === 1) ? 'block' : 'none';
+            echo '<div id="galaxyPage' . $p . '" style="display:' . $display . ';">';
+            echo '<table class="mini-table" border="0" width="100%">';
+            echo '<tr><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Moon Class</th><th align="left">Status</th></tr>';
+            foreach ($slice as $w) {
+                echo '<tr><td>' . h($w['coord']) . '</td><td>' . h($w['name']) . '</td><td>' . h($w['type']) . '</td><td>' . h($w['biome']) . '</td><td>' . fnum($w['habitability']) . '%</td><td>' . fnum($w['moons']) . '</td><td>' . h($w['moonClass']) . '</td><td>' . h($w['owner']) . '</td></tr>';
+            }
+            echo '</table>';
+            echo '</div>';
+        }
+
+        echo '<script type="text/javascript">';
+        echo 'function showGalaxyPage(page,total){for(var i=1;i<=total;i++){var el=document.getElementById("galaxyPage"+i);if(el){el.style.display=(i===page)?"block":"none";}}}';
+        echo '</script>';
+        echo '</div>';
     }
 
     if ($sub === 'planets') {
@@ -1346,6 +1507,7 @@ if ($main === 'universe') {
         echo '<div class="card"><h4>Colony Sustainment</h4>';
         echo '<p><strong>Food Reserves:</strong> ' . fnum($resourceHub['current']['food']) . '</p>';
         echo '<p><strong>Water Reserves:</strong> ' . fnum($resourceHub['current']['water']) . '</p>';
+        echo '<p><strong>Energy Grid:</strong> ' . fnum($resourceHub['current']['energy']) . '</p>';
         echo '<p><strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
         echo '</div>';
 
@@ -1391,6 +1553,7 @@ if ($main === 'universe') {
         echo '<div class="card"><h4>Expansion Workflows</h4>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Fleet Dock</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Orbital Stations Command</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'hyperspace\',\'get\',\'mainDisplay\'); return false">Jumpgate and Hyperspace Command</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_shipyard\'); return false">Upgrade Shipyard</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_bay\'); return false">Upgrade Mothership Bay</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'planets\'); return false">Candidate Worlds</a></p>';
@@ -1427,6 +1590,27 @@ if ($main === 'universe') {
         echo '<tr><td>Moon Base</td><td>Surveillance, scan depth, and expedition resilience</td><td>Universe expedition routes and object recovery</td><td>After first stable offensive wing</td></tr>';
         echo '</table></div>';
     }
+
+    if ($sub === 'travel') {
+        echo '<div class="card"><h4>Jumpgate and Stargate Transit</h4>';
+        echo '<p>Build gate infrastructure and launch hyperspace wings for transfer, expedition, and colonization operations.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'hyperspace\',\'get\',\'mainDisplay\'); return false">Open Hyperspace Transit Command</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Travel Integrations</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'fleet\'); return false">Military Fleet Directorate</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Fleet Dock and Mission Queue</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'expedition\'); return false">Expedition Operations</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Hyperspace Operations Doctrine</h4>';
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">System</th><th align="left">Role</th><th align="left">Primary Resource Pressure</th><th align="left">Best Usage Window</th></tr>';
+        echo '<tr><td>Jump Gate</td><td>Local lane initialization and deployment tempo</td><td>Metal + deuterium for lane maintenance</td><td>Early expansion and first war mobilization</td></tr>';
+        echo '<tr><td>Stargate</td><td>Deep interstellar routing and fleet projection</td><td>Crystal + deuterium for stable long routes</td><td>Mid-game multi-front campaigns</td></tr>';
+        echo '<tr><td>Hyperspace Core</td><td>Cooldown compression and transit efficiency</td><td>Deuterium + sustainment (food/water)</td><td>Late-stage expedition and colonization loops</td></tr>';
+        echo '</table></div>';
+    }
 }
 
 if ($main === 'research') {
@@ -1460,9 +1644,9 @@ if ($main === 'research') {
         echo '</ul></div>';
 
         echo '<div class="card full"><h4>Research Resource Requirements</h4>';
-        echo '<p>Advanced research phases consume strategic resources from the 5-resource economy.</p>';
+        echo '<p>Advanced research phases consume strategic resources from the expanded economy.</p>';
         echo '<p><strong>Metal:</strong> ' . fnum($resourceHub['current']['metal']) . ' | <strong>Crystal:</strong> ' . fnum($resourceHub['current']['crystal']) . ' | <strong>Deuterium:</strong> ' . fnum($resourceHub['current']['deuterium']) . '</p>';
-        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
+        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . ' | <strong>Energy:</strong> ' . fnum($resourceHub['current']['energy']) . '</p>';
         echo '</div>';
     }
 
@@ -1528,6 +1712,27 @@ if ($main === 'research') {
         foreach ($researchHub['talents'] as $talent) {
             echo '<tr><td>' . fnum($talent['id']) . '</td><td>' . h($talent['branch']) . '</td><td>' . h($talent['domain']) . '</td><td>' . h($talent['name']) . '</td><td>' . h($talent['focus']) . '</td><td>' . fnum($talent['tier']) . '</td><td>' . h($talent['effect']) . '</td></tr>';
         }
+        echo '</table></div>';
+    }
+
+    if ($sub === 'stargate') {
+        echo '<div class="card"><h4>Stargate Technology Program</h4>';
+        echo '<p>Research complete Stargate-era technologies including gate science, power matrices, fleet integration, and threat response.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'stargatetech\',\'get\',\'mainDisplay\'); return false">Open Stargate Technology Command</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Cross-System Links</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'technology\',\'get\',\'mainDisplay\'); return false">Legacy Technology Module</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'hyperspace\',\'get\',\'mainDisplay\'); return false">Hyperspace Transit Command</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Stations and Bases Command</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Stargate Doctrine Priorities</h4>';
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">Phase</th><th align="left">Primary Focus</th><th align="left">Expected Outcome</th></tr>';
+        echo '<tr><td>Early</td><td>Naquadah Physics, Gate Dialing Protocols, Capacitor Lattices</td><td>Reliable gate operation and base power continuity</td></tr>';
+        echo '<tr><td>Mid</td><td>Fleet Integration and Defense Tech domains</td><td>Safer deep-route deployments and stronger anti-raid posture</td></tr>';
+        echo '<tr><td>Late</td><td>Ancient Systems and high-tier threat-response lines</td><td>Maximum interstellar control and campaign endurance</td></tr>';
         echo '</table></div>';
     }
 }

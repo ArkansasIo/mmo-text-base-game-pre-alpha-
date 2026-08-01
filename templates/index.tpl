@@ -2,9 +2,9 @@
 <div class="app-shell">
   <div class="top-header">
     <div class="top-brand">
-      <img src="images/logo.gif" alt="Pegus Galaxy" />
+      <img src="images/logo.gif" alt="Universe: Empires at War" />
       <div>
-        <h1>Pegus Galaxy Command</h1>
+        <h1>Universe: Empires at War</h1>
         <p>Strategic war console and empire operations</p>
       </div>
     </div>
@@ -19,6 +19,8 @@
       <div class="stat-pill"><span>Food</span><strong id="food"></strong></div>
       <div class="stat-pill"><span>Water</span><strong id="water"></strong></div>
       <div class="stat-pill"><span>Population</span><strong id="population"></strong></div>
+      <div class="stat-pill"><span>Energy</span><strong id="energy"></strong></div>
+      <div class="stat-pill"><span>Server Time</span><strong id="serverTime"></strong></div>
       <div class="stat-pill"><span>Next Turn</span><strong id="next">&nbsp;</strong></div>
       <div class="stat-pill"><span>Messages</span><strong><a href="javascript:void(0)" onclick="sendData('messages','get','mainDisplay'); return false" id="messages"></a></strong></div>
     </div>
@@ -52,6 +54,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','universe','objects'); return false">Interstellar Objects</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','universe','expedition'); return false">Expedition Control</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','universe','bases'); return false">Stations &amp; Bases</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','universe','travel'); return false">Jumpgate &amp; Hyperspace</a>
       </details>
 
       <details open>
@@ -69,6 +72,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','training'); return false">Training</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','fleet'); return false">Fleet</a>
         <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations Command</a>
+        <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false">Hyperspace Command</a>
         <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Mega Forge 90/90/90</a>
       </details>
 
@@ -87,6 +91,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','technology'); return false">Technology</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','production'); return false">Production</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','resources'); return false">Resource Hub</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','economy','buildings'); return false">OGame Buildings</a>
       </details>
 
       <details>
@@ -95,6 +100,8 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','research','techlib'); return false">Technology Tree</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','research','classes'); return false">Class Library</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','research','talents'); return false">Talent Library</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','research','stargate'); return false">Stargate Tech</a>
+        <a href="javascript:void(0)" onclick="sendData('stargatetech','get','mainDisplay'); return false">Stargate Tech Command</a>
       </details>
 
       <details>
@@ -143,7 +150,9 @@
     <a href="javascript:void(0)" onclick="sendData('pages','get','empire','overview'); return false">Home</a>
     <a href="javascript:void(0)" onclick="sendData('pages','get','universe','galaxies'); return false">Universe</a>
     <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations</a>
+    <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false">Hyperspace</a>
     <a href="javascript:void(0)" onclick="sendData('pages','get','research','tree'); return false">Research</a>
+    <a href="javascript:void(0)" onclick="sendData('pages','get','research','stargate'); return false">Stargate</a>
     <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Forge</a>
     <a href="javascript:void(0)" onclick="sendData('pages','get','economy','banking'); return false">Bank</a>
     <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','messages'); return false">Messages</a>
@@ -154,7 +163,7 @@
 
   <footer class="site-footer">
     <div>
-      <strong>Pegus Galaxy</strong> tactical operations network
+      <strong>Universe: Empires at War</strong> tactical operations network
     </div>
     <div>
       &quot;Because it is so clear it takes a long time to realise it.&quot;

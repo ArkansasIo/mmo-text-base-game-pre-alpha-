@@ -170,6 +170,23 @@ class User extends Chive
 		if($rid <= 0) {
 			$rid = 1;
 		}
+		
+		// Ensure account creation uses a player-selectable race only.
+		$raceGroupCheck = $this->db_link->query("SHOW COLUMNS FROM race LIKE 'r_group'");
+		if ($raceGroupCheck && $raceGroupCheck->num_rows > 0) {
+			$raceStmt = $this->db_link->prepare("SELECT rid FROM race WHERE rid=? AND r_group='player' LIMIT 1");
+			$raceStmt->bind_param("i", $rid);
+			$raceStmt->execute();
+			$raceQ = $raceStmt->get_result();
+			if (!$raceQ || !$raceQ->num_rows) {
+				$fallbackQ = $this->db_link->query("SELECT rid FROM race WHERE r_group='player' ORDER BY rid ASC LIMIT 1");
+				if ($fallbackQ && $fallbackQ->num_rows) {
+					$rid = (int)($fallbackQ->fetch_object()->rid ?? 1);
+				} else {
+					$rid = 1;
+				}
+			}
+		}
 
 		if($userName === '' || $email === '' || $hpname === '' || $password === '') {
 			echo "Registration failed: missing required fields.";

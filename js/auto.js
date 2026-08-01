@@ -16,6 +16,7 @@ function autoHandle(){
 			stylizeDiv(obj[6],document.getElementById("next"));
 			stylizeDiv(obj[5],document.getElementById("messages"));
 			stylizeDiv(obj[4],document.getElementById("time"));
+            if (document.getElementById("serverTime")) { stylizeDiv(obj[4],document.getElementById("serverTime")); }
 			stylizeDiv(obj[3],document.getElementById("turns"));
 			stylizeDiv(obj[2],document.getElementById("isRank"));
 			stylizeDiv(obj[1],document.getElementById("inBank"));
@@ -26,7 +27,8 @@ function autoHandle(){
             if (document.getElementById("deuterium")) { stylizeDiv(obj[9],document.getElementById("deuterium")); }
             if (document.getElementById("food")) { stylizeDiv(obj[10],document.getElementById("food")); }
             if (document.getElementById("water")) { stylizeDiv(obj[11],document.getElementById("water")); }
-            if (document.getElementById("population")) { stylizeDiv(obj[12],document.getElementById("population")); }			
+            if (document.getElementById("population")) { stylizeDiv(obj[12],document.getElementById("population")); }
+            if (document.getElementById("energy")) { stylizeDiv(obj[13],document.getElementById("energy")); }
         } else {
             alert("A problem occurred with communicating between the XMLHttpRequest object and the server program .//Auto Problem");
         }

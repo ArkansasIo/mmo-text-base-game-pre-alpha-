@@ -129,16 +129,29 @@ CREATE TABLE IF NOT EXISTS `race` (
   `r_name` varchar(32) NOT NULL,
   `income_bonus` int(11) NOT NULL,
   `up_bonus` int(11) NOT NULL,
+  `r_group` varchar(16) NOT NULL DEFAULT 'player',
   PRIMARY KEY (`rid`)
-) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=3 ;
+) ENGINE=InnoDB  DEFAULT CHARSET=latin1 AUTO_INCREMENT=15 ;
 
 --
 -- Dumping data for table `race`
 --
 
-INSERT INTO `race` (`rid`, `r_name`, `income_bonus`, `up_bonus`) VALUES
-(1, 'Ancient', 0, 0),
-(2, 'Nox', 0, 0);
+INSERT INTO `race` (`rid`, `r_name`, `income_bonus`, `up_bonus`, `r_group`) VALUES
+(1, 'Ancient', 0, 0, 'player'),
+(2, 'Nox', 0, 0, 'player'),
+(3, 'Tau''ri', 0, 0, 'player'),
+(4, 'Asgard', 0, 0, 'player'),
+(5, 'Tok''ra', 0, 0, 'player'),
+(6, 'Goa''uld', 0, 0, 'npc'),
+(7, 'Replicator', 0, 0, 'npc'),
+(8, 'Wraith', 0, 0, 'npc'),
+(9, 'Ori', 0, 0, 'npc'),
+(10, 'Genii', 0, 0, 'npc'),
+(11, 'Jaffa', 0, 0, 'npc'),
+(12, 'Unas', 0, 0, 'npc'),
+(13, 'Reetou', 0, 0, 'npc'),
+(14, 'Vanir', 0, 0, 'npc');
 
 -- --------------------------------------------------------
 

@@ -21,7 +21,7 @@ if(!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout']))
 		<script type="text/javascript" src="js/bbfix.js"></script>
 		<link rel="meta" href="http://codenamelantea.com/labels.rdf" type="application/rdf+xml" title="ICRA labels" />
 <meta http-equiv="pics-Label" content='(pics-1.1 "http://www.icra.org/pics/vocabularyv03/" l gen true for "http://codenamelantea.com" r (n 0 s 0 v 0 l 2 oa 0 ob 0 oc 0 od 0 oe 0 of 0 og 0 oh 0 c 3) gen true for "http://www.codenamelantea.com" r (n 0 s 0 v 0 l 2 oa 0 ob 0 oc 0 od 0 oe 0 of 0 og 0 oh 0 c 3))' />
-		<title>Pegus Galaxy</title>
+    <title>Universe: Empires at War</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <LINK REL=STYLESHEET TYPE='text/css' HREF='main.css' />
 </head>
@@ -33,7 +33,7 @@ if(!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout']))
 <div class="public-shell">
   <header class="public-top">
     <div class="public-brand">
-      <h1>Pegus Galaxy</h1>
+      <h1>Universe: Empires at War</h1>
       <p>Turn-based Stargate strategy command network</p>
     </div>
     <div class="public-actions">
