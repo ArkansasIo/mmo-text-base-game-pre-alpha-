@@ -1,4 +1,4 @@
-<?
+<?php
  /*
   * php+gd dynamic progress bar image script.
   * copyright 2003, B. Johannessen <bob@db.org>

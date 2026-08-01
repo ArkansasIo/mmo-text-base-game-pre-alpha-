@@ -34,6 +34,9 @@ class Game extends User
 	{
 		$query = "SELECT `r_name`,`rid` FROM `race` LIMIT 30";
 		$q = $this->query($query);		
+		if(!$q) {
+			return [];
+		}
 		$list = [];
 		$counter = 0;
 		while($obj = $q->fetch_object())
@@ -410,6 +413,199 @@ class Game extends User
 		}
 		
 		return $userStats;
+	}
+
+	public function getUserPlanets(int $uid): array
+	{
+		$uid = (int)$uid;
+		$query = "SELECT planets.plnt_name, planets.income_bonus, planets.up_bonus, planets.plnt_size, planetsize.text AS size_text
+			FROM planets
+			LEFT JOIN planetsize ON planetsize.size = planets.plnt_size
+			WHERE planets.uid = ?
+			ORDER BY planets.isHome DESC, planets.pid ASC
+			LIMIT 100";
+		$stmt = $this->db_link->prepare($query);
+		$stmt->bind_param("i", $uid);
+		$stmt->execute();
+		$q = $stmt->get_result();
+
+		$planets = [];
+		while ($planet = $q->fetch_object()) {
+			$size = $planet->size_text !== null && $planet->size_text !== "" ? $planet->size_text : (string)$planet->plnt_size;
+			$planets[] = [
+				"name" => $planet->plnt_name,
+				"size" => $size,
+				"bonus" => "+" . number_format((int)$planet->income_bonus) . " income / +" . number_format((int)$planet->up_bonus) . " UP"
+			];
+		}
+
+		return $planets;
+	}
+
+	public function getActionTurnsByUid(int $uid): int
+	{
+		$query = "SELECT actionTurns FROM userdata WHERE uid = ? LIMIT 1";
+		$stmt = $this->db_link->prepare($query);
+		$stmt->bind_param("i", $uid);
+		$stmt->execute();
+		$q = $stmt->get_result();
+		$data = $q->fetch_object();
+		return $data ? (int)$data->actionTurns : 0;
+	}
+
+	public function setCommander(int $commanderUid): string
+	{
+		$myUid = (int)$_SESSION['userid'];
+		$commanderUid = (int)$commanderUid;
+
+		if($commanderUid <= 0) {
+			return "Invalid commander.";
+		}
+		if($commanderUid === $myUid) {
+			return "You cannot make yourself your own commander.";
+		}
+
+		$query = "SELECT uid FROM users WHERE uid = ? LIMIT 1";
+		$stmt = $this->db_link->prepare($query);
+		$stmt->bind_param("i", $commanderUid);
+		$stmt->execute();
+		$q = $stmt->get_result();
+		if(!$q->num_rows) {
+			return "Commander does not exist.";
+		}
+
+		$query = "UPDATE userdata SET cid = ? WHERE uid = ? LIMIT 1";
+		$stmt = $this->db_link->prepare($query);
+		$stmt->bind_param("ii", $commanderUid, $myUid);
+		if($stmt->execute()) {
+			return "Commander updated successfully.";
+		}
+
+		return "Could not update commander.";
+	}
+
+	public function clearCommander(): string
+	{
+		$myUid = (int)$_SESSION['userid'];
+		$query = "UPDATE userdata SET cid = 0 WHERE uid = ? LIMIT 1";
+		$stmt = $this->db_link->prepare($query);
+		$stmt->bind_param("i", $myUid);
+		if($stmt->execute()) {
+			return "Commander cleared.";
+		}
+
+		return "Could not clear commander.";
+	}
+
+	public function sendSupport(int $toUid, string $supportType, int $amount): string
+	{
+		$fromUid = (int)$_SESSION['userid'];
+		$toUid = (int)$toUid;
+		$amount = (int)$amount;
+
+		if($toUid <= 0 || $toUid === $fromUid) {
+			return "Invalid target player.";
+		}
+		if($amount <= 0) {
+			return "Amount must be greater than zero.";
+		}
+
+		$brokerFee = (int)floor($amount * 0.01);
+		$received = $amount - $brokerFee;
+		if($received <= 0) {
+			return "Amount is too small after broker fee.";
+		}
+
+		$query = "SELECT uid FROM users WHERE uid = ? LIMIT 1";
+		$stmt = $this->db_link->prepare($query);
+		$stmt->bind_param("i", $toUid);
+		$stmt->execute();
+		$q = $stmt->get_result();
+		if(!$q->num_rows) {
+			return "Target player not found.";
+		}
+
+		$this->db_link->begin_transaction();
+		try {
+			switch($supportType) {
+				case "naq":
+					$query = "SELECT onHand FROM bank WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("i", $fromUid);
+					$stmt->execute();
+					$sender = $stmt->get_result()->fetch_object();
+					if(!$sender || (int)$sender->onHand < $amount) {
+						$this->db_link->rollback();
+						return "Not enough Naquadah on hand.";
+					}
+
+					$query = "UPDATE bank SET onHand = onHand - ? WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("ii", $amount, $fromUid);
+					$stmt->execute();
+
+					$query = "UPDATE bank SET onHand = onHand + ? WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("ii", $received, $toUid);
+					$stmt->execute();
+					break;
+
+				case "turns":
+					$query = "SELECT actionTurns FROM userdata WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("i", $fromUid);
+					$stmt->execute();
+					$sender = $stmt->get_result()->fetch_object();
+					if(!$sender || (int)$sender->actionTurns < $amount) {
+						$this->db_link->rollback();
+						return "Not enough turns available.";
+					}
+
+					$query = "UPDATE userdata SET actionTurns = actionTurns - ? WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("ii", $amount, $fromUid);
+					$stmt->execute();
+
+					$query = "UPDATE userdata SET actionTurns = actionTurns + ? WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("ii", $received, $toUid);
+					$stmt->execute();
+					break;
+
+				case "units":
+					$query = "SELECT untrained FROM units WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("i", $fromUid);
+					$stmt->execute();
+					$sender = $stmt->get_result()->fetch_object();
+					if(!$sender || (int)$sender->untrained < $amount) {
+						$this->db_link->rollback();
+						return "Not enough untrained units available.";
+					}
+
+					$query = "UPDATE units SET untrained = untrained - ? WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("ii", $amount, $fromUid);
+					$stmt->execute();
+
+					$query = "UPDATE units SET untrained = untrained + ? WHERE uid = ? LIMIT 1";
+					$stmt = $this->db_link->prepare($query);
+					$stmt->bind_param("ii", $received, $toUid);
+					$stmt->execute();
+					break;
+
+				default:
+					$this->db_link->rollback();
+					return "Unknown support type.";
+			}
+
+			$this->db_link->commit();
+			return "Transfer complete. Sent " . number_format($amount) . ", broker kept " . number_format($brokerFee) . ", recipient received " . number_format($received) . ".";
+		} catch (Throwable $e) {
+			$this->db_link->rollback();
+			Debug::printMsg(__CLASS__, __FUNCTION__, "Support transfer failed: " . $e->getMessage());
+			return "Transfer failed. Please try again.";
+		}
 	}
 	
 	public function getWeapons(): array
@@ -1659,7 +1855,7 @@ $atkr = "$data->atkrName Sent:<br>  $data->superAnticovert $data->superAnticover
 					<tr><td><?= $byMe->time;?> </td><td align="center">
 					<a href="javascript:void(0)" onclick="sendData('user','get','<?= $byMe->uid; ?>'); return false">
 					<?= $byMe->user; ?></td>
-					<td align="center"><? if($byMe->success == 0 ) { echo "Attack Defended"; } else { echo number_format($byMe->stolen)." Cash Stolen"; } ?></td>
+					<td align="center"><?php if($byMe->success == 0 ) { echo "Attack Defended"; } else { echo number_format($byMe->stolen)." Cash Stolen"; } ?></td>
 					<td align="center"><?= $byMe->turnsUsed; ?></td>
 					<td align="center"><?= $byMe->thereDead; ?></td>
 					<td align="center"><?= $byMe->myDead; ?></td>
@@ -1681,7 +1877,7 @@ $atkr = "$data->atkrName Sent:<br>  $data->superAnticovert $data->superAnticover
 					<tr><td><?= $toMe->time;?> </td><td align="center">
 					<a href="javascript:void(0)" onclick="sendData('user','get','<?= $toMe->uid; ?>'); return false">
 					<?= $toMe->user; ?></td>
-					<td align="center"><? if($toMe->success == 0 ) { echo "Attack Defended"; } else { echo number_format($toMe->stolen)." Cash Stolen"; } ?> </td>
+					<td align="center"><?php if($toMe->success == 0 ) { echo "Attack Defended"; } else { echo number_format($toMe->stolen)." Cash Stolen"; } ?> </td>
 					<td align="center"><?= $toMe->turnsUsed; ?></td>
 					<td align="center"><?= $toMe->thereDead; ?></td>
 					<td align="center"><?= $toMe->myDead; ?></td>

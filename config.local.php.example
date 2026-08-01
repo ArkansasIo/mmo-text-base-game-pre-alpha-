@@ -1,0 +1,13 @@
+<?php
+// Local machine overrides for development or deployment.
+// Copy this file to config.local.php and update values as needed.
+
+$subs['{TITLE}'] = 'Pegus Galaxy';
+$subs['{SUBTITLE}'] = 'The place to get your war on!';
+$subs['{ADMIN_EMAIL}'] = 'admin@example.com';
+
+$conf['db_server'] = 'localhost';
+$conf['db_name'] = 'sgw';
+$conf['db_username'] = 'sgw';
+$conf['db_password'] = 'sgwpass';
+$conf['db_prefix'] = '';

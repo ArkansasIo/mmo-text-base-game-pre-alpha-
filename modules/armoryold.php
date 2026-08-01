@@ -46,7 +46,7 @@ $inv = $s->getWeaponInventory($_SESSION['userid']);
         <td width="13%" align="center" valign="middle">Repair</td>
         <td width="22%" align="center" valign="middle">Scrap /Sell </td>
       </tr>
-      <? for ($x = 0; $x < count($inv['atk']); $x++){?>
+	  <?php for ($x = 0; $x < count($inv['atk']); $x++){?>
 	  <tr>
         <td align="left" valign="middle"><?= $inv['atk'][$x]['name'];?></td>
         <td align="center" valign="middle"><?= $inv['atk'][$x]['quanity'];?></td>
@@ -71,12 +71,12 @@ $inv = $s->getWeaponInventory($_SESSION['userid']);
         <td align="center" valign="middle"><a href="javascript:void(0)" onclick="sendData('armory','get','<?= $inv['def'][$x]['wid'];?>','repair'); return false;"><?= $inv['def'][$x]['perpoint'];?></a></td>
         <td align="center" valign="middle"><input name="<?= $inv['def'][$x]['fieldname'];?>" type="text" value="<?= $inv['def'][$x]['quanity'];?>" size="10" /> for <?= $inv['def'][$x]['sell'];?> each</td>
       </tr>
-	  <? } ?>
+    <?php } ?>
 	  <tr><td>&nbsp;</td></tr>
     </table></td>
   </tr>
   <tr>
-    <td width="37%" align="left" valign="top"><? include_once('mil_rank.php'); echo "<br>"; include_once('personnel.php'); ?>
+    <td width="37%" align="left" valign="top"><?php include_once('mil_rank.php'); echo "<br>"; include_once('personnel.php'); ?>
     <br /></td>
     <td width="63%" align="right" valign="top"><form action="javascript:void(0)"><table width="90%" border="0">
       <tr>

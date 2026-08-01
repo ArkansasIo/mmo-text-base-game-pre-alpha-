@@ -78,13 +78,29 @@ class Chive
     public function connectToDB(): void
     {
         Debug::printMsg(__CLASS__, __FUNCTION__, "Connecting to DB...");
-        $this->db_link = new mysqli($this->db_server, $this->db_username, $this->db_password, $this->db_name);
-        if($this->db_link->connect_error)
-        {
-            Debug::printMsg(__CLASS__, __FUNCTION__, "Couldn't connect to DB ".$this->db_link->connect_error);
-        } else {
-            Debug::printMsg(__CLASS__, __FUNCTION__, "Connected to database");
+        mysqli_report(MYSQLI_REPORT_OFF);
+
+        try {
+            $this->db_link = new mysqli($this->db_server, $this->db_username, $this->db_password, $this->db_name);
+
+            // If localhost socket resolution fails in container/dev envs, retry over TCP.
+            if ($this->db_link->connect_error && $this->db_server === "localhost") {
+                $this->db_link = new mysqli("127.0.0.1", $this->db_username, $this->db_password, $this->db_name);
+            }
+        } catch (Throwable $e) {
+            $this->db_link = null;
+            Debug::printMsg(__CLASS__, __FUNCTION__, "Couldn't connect to DB " . $e->getMessage());
+            return;
         }
+
+        if($this->db_link && !$this->db_link->connect_error)
+        {
+            Debug::printMsg(__CLASS__, __FUNCTION__, "Connected to database");
+            return;
+        }
+
+        $error = $this->db_link ? $this->db_link->connect_error : "Unknown connection error";
+        Debug::printMsg(__CLASS__, __FUNCTION__, "Couldn't connect to DB " . $error);
     }
     
     /**
@@ -107,6 +123,10 @@ class Chive
     public function clean_sql(string $string, int $quotes = 1): string
     {
         if(!$this->connected()) $this->connectToDB();
+
+        if(!$this->connected()) {
+            return $quotes ? "'" . addslashes($string) . "'" : $string;
+        }
         
         // Quote if not integer
         if (!is_numeric($string) && $quotes)
@@ -126,8 +146,21 @@ class Chive
     public function query(string $query)
     {
         if(!$this->connected()) $this->connectToDB();
+
+        if(!$this->connected()) {
+            Debug::printMsg(__CLASS__, __FUNCTION__, "Query aborted: no DB connection for query - \"" . $query . "\"");
+            $this->queryCount++;
+            return false;
+        }
         
-        $r = $this->db_link->query($query);
+        $r = false;
+        try {
+            $r = $this->db_link->query($query);
+        } catch (Throwable $e) {
+            Debug::printMsg(__CLASS__, __FUNCTION__, "Query exception - <b>ERROR:</b> " . $e->getMessage() . " FROM QUERY - \"" . $query . "\"\n");
+            $this->queryCount++;
+            return false;
+        }
         if($r)
         {
             Debug::printMsg(__CLASS__, __FUNCTION__, "Query successful: ".$query."\r\n");

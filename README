@@ -1,12 +1,138 @@
-TITLE: README
-Author: Advocaite
+# Stargate Wars
 
-Stargate-Wars OPEN SOURCE PHP/SQL Kings of Chaos Type Game Engine
-Based On the TV show Stargate SG1
-Game is not finished but structure and goal for game is
-I have not worked on this game in a long time so may need 
-upgrading here and there but overall engine works nicly
-if anyone wants to help dev it then let me know,
-as im currently dev in some other big projects
+Open-source PHP/MySQL browser strategy game engine inspired by classic turn-based war games and the Stargate universe.
 
-Many Thanks Advocaite
+## Project Status
+
+This codebase is actively being modernized while preserving legacy gameplay flow.
+
+- Core login, registration, and main game shell are functional.
+- Database schema is included and importable.
+- Backend operations tooling (migrations, health checks, report exports) is included.
+- Many gameplay systems are present; some modules are still legacy or partial.
+
+## Tech Stack
+
+- PHP (recommended runtime: system PHP with mysqli support)
+- MariaDB/MySQL
+- HTML/CSS/JavaScript (AJAX module loading pattern)
+
+## Quick Start (Local)
+
+1. Start MariaDB.
+2. Create database and user.
+3. Import schema.
+4. Configure runtime settings.
+5. Start PHP built-in server.
+
+Example workflow from repository root:
+
+```bash
+# 1) database bootstrap (if needed)
+mysql -u root -p < database/sql/01_create_database.sql
+
+# 2) import legacy core schema
+mysql -u sgw -psgwpass sgw < game.sql
+
+# 3) apply backend tables/views/defaults
+./scripts/backend/db_migrate.sh
+
+# 4) run health check
+./scripts/backend/healthcheck.sh
+
+# 5) start web server
+/usr/bin/php -S 0.0.0.0:8080
+```
+
+Then open:
+
+- http://127.0.0.1:8080/index.php
+
+## Configuration
+
+Primary config file:
+
+- config.php
+
+Optional local override (recommended for machine-specific settings):
+
+- copy config.local.php.example -> config.local.php
+
+Environment template:
+
+- .env.example
+
+Supported environment variables:
+
+- SGW_TITLE
+- SGW_SUBTITLE
+- SGW_ADMIN_EMAIL
+- SGW_DB_HOST
+- SGW_DB_NAME
+- SGW_DB_USER
+- SGW_DB_PASS
+
+## Backend Operations
+
+See full guide:
+
+- BACKEND_SETUP.md
+
+Main backend scripts:
+
+- scripts/backend/db_init.sh
+- scripts/backend/db_migrate.sh
+- scripts/backend/db_backup.sh
+- scripts/backend/healthcheck.sh
+- scripts/backend/export_reports.sh
+
+## Reporting and Excel Exports
+
+Generated outputs:
+
+- exports/sql/*.sql.txt
+- exports/excel/*.csv
+
+CSV exports are Excel-compatible.
+
+Templates:
+
+- database/excel_templates/player_economy_template.csv
+- database/excel_templates/player_military_template.csv
+
+## Repository Layout
+
+- base/: core PHP classes (DB/user/game logic)
+- modules/: AJAX-loaded gameplay modules
+- templates/: page templates and shell
+- database/: SQL and backend data docs
+- scripts/backend/: DB and ops automation
+- tools/backend/: server-side backend utilities
+
+## Development Notes
+
+- Legacy modules may still contain old patterns and require incremental cleanup.
+- Prefer full PHP tags (<?php ... ?>) over short tags.
+- Use /usr/bin/php for tooling in environments where the default php binary lacks mysqli.
+
+## Contributing
+
+Contributions are welcome.
+
+Recommended process:
+
+1. Create a branch.
+2. Make focused changes.
+3. Run syntax checks and backend healthcheck.
+4. Open a pull request with a clear summary.
+
+Useful checks:
+
+```bash
+find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
+./scripts/backend/healthcheck.sh
+```
+
+## Credits
+
+Original project by Advocaite.

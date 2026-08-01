@@ -20,7 +20,7 @@
 	</head>
 	<LINK REL=STYLESHEET TYPE='text/css' HREF='main.css'>
 	
-	<body background="images/stars.jpg" onload=" bb_init('divBody', false);sendData('base','get','mainDisplay');autoLoad(); suggestTHIS();return false;">
+	<body background="images/stars.jpg" onload=" bb_init('divBody', false);sendData('pages','get','empire','overview');autoLoad(); suggestTHIS();return false;">
     <center>
 	<div id="divBBDebug"></div>
 	<div id="divBody">

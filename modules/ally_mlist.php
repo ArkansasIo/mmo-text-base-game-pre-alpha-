@@ -27,7 +27,7 @@ else
     <td>Race</td>
     <td>Treasury</td>
   </tr>
-<?
+<?php
 for($x = 0; $x < count($rankings); $x++)
 {
   if(!$rankings[$x]['rank'] == 0){?>
@@ -39,12 +39,12 @@ for($x = 0; $x < count($rankings); $x++)
     	<td><?= $rankings[$x]['cash']; ?></td>
   		</tr>
 	
-<?
+<?php
 }
 }
 ?>
 </table>
-<?
+<?php
 echo "Query Count: ".$s->queryCount."<br>";
 $pagegen->stop();
 print('page generation time: ' . $pagegen->gen());

@@ -5,7 +5,7 @@ $s = new Game();
 if (!$s->loggedIn)
 {
 ?>
-<form method="post" action="index.php">
+<form method="post" action="/index.php">
 <table border="0">
  <tr>
   <td align="center" valign="middle"><label for="username"><font color="black">Username:</font></label></td>
