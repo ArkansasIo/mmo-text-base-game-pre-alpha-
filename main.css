@@ -73,7 +73,7 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
 
 .top-stats {
     display: grid;
-    grid-template-columns: repeat(3, minmax(120px, 1fr));
+    grid-template-columns: repeat(4, minmax(120px, 1fr));
     gap: 8px;
 }
 
@@ -358,8 +358,338 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
     color: #d8ffff;
 }
 
+.wows-brief {
+    background: linear-gradient(180deg, rgba(11, 35, 35, 0.88) 0%, rgba(6, 22, 22, 0.82) 100%);
+}
+
+.wows-pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.wows-pill {
+    border: 1px solid #3b7a7a;
+    background: rgba(8, 28, 28, 0.85);
+    padding: 4px 8px;
+    font-size: 11px;
+    color: #d9ffff;
+}
+
+.wows-tree {
+    border: 1px solid #255c5c;
+    background: linear-gradient(180deg, rgba(2, 14, 14, 0.92) 0%, rgba(2, 8, 8, 0.92) 100%);
+    padding: 8px;
+    overflow-x: auto;
+}
+
+.wows-tier-head,
+.wows-tree-row {
+    display: grid;
+    grid-template-columns: 170px 1fr;
+    gap: 8px;
+    align-items: center;
+}
+
+.wows-tier-head {
+    grid-template-columns: 170px repeat(6, minmax(170px, 1fr));
+    margin-bottom: 6px;
+}
+
+.wows-tier-head {
+    background: rgba(12, 33, 33, 0.8);
+    border: 1px solid #2b6363;
+    padding: 6px;
+}
+
+.wows-tier-head > span:first-child {
+    font-size: 11px;
+    color: #a2dede;
+    font-weight: bold;
+}
+
+.wows-tier-head > span:not(:first-child) {
+    display: block;
+    text-align: center;
+    font-size: 11px;
+    color: #b7eaea;
+    border-left: 1px dashed #2a5b5b;
+}
+
+.wows-domain {
+    border: 1px solid #2b6363;
+    background: rgba(9, 32, 32, 0.86);
+    padding: 10px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #d6ffff;
+}
+
+.wows-node-lane {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(170px, 1fr));
+    gap: 8px;
+    position: relative;
+}
+
+.wows-node-lane::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    border-top: 1px dashed #2f6868;
+    opacity: 0.8;
+    pointer-events: none;
+}
+
+.wows-node {
+    position: relative;
+    border: 1px solid #2f6666;
+    background: rgba(6, 20, 20, 0.92);
+    padding: 8px;
+    min-height: 96px;
+    z-index: 1;
+}
+
+.wows-node-title {
+    font-size: 10px;
+    color: #9ccfcf;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.wows-node-name {
+    font-size: 12px;
+    color: #e7ffff;
+    margin-top: 3px;
+}
+
+.wows-node-meta {
+    font-size: 10px;
+    color: #b7e4e4;
+    margin-top: 3px;
+}
+
+.wows-node.unlocked {
+    border-color: #5ea47e;
+    box-shadow: inset 0 0 0 1px rgba(94, 164, 126, 0.45);
+}
+
+.wows-node.available {
+    border-color: #7ac3d9;
+    box-shadow: 0 0 0 1px rgba(122, 195, 217, 0.55), 0 0 12px rgba(122, 195, 217, 0.25);
+    background: rgba(8, 29, 35, 0.92);
+}
+
+.wows-node.locked {
+    border-color: #3c5050;
+    opacity: 0.8;
+}
+
+.wows-tree-row + .wows-tree-row {
+    margin-top: 6px;
+}
+
 @media (max-width: 900px) {
+    .top-stats {
+        grid-template-columns: repeat(2, minmax(120px, 1fr));
+    }
+
     .calc-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .wows-tier-head,
+    .wows-tree-row {
+        grid-template-columns: 1fr;
+    }
+
+    .wows-domain {
+        text-align: center;
+    }
+}
+
+.public-shell {
+    width: min(1120px, 96vw);
+    margin: 14px auto;
+    border: 1px solid #255454;
+    background: linear-gradient(180deg, rgba(3, 18, 18, 0.9) 0%, rgba(0, 0, 0, 0.85) 100%);
+    box-shadow: 0 12px 34px rgba(0, 0, 0, 0.55);
+}
+
+.public-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    border-bottom: 1px solid #255454;
+    background: linear-gradient(90deg, #092525 0%, #0f3434 45%, #114949 100%);
+}
+
+.public-brand h1 {
+    margin: 0;
+    font-size: 34px;
+    text-decoration: none;
+}
+
+.public-brand p {
+    margin: 3px 0 0 0;
+    color: #c8f7f7;
+    font-size: 12px;
+}
+
+.public-actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.public-btn {
+    display: inline-block;
+    padding: 8px 12px;
+    border: 1px solid #4ab1b1;
+    background: #103b3b;
+    color: #ffffff;
+    font-weight: bold;
+}
+
+.public-btn.secondary {
+    background: #1e2d58;
+    border-color: #5e8be4;
+}
+
+.public-btn:hover {
+    background: #176262;
+}
+
+.public-hero {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 10px;
+    padding: 12px;
+}
+
+.public-hero-left,
+.public-hero-right {
+    display: grid;
+    gap: 10px;
+}
+
+.public-hero img {
+    width: 100%;
+    height: auto;
+    border: 1px solid #2d6363;
+    display: block;
+}
+
+.public-content-grid {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 10px;
+    padding: 0 12px 12px 12px;
+}
+
+.public-panel {
+    border: 1px solid #2d6363;
+    background: rgba(2, 17, 17, 0.76);
+    padding: 10px;
+}
+
+.public-news h3,
+.public-main h3 {
+    margin: 0 0 8px 0;
+    text-decoration: none;
+}
+
+.public-news h4 {
+    margin: 10px 0 4px 0;
+}
+
+.public-main #mainDisplay {
+    min-height: 360px;
+    border: 1px solid #264f4f;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 10px;
+}
+
+.public-footnote {
+    margin-top: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+}
+
+.auth-card {
+    width: min(520px, 94%);
+    margin: 0 auto;
+    border: 1px solid #2b6363;
+    background: rgba(1, 20, 20, 0.82);
+    padding: 16px;
+    box-sizing: border-box;
+}
+
+.auth-card h3 {
+    margin: 0;
+    text-decoration: none;
+    color: #ddffff;
+}
+
+.auth-card p {
+    margin: 6px 0 10px 0;
+    color: #c8f1f1;
+}
+
+.auth-card label {
+    display: block;
+    margin: 8px 0 4px 0;
+    font-size: 12px;
+    color: #d6ffff;
+}
+
+.auth-card input[type="text"],
+.auth-card input[type="password"],
+.auth-card input[type="email"],
+.auth-card select {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.auth-submit {
+    margin-top: 12px;
+    width: 100%;
+    background: #134b4b;
+    border: 1px solid #4ab1b1;
+    color: #fff;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.auth-submit:hover {
+    background: #1b6e6e;
+}
+
+.auth-hint {
+    margin-top: 8px;
+    font-size: 11px;
+    color: #aee8e8;
+}
+
+@media (max-width: 980px) {
+    .public-top {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .public-hero {
+        grid-template-columns: 1fr;
+    }
+
+    .public-content-grid {
         grid-template-columns: 1fr;
     }
 }

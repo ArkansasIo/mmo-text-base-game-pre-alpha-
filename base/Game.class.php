@@ -50,16 +50,61 @@ class Game extends User
 	
 	public function autoLoad(): string
 	{
-		$query = "SELECT rank.overall AS isRank, bank.onHand, bank.inBank, userdata.actionTurns, (SELECT COUNT(messages.toUID) FROM `messages` RIGHT OUTER JOIN `userdata` ON messages.toUID = userdata.uid WHERE userdata.uid = ? GROUP BY userdata.uid) AS messageCount FROM `bank`,`userdata`,`rank` WHERE bank.uid=? AND userdata.uid = bank.uid  AND rank.uid = bank.uid LIMIT 1";
+		if (!isset($_SESSION['userid']) || (int)$_SESSION['userid'] <= 0) {
+			$gameTime = date("F jS H:i:s");
+			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
+		}
+
+		$query = "SELECT rank.overall AS isRank,
+					 bank.onHand,
+					 bank.inBank,
+					 userdata.actionTurns,
+					 IFNULL(msg.messageCount, 0) AS messageCount
+				  FROM bank
+				  INNER JOIN userdata ON userdata.uid = bank.uid
+				  INNER JOIN rank ON rank.uid = bank.uid
+				  LEFT JOIN (
+						SELECT toUID, COUNT(*) AS messageCount
+						FROM messages
+						GROUP BY toUID
+				  ) msg ON msg.toUID = bank.uid
+				  WHERE bank.uid=?
+				  LIMIT 1";
 		$stmt = $this->db_link->prepare($query);
-		$stmt->bind_param("ii", $_SESSION['userid'], $_SESSION['userid']);
+		$stmt->bind_param("i", $_SESSION['userid']);
 		$stmt->execute();
 		$q = $stmt->get_result();
 		$auto = $q->fetch_object();
+		if (!$auto) {
+			$gameTime = date("F jS H:i:s");
+			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
+		}
+
+		$metal = 0;
+		$crystal = 0;
+		$deuterium = 0;
+		$food = 0;
+		$water = 0;
+		$population = 0;
+		$resTable = $this->query("SHOW TABLES LIKE 'player_resources'");
+		if ($resTable && $resTable->num_rows > 0) {
+			$resQ = $this->query("SELECT metal,crystal,deuterium,food,water,population FROM player_resources WHERE uid=" . (int)$_SESSION['userid'] . " LIMIT 1");
+			if ($resQ && $resQ->num_rows > 0) {
+				$res = $resQ->fetch_object();
+				$metal = (int)($res->metal ?? 0);
+				$crystal = (int)($res->crystal ?? 0);
+				$deuterium = (int)($res->deuterium ?? 0);
+				$food = (int)($res->food ?? 0);
+				$water = (int)($res->water ?? 0);
+				$population = (int)($res->population ?? 0);
+			}
+		}
 		$gameTime 	= date("F jS H:i:s");
 		$str = "new Array(\"".number_format($auto->onHand)."\",\"".number_format($auto->inBank)."\",\""
 		       .number_format($auto->isRank)."\",\"".number_format($auto->actionTurns)."\",\""
-			   .$gameTime."\",\"".number_format($auto->messageCount)."\",\"".$this->nextTurn()." minutes\")";
+			   .$gameTime."\",\"".number_format($auto->messageCount)."\",\"".$this->nextTurn()." minutes\",\""
+			   .number_format($metal)."\",\"".number_format($crystal)."\",\"".number_format($deuterium)."\",\""
+			   .number_format($food)."\",\"".number_format($water)."\",\"".number_format($population)."\")";
 		$_SESSION['money'] = $auto->onHand;
 		return $str;
 	}	

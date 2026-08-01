@@ -118,7 +118,7 @@ class User extends Chive
 	 * Logs out user
 	 *
 	 */
-	public function logOut(): void
+	public static function logOut(): void
 	{
 		$_SESSION['username'] = null;
 		$_SESSION['password'] = null;

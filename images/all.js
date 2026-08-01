@@ -86,6 +86,13 @@ function autoHandle(){
 			autoDiv(obj[3],document.getElementById("turns"));
 			autoDiv(obj[4],document.getElementById("time"));
 			autoDiv(obj[5],document.getElementById("messages"));
+            if (document.getElementById("next")) { autoDiv(obj[6],document.getElementById("next")); }
+            if (document.getElementById("metal")) { autoDiv(obj[7],document.getElementById("metal")); }
+            if (document.getElementById("crystal")) { autoDiv(obj[8],document.getElementById("crystal")); }
+            if (document.getElementById("deuterium")) { autoDiv(obj[9],document.getElementById("deuterium")); }
+            if (document.getElementById("food")) { autoDiv(obj[10],document.getElementById("food")); }
+            if (document.getElementById("water")) { autoDiv(obj[11],document.getElementById("water")); }
+            if (document.getElementById("population")) { autoDiv(obj[12],document.getElementById("population")); }
         } else {
             alert("A problem occurred with communicating between the XMLHttpRequest object and the server program .//Auto Problem");
         }

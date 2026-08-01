@@ -6,36 +6,24 @@ if (!$s->loggedIn)
 {
 ?>
 <form method="post" action="/index.php">
-<table border="0">
- <tr>
-  <td align="center" valign="middle"><label for="username"><font color="black">Username:</font></label></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><input type="text" name="user" id="username" required /></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><label for="hpname"><font color="black">Home Planet Name:</font></label></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><input type="text" name="hpname" id="hpname" required /></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><label for="password"><font color="black">Password:</font></label></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><input type="password" name="pass" id="password" required /></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><label for="email"><font color="black">E-mail Address:</font></label></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><input type="email" name="email" id="email" required /></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><label for="race"><font color="black">Race:</font></label></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><select name="rid" id="race" required>
+<div class="auth-card" id="register-form">
+  <h3>Register New Pilot</h3>
+  <p>Create your realm and begin expansion across the galaxy.</p>
+
+  <label for="username">Username</label>
+  <input type="text" name="user" id="username" required />
+
+  <label for="hpname">Home Planet Name</label>
+  <input type="text" name="hpname" id="hpname" required />
+
+  <label for="password">Password</label>
+  <input type="password" name="pass" id="password" required />
+
+  <label for="email">E-mail Address</label>
+  <input type="email" name="email" id="email" required />
+
+  <label for="race">Race</label>
+  <select name="rid" id="race" required>
     <?php
 		$list = $s->getRaces();
 		for ($x = 0; $x < count($list); $x++)
@@ -43,25 +31,14 @@ if (!$s->loggedIn)
 			echo "<option value='".$list[$x]["id"]."'>".$list[$x]["name"]."</option>\r\n";
 		}
 	?>
-  </select></td>
- </tr>
- <tr>
-  <td>
-    <strong><font>
-      Please enter the string shown in the image in the form.<br> The possible characters are letters from A to Z in capitalized form and the numbers from 0 to 9.
-    </font></strong>
-  </td>
- </tr>
- <tr>
-  <td align="center" colspan="2"><input name="number" type="text" id="number" required></td>
- </tr>
- <tr>
-  <td colspan="2" align="center"><img src="image.php?mt=<?= microtime();?>"></td>
- </tr>
- <tr>
-  <td align="center" valign="middle"><input type="submit" name="submit" value="Register" /></td>
- </tr>
-</table>
+  </select>
+
+  <p class="auth-hint">Type the validation text shown in the image.</p>
+  <input name="number" type="text" id="number" required />
+  <p style="text-align:center; margin-top:8px;"><img src="image.php?mt=<?= microtime();?>" alt="Validation code"></p>
+
+  <input type="submit" class="auth-submit" name="submit" value="Register" />
+</div>
 </form>
 <?php
 }

@@ -19,6 +19,431 @@ function fnum($value): string {
     return number_format((float)$value);
 }
 
+function universeRand(int &$seed, int $min, int $max): int {
+    $seed = (int)(($seed * 1103515245 + 12345) & 0x7fffffff);
+    $span = ($max - $min) + 1;
+    return $min + ($seed % $span);
+}
+
+function universePick(int &$seed, array $list): string {
+    if (count($list) === 0) {
+        return '';
+    }
+    $idx = universeRand($seed, 0, count($list) - 1);
+    return (string)$list[$idx];
+}
+
+function buildUniverseSnapshot(int $uid, array $ownedPlanets): array {
+    $seed = (($uid + 11) * 7919) & 0x7fffffff;
+
+    $worldTypes = ['Terran', 'Oceanic', 'Arid', 'Volcanic', 'Ice', 'Gas Dwarf', 'Toxic', 'Crystalline', 'Relic'];
+    $biomes = [
+        'Terran' => ['Temperate Forest', 'Grassland', 'Rain Basin'],
+        'Oceanic' => ['Archipelago', 'Kelp Expanse', 'Storm Sea'],
+        'Arid' => ['Dune Basin', 'Canyon Belt', 'Salt Flats'],
+        'Volcanic' => ['Magma Rift', 'Ash Plateau', 'Basalt Sea'],
+        'Ice' => ['Glacier Shield', 'Frozen Canyons', 'Polar Sink'],
+        'Gas Dwarf' => ['Upper Cloudline', 'Ionic Layer', 'Hydrogen Drift'],
+        'Toxic' => ['Acid Mire', 'Sulfur Crust', 'Caustic Foglands'],
+        'Crystalline' => ['Shard Plains', 'Prism Caves', 'Quartz Highlands'],
+        'Relic' => ['Ancient Arcology', 'Derelict Ring', 'Vault Ruins'],
+    ];
+
+    $galaxies = [];
+    $worlds = [];
+    $objects = [];
+    $ownedIdx = 0;
+    $moonTotal = 0;
+    $colonizable = 0;
+
+    for ($g = 1; $g <= 4; $g++) {
+        $galName = 'G' . $g;
+        $totalHabitability = 0;
+        $galWorldCount = 0;
+        $galMoonCount = 0;
+
+        for ($sector = 1; $sector <= 6; $sector++) {
+            for ($orbit = 1; $orbit <= 6; $orbit++) {
+                $type = universePick($seed, $worldTypes);
+                $biomePool = $biomes[$type] ?? ['Unknown'];
+                $biome = universePick($seed, $biomePool);
+
+                $habitability = universeRand($seed, 18, 98);
+                $metal = universeRand($seed, 220, 1200);
+                $crystal = universeRand($seed, 120, 980);
+                $deut = universeRand($seed, 60, 760);
+
+                $moonCount = ($type === 'Gas Dwarf' || $type === 'Relic') ? universeRand($seed, 1, 3) : universeRand($seed, 0, 2);
+                $moonClass = $moonCount > 0 ? universePick($seed, ['Rocky', 'Icy', 'Metallic', 'Ruined']) : '-';
+                $slots = max(2, (int)floor($habitability / 12));
+
+                $owner = 'Unclaimed';
+                $planetLabel = $galName . '-' . $sector . ':' . $orbit;
+                if ($ownedIdx < count($ownedPlanets)) {
+                    $owner = 'Player Colony';
+                    $planetLabel = (string)$ownedPlanets[$ownedIdx]['name'];
+                    $ownedIdx++;
+                }
+
+                $worlds[] = [
+                    'coord' => $galName . ' [' . $sector . ':' . $orbit . ']',
+                    'name' => $planetLabel,
+                    'type' => $type,
+                    'biome' => $biome,
+                    'habitability' => $habitability,
+                    'slots' => $slots,
+                    'metal' => $metal,
+                    'crystal' => $crystal,
+                    'deut' => $deut,
+                    'moons' => $moonCount,
+                    'moonClass' => $moonClass,
+                    'owner' => $owner,
+                ];
+
+                $totalHabitability += $habitability;
+                $galMoonCount += $moonCount;
+                $galWorldCount++;
+                if ($habitability >= 48 && $owner === 'Unclaimed') {
+                    $colonizable++;
+                }
+            }
+        }
+
+        $galaxies[] = [
+            'name' => $galName,
+            'sectors' => 6,
+            'worlds' => $galWorldCount,
+            'avgHab' => $galWorldCount > 0 ? (int)round($totalHabitability / $galWorldCount) : 0,
+            'moons' => $galMoonCount,
+        ];
+        $moonTotal += $galMoonCount;
+
+        $objects[] = [
+            'galaxy' => $galName,
+            'asteroidBelts' => universeRand($seed, 8, 24),
+            'debrisFields' => universeRand($seed, 4, 16),
+            'nebulae' => universeRand($seed, 2, 9),
+            'cometStreams' => universeRand($seed, 1, 7),
+            'wormholes' => universeRand($seed, 0, 3),
+            'ancientRuins' => universeRand($seed, 1, 5),
+        ];
+    }
+
+    return [
+        'seed' => (($uid + 11) * 7919) & 0x7fffffff,
+        'galaxies' => $galaxies,
+        'worlds' => $worlds,
+        'objects' => $objects,
+        'summary' => [
+            'totalGalaxies' => count($galaxies),
+            'totalWorlds' => count($worlds),
+            'totalMoons' => $moonTotal,
+            'colonizableWorlds' => $colonizable,
+            'ownedColonies' => count($ownedPlanets),
+        ],
+    ];
+}
+
+function researchPick(int &$seed, array $list): string {
+    if (count($list) === 0) {
+        return '';
+    }
+    $idx = universeRand($seed, 0, count($list) - 1);
+    return (string)$list[$idx];
+}
+
+function buildResearchDirectorate(int $uid, $techView, $personnel): array {
+    $seed = (($uid + 41) * 104729) & 0x7fffffff;
+
+    $domains = ['Quantum', 'Void', 'Psionic', 'Nano', 'Graviton', 'Xeno', 'Bioforge', 'Temporal', 'Stellar', 'Aegis'];
+    $focuses = ['Warfare', 'Economy', 'Espionage', 'Logistics', 'Expansion', 'Defense'];
+    $typePool = ['Offensive', 'Defensive', 'Support', 'Industrial', 'Recon', 'Colonial'];
+    $subTypePool = ['Kinetic', 'Energy', 'Psionic', 'Stealth', 'Command', 'Terraform', 'Recovery', 'Anomaly'];
+
+    $classRoles = ['Architect', 'Sentinel', 'Reaver', 'Oracle', 'Warden', 'Harbinger', 'Cipher', 'Ranger', 'Artificer'];
+    $subclassRoles = ['Prime', 'Vanguard', 'Seeker', 'Bastion', 'Catalyst', 'Executor', 'Scholar', 'Pathfinder', 'Anchor'];
+
+    $classes = [];
+    $classId = 1;
+    foreach ($domains as $domain) {
+        foreach ($classRoles as $idx => $role) {
+            $type = $typePool[$idx % count($typePool)];
+            $subType = $subTypePool[($idx + universeRand($seed, 0, 7)) % count($subTypePool)];
+            $classes[] = [
+                'id' => $classId,
+                'className' => $domain . ' ' . $role,
+                'subClass' => $domain . ' ' . $subclassRoles[$idx],
+                'type' => $type,
+                'subType' => $subType,
+            ];
+            $classId++;
+        }
+    }
+
+    $researchTree = [];
+    $techTree = [];
+    foreach ($domains as $domain) {
+        $researchNodes = [];
+        $techNodes = [];
+        for ($tier = 1; $tier <= 6; $tier++) {
+            $researchNodes[] = [
+                'name' => $domain . ' Research Tier ' . $tier,
+                'focus' => researchPick($seed, $focuses),
+                'cost' => (50000 * $tier) + universeRand($seed, 2500, 15000),
+                'power' => universeRand($seed, 4, 18) * $tier,
+            ];
+            $techNodes[] = [
+                'name' => $domain . ' Technology Tier ' . $tier,
+                'focus' => researchPick($seed, $focuses),
+                'cost' => (65000 * $tier) + universeRand($seed, 3500, 18000),
+                'power' => universeRand($seed, 5, 22) * $tier,
+            ];
+        }
+        $researchTree[] = ['domain' => $domain, 'nodes' => $researchNodes];
+        $techTree[] = ['domain' => $domain, 'nodes' => $techNodes];
+    }
+
+    $talentPrefixes = ['Adaptive', 'Warped', 'Hyper', 'Focused', 'Deep', 'Prime', 'Echo', 'Null', 'Stellar', 'Iron', 'Arc', 'Silent'];
+    $talentCore = ['Matrix', 'Lattice', 'Protocol', 'Vector', 'Engine', 'Manifold', 'Beacon', 'Circuit', 'Doctrine', 'Kernel'];
+    $talentSuffix = ['Surge', 'Lock', 'Burst', 'Thread', 'Field', 'Link', 'Sight', 'Ward', 'Pulse', 'Drive'];
+
+    $talents = [];
+    for ($i = 1; $i <= 240; $i++) {
+        $isResearch = $i <= 120;
+        $tier = 1 + (int)floor(($i - 1) / 30);
+        $domain = $domains[($i - 1) % count($domains)];
+        $focus = $focuses[($i + 2) % count($focuses)];
+        $prefix = $talentPrefixes[($i + universeRand($seed, 0, 11)) % count($talentPrefixes)];
+        $core = $talentCore[($i + universeRand($seed, 0, 9)) % count($talentCore)];
+        $suffix = $talentSuffix[($i + universeRand($seed, 0, 9)) % count($talentSuffix)];
+
+        $talents[] = [
+            'id' => $i,
+            'branch' => $isResearch ? 'Research' : 'Technology',
+            'domain' => $domain,
+            'focus' => $focus,
+            'tier' => $tier,
+            'name' => $prefix . ' ' . $core . ' ' . $suffix,
+            'effect' => ($isResearch ? 'Lab Output +' : 'Tech Throughput +') . universeRand($seed, 2, 12) . '%',
+        ];
+    }
+
+    $ttl = (int)($techView->ttl ?? 0);
+    $asc = (int)($techView->ascend ?? 0);
+    $commandLevel = max(1, 1 + (int)floor(($ttl + ($asc * 25)) / 10));
+    $xpToNext = ($commandLevel * 1200) + ($asc * 500);
+
+    $stats = [
+        'Research Mastery' => 60 + ($commandLevel * 4),
+        'Tech Integration' => 55 + ($commandLevel * 3),
+        'Doctrine Control' => 50 + ($commandLevel * 3),
+        'Fleet Engineering' => 45 + ($commandLevel * 4),
+        'Expedition Theory' => 48 + ($commandLevel * 3),
+    ];
+
+    $subStats = [
+        'Lab Efficiency' => 35 + ((int)($techView->income ?? 0) * 2),
+        'Prototype Speed' => 30 + ((int)($techView->uppl ?? 0) * 2),
+        'Resource Fidelity' => 28 + ((int)($techView->duRes ?? 0)),
+        'Signal Intelligence' => 32 + ((int)($techView->cuEffect ?? 0)),
+        'Containment Stability' => 26 + ((int)($techView->pDef ?? 0)),
+        'Field Logistics' => 34 + (int)floor((int)($personnel->uuCount ?? 0) / 10000),
+    ];
+
+    return [
+        'counts' => [
+            'classes' => count($classes),
+            'subclasses' => count($classes),
+            'types' => count($typePool),
+            'subtypes' => count($subTypePool),
+            'talents' => count($talents),
+        ],
+        'level' => [
+            'commandLevel' => $commandLevel,
+            'researchLevel' => max(1, 1 + (int)floor($ttl / 8)),
+            'technologyLevel' => max(1, 1 + (int)floor(($ttl + $asc) / 9)),
+            'ascension' => $asc,
+            'xpToNext' => $xpToNext,
+        ],
+        'stats' => $stats,
+        'subStats' => $subStats,
+        'researchTree' => $researchTree,
+        'techTree' => $techTree,
+        'classes' => $classes,
+        'talents' => $talents,
+        'types' => $typePool,
+        'subTypes' => $subTypePool,
+    ];
+}
+
+function resourceEnsureAndTick(Game $s, int $uid, $baseData, array $planets, $techView): array {
+    $s->query("CREATE TABLE IF NOT EXISTS player_resources (
+        uid INT NOT NULL PRIMARY KEY,
+        metal BIGINT NOT NULL DEFAULT 80000,
+        crystal BIGINT NOT NULL DEFAULT 60000,
+        deuterium BIGINT NOT NULL DEFAULT 45000,
+        food BIGINT NOT NULL DEFAULT 55000,
+        water BIGINT NOT NULL DEFAULT 55000,
+        population BIGINT NOT NULL DEFAULT 120000,
+        last_tick_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+
+    $s->query("INSERT IGNORE INTO player_resources (uid) VALUES (" . (int)$uid . ")");
+    $s->query("CREATE TABLE IF NOT EXISTS resource_structures (
+        uid INT NOT NULL PRIMARY KEY,
+        metal_mine INT NOT NULL DEFAULT 1,
+        crystal_lab INT NOT NULL DEFAULT 1,
+        deuterium_refinery INT NOT NULL DEFAULT 1,
+        hydroponics INT NOT NULL DEFAULT 1,
+        water_plant INT NOT NULL DEFAULT 1,
+        habitat_dome INT NOT NULL DEFAULT 1,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+    $s->query("INSERT IGNORE INTO resource_structures (uid) VALUES (" . (int)$uid . ")");
+
+    $strQ = $s->query("SELECT metal_mine,crystal_lab,deuterium_refinery,hydroponics,water_plant,habitat_dome FROM resource_structures WHERE uid=" . (int)$uid . " LIMIT 1");
+    $structures = $strQ ? $strQ->fetch_object() : (object)[
+        'metal_mine' => 1,
+        'crystal_lab' => 1,
+        'deuterium_refinery' => 1,
+        'hydroponics' => 1,
+        'water_plant' => 1,
+        'habitat_dome' => 1,
+    ];
+    $resQ = $s->query("SELECT metal,crystal,deuterium,food,water,population,last_tick_at FROM player_resources WHERE uid=" . (int)$uid . " LIMIT 1");
+    $res = $resQ ? $resQ->fetch_object() : (object)[
+        'metal' => 80000,
+        'crystal' => 60000,
+        'deuterium' => 45000,
+        'food' => 55000,
+        'water' => 55000,
+        'population' => 120000,
+        'last_tick_at' => date('Y-m-d H:i:s'),
+    ];
+
+    $planetCount = max(1, count($planets));
+    $incomeBase = max(220, (int)($baseData->income ?? 220));
+    $upBase = max(10, (int)($baseData->up ?? 10));
+    $techIncome = max(0, (int)($techView->income ?? 0));
+    $techProd = max(0, (int)($techView->unitProd ?? 0));
+
+    $rates = [
+        'metal' => (int)round((($incomeBase * 0.40) + ($planetCount * 180) + ($upBase * 8) + ($techProd * 20)) * (1 + ((int)$structures->metal_mine * 0.12))),
+        'crystal' => (int)round((($incomeBase * 0.28) + ($planetCount * 140) + ($upBase * 5) + ($techIncome * 16)) * (1 + ((int)$structures->crystal_lab * 0.12))),
+        'deuterium' => (int)round((($incomeBase * 0.18) + ($planetCount * 120) + ($upBase * 3) + ($techIncome * 12)) * (1 + ((int)$structures->deuterium_refinery * 0.12))),
+        'food' => (int)round((($incomeBase * 0.14) + ($planetCount * 220) + ($techIncome * 9)) * (1 + ((int)$structures->hydroponics * 0.10))),
+        'water' => (int)round((($incomeBase * 0.12) + ($planetCount * 240) + ($techIncome * 8)) * (1 + ((int)$structures->water_plant * 0.10))),
+        'population' => max(25, (int)round((($planetCount * 30) + ($upBase * 0.35)) * (1 + ((int)$structures->habitat_dome * 0.08)))),
+    ];
+
+    $lastTickTs = strtotime((string)$res->last_tick_at);
+    if ($lastTickTs === false) {
+        $lastTickTs = time();
+    }
+    $nowTs = time();
+    $tickSeconds = 1800;
+    $ticks = (int)floor(max(0, $nowTs - $lastTickTs) / $tickSeconds);
+
+    if ($ticks > 0) {
+        $metal = max(0, (int)$res->metal + ($rates['metal'] * $ticks));
+        $crystal = max(0, (int)$res->crystal + ($rates['crystal'] * $ticks));
+        $deuterium = max(0, (int)$res->deuterium + ($rates['deuterium'] * $ticks));
+        $food = max(0, (int)$res->food + ($rates['food'] * $ticks));
+        $water = max(0, (int)$res->water + ($rates['water'] * $ticks));
+        $population = max(0, (int)$res->population + ($rates['population'] * $ticks));
+
+        $foodUse = (int)round($population * 0.008 * $ticks);
+        $waterUse = (int)round($population * 0.007 * $ticks);
+
+        $food = max(0, $food - $foodUse);
+        $water = max(0, $water - $waterUse);
+
+        if ($food === 0 || $water === 0) {
+            $popDrop = (int)round($population * 0.02);
+            $population = max(0, $population - max(150, $popDrop));
+        }
+
+        $s->query("UPDATE player_resources SET
+            metal=" . (int)$metal . ",
+            crystal=" . (int)$crystal . ",
+            deuterium=" . (int)$deuterium . ",
+            food=" . (int)$food . ",
+            water=" . (int)$water . ",
+            population=" . (int)$population . ",
+            last_tick_at=NOW()
+            WHERE uid=" . (int)$uid . " LIMIT 1");
+
+        $res = (object)[
+            'metal' => $metal,
+            'crystal' => $crystal,
+            'deuterium' => $deuterium,
+            'food' => $food,
+            'water' => $water,
+            'population' => $population,
+        ];
+    }
+
+    return [
+        'current' => [
+            'metal' => (int)($res->metal ?? 0),
+            'crystal' => (int)($res->crystal ?? 0),
+            'deuterium' => (int)($res->deuterium ?? 0),
+            'food' => (int)($res->food ?? 0),
+            'water' => (int)($res->water ?? 0),
+            'population' => (int)($res->population ?? 0),
+        ],
+        'rates' => $rates,
+        'structures' => [
+            'metal_mine' => (int)$structures->metal_mine,
+            'crystal_lab' => (int)$structures->crystal_lab,
+            'deuterium_refinery' => (int)$structures->deuterium_refinery,
+            'hydroponics' => (int)$structures->hydroponics,
+            'water_plant' => (int)$structures->water_plant,
+            'habitat_dome' => (int)$structures->habitat_dome,
+        ],
+        'ticksApplied' => $ticks,
+    ];
+}
+
+function renderTreeBoard(array $branches, int $level, string $boardId, string $nodePrefix): void {
+    echo '<div class="wows-tree" id="' . h($boardId) . '">';
+    echo '<div class="wows-tier-head">';
+    echo '<span>Domain</span>';
+    for ($tier = 1; $tier <= 6; $tier++) {
+        echo '<span>T' . $tier . '</span>';
+    }
+    echo '</div>';
+
+    foreach ($branches as $branch) {
+        echo '<div class="wows-tree-row">';
+        echo '<div class="wows-domain">' . h($branch['domain']) . '</div>';
+        echo '<div class="wows-node-lane">';
+
+        foreach ($branch['nodes'] as $idx => $node) {
+            $tier = $idx + 1;
+            $state = 'locked';
+            if ($level > $tier) {
+                $state = 'unlocked';
+            } elseif ($level === $tier) {
+                $state = 'available';
+            }
+
+            echo '<div class="wows-node ' . h($state) . '">';
+            echo '<div class="wows-node-title">' . h($nodePrefix . ' ' . $tier) . '</div>';
+            echo '<div class="wows-node-name">' . h($node['name']) . '</div>';
+            echo '<div class="wows-node-meta">' . h($node['focus']) . '</div>';
+            echo '<div class="wows-node-meta">Cost ' . fnum($node['cost']) . ' | Power ' . fnum($node['power']) . '</div>';
+            echo '</div>';
+        }
+
+        echo '</div>';
+        echo '</div>';
+    }
+
+    echo '</div>';
+}
+
 function renderInfoBlock(array $detail): void {
     echo '<div class="card full"><h4>Operational Brief</h4><p>' . h($detail['brief']) . '</p></div>';
 
@@ -44,7 +469,7 @@ function renderInfoBlock(array $detail): void {
 function renderMechanicsMatrix(string $main, string $sub): void {
     $core = [
         'Turn cycle runs every 30 minutes and updates key production resources.',
-        'Primary strategic resources are Naquadah, action turns, covert turns, and untrained units.',
+        'Primary strategic resources are Metal, Crystal, Deuterium, Food, Water, Population, plus Naquadah and turn currencies.',
         'Untrained units are generated by unit production and converted into military roles through training.',
     ];
 
@@ -110,6 +535,26 @@ function renderMechanicsMatrix(string $main, string $sub): void {
             'Covert sabotage doctrine often accepts lower losses on success and higher losses on failure.',
             'Mothership progression includes high-cost entry, bay expansion, and weapon specialization.',
             'Effective macro play balances production growth, intel quality, and turn efficiency.',
+        ],
+        'universe:galaxies' => [
+            'Universe is divided into galaxy clusters, sectors, and orbital slots for expansion routing.',
+            'Each world has a biome profile, habitability score, and distinct resource distribution.',
+            'OGame-style growth favors staggered colonies across multiple galaxy lanes to reduce bottlenecks.',
+        ],
+        'universe:planets' => [
+            'Moon presence improves surveillance coverage and tactical deployment windows.',
+            'Planet biomes influence long-run mining bias and defensive architecture planning.',
+            'Colonization slots should be prioritized for high-habitability worlds with stable debris income nearby.',
+        ],
+        'universe:objects' => [
+            'Debris fields support recycler-style recovery loops for metal and crystal reconstruction.',
+            'Nebula and wormhole zones increase expedition variance and scouting risk.',
+            'Ancient ruins provide high-variance anomaly opportunities for advanced empires.',
+        ],
+        'universe:expedition' => [
+            'Expeditions are fleet-timed probes with outcome variance tied to mission scale and support posture.',
+            'Colonization cadence should match economy reserve and defensive readiness.',
+            'Rapid multi-wave expansion increases reach but can weaken local defense if staged too aggressively.',
         ],
     ];
 
@@ -260,6 +705,34 @@ function renderFeatureWorkbenches(string $main, string $sub, $baseData, $personn
         echo '</div>';
     }
 
+    if (($main === 'universe' && $sub === 'objects') || ($main === 'universe' && $sub === 'expedition')) {
+        echo '<div class="card full">';
+        echo '<h4>Debris Recovery Estimator</h4>';
+        echo '<div class="calc-grid">';
+        echo '<label>Debris Metal<input id="debrisMetal" type="number" min="0" value="450000"></label>';
+        echo '<label>Debris Crystal<input id="debrisCrystal" type="number" min="0" value="320000"></label>';
+        echo '<label>Recycler Capacity per Ship<input id="recyclerCap" type="number" min="1" value="20000"></label>';
+        echo '<label>Travel Time (minutes)<input id="recyclerTime" type="number" min="1" value="18"></label>';
+        echo '</div>';
+        echo '<button class="calc-btn" type="button" onclick="(function(){var m=Math.max(0,parseFloat(document.getElementById(\'debrisMetal\').value)||0);var c=Math.max(0,parseFloat(document.getElementById(\'debrisCrystal\').value)||0);var cap=Math.max(1,parseFloat(document.getElementById(\'recyclerCap\').value)||1);var t=Math.max(1,parseFloat(document.getElementById(\'recyclerTime\').value)||1);var total=m+c;var rec=Math.ceil(total/cap);var hourly=Math.round((60/t)*total);document.getElementById(\'debrisOut\').innerHTML=\'Total Debris: \'+Math.round(total).toLocaleString()+\' | Recyclers Needed: \'+rec.toLocaleString()+\'<br>Recovery Throughput/Hour: \'+hourly.toLocaleString()+\' resources\';})();">Estimate Recovery</button>';
+        echo '<div id="debrisOut" class="calc-output">Compute recycler fleet size before dispatching recovery waves.</div>';
+        echo '</div>';
+    }
+
+    if ($main === 'universe' && $sub === 'expedition') {
+        echo '<div class="card full">';
+        echo '<h4>Expedition Outcome Simulator</h4>';
+        echo '<div class="calc-grid">';
+        echo '<label>Fleet Value<input id="expFleetValue" type="number" min="1" value="650000"></label>';
+        echo '<label>Escort Strength<input id="expEscort" type="number" min="0" value="120000"></label>';
+        echo '<label>Astro Tech Level<input id="expAstro" type="number" min="0" value="6"></label>';
+        echo '<label>Missions Today<input id="expMissions" type="number" min="0" max="20" value="3"></label>';
+        echo '</div>';
+        echo '<button class="calc-btn" type="button" onclick="(function(){var fv=Math.max(1,parseFloat(document.getElementById(\'expFleetValue\').value)||1);var es=Math.max(0,parseFloat(document.getElementById(\'expEscort\').value)||0);var astro=Math.max(0,parseFloat(document.getElementById(\'expAstro\').value)||0);var missions=Math.max(0,Math.min(20,parseFloat(document.getElementById(\'expMissions\').value)||0));var safeChance=Math.max(10,Math.min(96,58+(astro*2)+(es/Math.max(fv,1))*20-(missions*1.5)));var haul=Math.round((fv*0.05)+(astro*12000));var risk=Math.max(4,Math.min(80,35-(astro*1.4)+(missions*2)));document.getElementById(\'expOut\').innerHTML=\'Safe Return Chance: \'+safeChance.toFixed(1)+\'%<br>Estimated Resource Haul: \'+haul.toLocaleString()+\'<br>Incident Risk Index: \'+risk.toFixed(1)+\'%\';})();">Simulate Expedition</button>';
+        echo '<div id="expOut" class="calc-output">Use this to pace daily expedition waves and avoid over-commitment.</div>';
+        echo '</div>';
+    }
+
     if ($main === 'help' && $sub === 'glossary') {
         echo '<div class="card full">';
         echo '<h4>Command Abbreviations Table</h4>';
@@ -304,6 +777,8 @@ $mainTitles = [
     'intel' => 'Intelligence Bureau',
     'community' => 'Community & Updates',
     'help' => 'Guides & Help Desk',
+    'universe' => 'Universe Observatory',
+    'research' => 'Research Directorate',
 ];
 
 $subDefaults = [
@@ -315,17 +790,21 @@ $subDefaults = [
     'intel' => 'rankings',
     'community' => 'forums',
     'help' => 'newplayer',
+    'universe' => 'galaxies',
+    'research' => 'tree',
 ];
 
 $subLabels = [
     'empire' => ['overview' => 'Overview', 'planets' => 'Planets', 'command' => 'Command', 'progress' => 'Progression'],
     'military' => ['personnel' => 'Personnel', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet'],
     'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs'],
-    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production'],
+    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub'],
     'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain'],
     'intel' => ['rankings' => 'Rankings', 'reports' => 'Battle Reports', 'threats' => 'Threat Matrix', 'map' => 'Sector Map'],
     'community' => ['forums' => 'Forums', 'updates' => 'Updates', 'contact' => 'Contact', 'faq' => 'FAQ'],
     'help' => ['newplayer' => 'New Player', 'mechanics' => 'Mechanics', 'glossary' => 'Glossary', 'support' => 'Support'],
+    'universe' => ['galaxies' => 'Galaxies', 'planets' => 'Planets & Moons', 'objects' => 'Interstellar Objects', 'expedition' => 'Expedition', 'bases' => 'Stations & Bases'],
+    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'classes' => 'Class Library', 'talents' => 'Talent Library'],
 ];
 
 $systemDetails = [
@@ -432,6 +911,12 @@ $systemDetails = [
             'features' => ['Doctrine checklist', 'Scale-up guidance', 'Force-economy balance prompts'],
             'logic' => ['UP directly affects unit generation', 'Over-militarization can stall growth', 'Defensive coverage preserves production gains'],
         ],
+        'resources' => [
+            'brief' => 'OGame-style resource economy command for mining, sustainment, and population growth.',
+            'functions' => ['Track 5 strategic resources', 'Upgrade production structures', 'Trade resources for tactical needs'],
+            'features' => ['Resource stockpile view', 'Production rates by line', 'Structure level overview and controls'],
+            'logic' => ['Resources tick on 30-minute cadence', 'Structure levels amplify resource rates', 'Food and water shortages reduce population'],
+        ],
     ],
     'diplomacy' => [
         'alliance' => [
@@ -537,6 +1022,64 @@ $systemDetails = [
             'logic' => ['Detailed reports are resolved faster', 'Including players and timestamps improves verification', 'Channel discipline prevents lost requests'],
         ],
     ],
+    'universe' => [
+        'galaxies' => [
+            'brief' => 'Strategic map of galaxy clusters, sector lanes, and expansion pressure points.',
+            'functions' => ['Survey galaxy clusters', 'Track moon and habitability density', 'Support macro colonization pathing'],
+            'features' => ['Cluster summary grid', 'Per-galaxy readiness indicators', 'Expansion lane overview'],
+            'logic' => ['Galaxy spread reduces campaign congestion', 'High moon density improves tactical flexibility', 'Balanced lane usage improves long-term resilience'],
+        ],
+        'planets' => [
+            'brief' => 'Planetary registry with moon classes, biomes, and resource signatures.',
+            'functions' => ['Inspect worlds and moons', 'Prioritize colonization targets', 'Link biome profile to economy strategy'],
+            'features' => ['Planet/moon table', 'Biome visibility', 'Resource profile summaries'],
+            'logic' => ['Habitability influences colony slot efficiency', 'Biome composition shapes mining and defense roles', 'Moon count helps expedition staging and surveillance'],
+        ],
+        'objects' => [
+            'brief' => 'Interstellar object scanner for debris, nebula, asteroid, and anomaly logistics.',
+            'functions' => ['Review object density', 'Plan recycler and scout loops', 'Estimate anomaly opportunities'],
+            'features' => ['Object matrix by galaxy', 'Debris recovery tools', 'Route planning context'],
+            'logic' => ['Debris-heavy zones raise recovery value', 'Nebulae increase uncertainty in movement timing', 'Wormhole lanes can alter strike projection windows'],
+        ],
+        'expedition' => [
+            'brief' => 'OGame-style expedition and colonization planner with mission control actions.',
+            'functions' => ['Stage expeditions', 'Run attack/spy/raid target dispatch', 'Balance colony growth versus military readiness'],
+            'features' => ['Mission matrix', 'Target dispatch controls', 'Expansion doctrine checklist'],
+            'logic' => ['Expedition risk scales with mission cadence', 'Colonization should preserve reserve economy', 'Multi-front dispatch requires covert and combat redundancy'],
+        ],
+        'bases' => [
+            'brief' => 'Orbital infrastructure command for Space Stations, Starbases, and Moon Bases.',
+            'functions' => ['Upgrade orbital installations', 'Increase fleet staging capacity', 'Improve expedition safety and scanning'],
+            'features' => ['Persistent base levels', 'Resource-based upgrade controls', 'Integration with fleet and expedition modules'],
+            'logic' => ['Space Stations unlock deep-space logistics', 'Starbases require station maturity and improve defense projection', 'Moon Bases require Starbases and boost scan/survival multipliers'],
+        ],
+    ],
+    'research' => [
+        'tree' => [
+            'brief' => 'Master research tree with domain-tier progression, level systems, and core stat scaffolding.',
+            'functions' => ['Browse research domains and tiers', 'Track level systems and XP to next tier', 'Review top-level stat and sub-stat baselines'],
+            'features' => ['10-domain tree matrix', 'Level progression panel', 'Stats and sub-stats board'],
+            'logic' => ['Research level scales with cumulative tech progression', 'Tier costs increase per domain stage', 'Sub-stats influence specialized outcomes'],
+        ],
+        'techlib' => [
+            'brief' => 'Technology tree library focused on implementation branches and throughput disciplines.',
+            'functions' => ['Browse technology domain ladders', 'Compare tech tier costs and power', 'Route upgrades to military or economy goals'],
+            'features' => ['Per-domain technology nodes', 'Power and cost summaries', 'Cross-link to existing tech module'],
+            'logic' => ['Technology throughput compounds with level systems', 'Branch selection changes empire specialization', 'Balanced sequencing reduces bottlenecks'],
+        ],
+        'classes' => [
+            'brief' => 'Expanded doctrine class library with 90 classes and mapped subclasses, types, and sub-types.',
+            'functions' => ['Inspect class doctrine models', 'Audit type and subtype coverage', 'Map classes to mission roles'],
+            'features' => ['90 class rows', 'Subclass pairings', 'Type and subtype categorization'],
+            'logic' => ['Class doctrine defines build intent', 'Subtype detail refines tactical usage', 'Coverage supports flexible campaign design'],
+        ],
+        'talents' => [
+            'brief' => 'Talent library containing 240 unique entries split across research and technology branches.',
+            'functions' => ['Browse research talents', 'Browse technology talents', 'Review tier and effect progression'],
+            'features' => ['240 talent index', 'Branch and tier filtering table', 'Effect strings for planning'],
+            'logic' => ['Talent tiers scale in progression bands', 'Branch choice impacts growth profile', 'Effects stack with tech and level systems'],
+        ],
+    ],
 ];
 
 if (!isset($mainTitles[$main])) {
@@ -554,6 +1097,10 @@ $personnel = $s->getPersonnel($uid);
 $bank = $s->bank();
 $userStats = $s->getUserInfo($uid);
 $planets = $s->getUserPlanets($uid);
+$universe = buildUniverseSnapshot($uid, $planets);
+$techView = $s->viewTech();
+$researchHub = buildResearchDirectorate($uid, $techView, $personnel);
+$resourceHub = resourceEnsureAndTick($s, $uid, $baseData, $planets, $techView);
 
 $title = $mainTitles[$main];
 $subTitle = $subLabels[$main][$sub];
@@ -585,6 +1132,16 @@ if ($main === 'empire' && $sub === 'overview') {
     echo '<p><a href="javascript:void(0)" onclick="sendData(\'technology\',\'get\',\'mainDisplay\'); return false">Open Technology</a></p>';
     echo '<p><a href="javascript:void(0)" onclick="sendData(\'progress\',\'get\',\'mainDisplay\'); return false">Open Progress</a></p>';
     echo '</div>';
+
+    echo '<div class="card full"><h4>Five-Resource Command Stockpile</h4>';
+    echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Resource</th><th align="left">Current</th><th align="left">Production / Turn</th></tr>';
+    echo '<tr><td>Metal</td><td>' . fnum($resourceHub['current']['metal']) . '</td><td>' . fnum($resourceHub['rates']['metal']) . '</td></tr>';
+    echo '<tr><td>Crystal</td><td>' . fnum($resourceHub['current']['crystal']) . '</td><td>' . fnum($resourceHub['rates']['crystal']) . '</td></tr>';
+    echo '<tr><td>Deuterium</td><td>' . fnum($resourceHub['current']['deuterium']) . '</td><td>' . fnum($resourceHub['rates']['deuterium']) . '</td></tr>';
+    echo '<tr><td>Food</td><td>' . fnum($resourceHub['current']['food']) . '</td><td>' . fnum($resourceHub['rates']['food']) . '</td></tr>';
+    echo '<tr><td>Water</td><td>' . fnum($resourceHub['current']['water']) . '</td><td>' . fnum($resourceHub['rates']['water']) . '</td></tr>';
+    echo '<tr><td>Population</td><td>' . fnum($resourceHub['current']['population']) . '</td><td>' . fnum($resourceHub['rates']['population']) . '</td></tr>';
+    echo '</table></div>';
 }
 
 if ($main === 'empire' && $sub === 'planets') {
@@ -643,7 +1200,9 @@ if ($main === 'military') {
         echo '<div class="card"><h4>Demobilization</h4><p>Reverse assignments when strategy shifts.</p><p><a href="javascript:void(0)" onclick="sendData(\'untrain\',\'get\',\'mainDisplay\'); return false">Open Untrain</a></p></div>';
     }
     if ($sub === 'fleet') {
-        echo '<div class="card"><h4>Fleet Operations</h4><p>Deploy, reposition, and monitor fleet readiness.</p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p></div>';
+        echo '<div class="card"><h4>Fleet Operations</h4><p>Deploy, reposition, and monitor fleet readiness.</p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'objects\'); return false">Scan Debris Fields</a></p></div>';
+        echo '<div class="card"><h4>Shipyard and Mothership Controls</h4><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_shipyard\'); return false">Upgrade Shipyard</a></p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_bay\'); return false">Upgrade Mothership Bay</a></p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Starship Build Console</a></p><p><a href="javascript:void(0)" onclick="sendData(\'megaforge\',\'get\',\'mainDisplay\'); return false">Open 90-Class Mega Forge</a></p></div>';
+        echo '<div class="card"><h4>Orbital Installations</h4><p>Expand stations and bases to improve fleet staging and defensive projection.</p><p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Open Stations Command</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'bases\'); return false">Open Universe Base Matrix</a></p></div>';
     }
 }
 
@@ -669,6 +1228,11 @@ if ($main === 'economy') {
         echo '<p><strong>In Bank:</strong> ' . fnum($bank->inBank ?? 0) . '</p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'bank\',\'get\',\'mainDisplay\'); return false">Open Bank Module</a></p>';
         echo '</div>';
+
+        echo '<div class="card full"><h4>Resource Vaults</h4>';
+        echo '<p><strong>Metal:</strong> ' . fnum($resourceHub['current']['metal']) . ' | <strong>Crystal:</strong> ' . fnum($resourceHub['current']['crystal']) . ' | <strong>Deuterium:</strong> ' . fnum($resourceHub['current']['deuterium']) . '</p>';
+        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
+        echo '</div>';
     }
     if ($sub === 'market') {
         echo '<div class="card"><h4>Market Trade</h4><p>Buy and sell resources to tune your economy.</p><p><a href="javascript:void(0)" onclick="sendData(\'market\',\'get\',\'mainDisplay\'); return false">Open Market</a></p></div>';
@@ -678,6 +1242,38 @@ if ($main === 'economy') {
     }
     if ($sub === 'production') {
         echo '<div class="card"><h4>Production Planning</h4><p>Focus on unit production and mining throughput to scale your empire.</p><ul><li>Upgrade UP first for faster growth</li><li>Balance miners vs combat readiness</li><li>Protect income assets with defense</li></ul></div>';
+        echo '<div class="card"><h4>Resource Command</h4><p><a href="javascript:void(0)" onclick="sendData(\'resourcehq\',\'get\',\'mainDisplay\'); return false">Open Resource HQ</a></p></div>';
+
+        echo '<div class="card full"><h4>OGame-Style Resource Output Grid</h4>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Line</th><th align="left">Per Turn</th><th align="left">Notes</th></tr>';
+        echo '<tr><td>Metal Mines</td><td>' . fnum($resourceHub['rates']['metal']) . '</td><td>Primary build material for warships and infrastructure.</td></tr>';
+        echo '<tr><td>Crystal Plants</td><td>' . fnum($resourceHub['rates']['crystal']) . '</td><td>Advanced systems and tech fabrication material.</td></tr>';
+        echo '<tr><td>Deuterium Synthesizers</td><td>' . fnum($resourceHub['rates']['deuterium']) . '</td><td>Fuel and high-tier fleet operations resource.</td></tr>';
+        echo '<tr><td>Hydroponics (Food)</td><td>' . fnum($resourceHub['rates']['food']) . '</td><td>Population upkeep and colony stability.</td></tr>';
+        echo '<tr><td>Atmospheric Condensers (Water)</td><td>' . fnum($resourceHub['rates']['water']) . '</td><td>Life support and growth multiplier.</td></tr>';
+        echo '<tr><td>Population Growth</td><td>' . fnum($resourceHub['rates']['population']) . '</td><td>Workforce growth with food/water dependence.</td></tr>';
+        echo '</table></div>';
+    }
+
+    if ($sub === 'resources') {
+        echo '<div class="card"><h4>Resource Headquarters</h4>';
+        echo '<p>Manage OGame-style resource mining, food and water sustainment, and population growth.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'resourcehq\',\'get\',\'mainDisplay\'); return false">Open Resource HQ Module</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Current Structure Levels</h4>';
+        echo '<p><strong>Metal Mine:</strong> ' . fnum($resourceHub['structures']['metal_mine']) . '</p>';
+        echo '<p><strong>Crystal Lab:</strong> ' . fnum($resourceHub['structures']['crystal_lab']) . '</p>';
+        echo '<p><strong>Deuterium Refinery:</strong> ' . fnum($resourceHub['structures']['deuterium_refinery']) . '</p>';
+        echo '<p><strong>Hydroponics:</strong> ' . fnum($resourceHub['structures']['hydroponics']) . '</p>';
+        echo '<p><strong>Water Plant:</strong> ' . fnum($resourceHub['structures']['water_plant']) . '</p>';
+        echo '<p><strong>Habitat Dome:</strong> ' . fnum($resourceHub['structures']['habitat_dome']) . '</p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Resource Status</h4>';
+        echo '<p><strong>Metal:</strong> ' . fnum($resourceHub['current']['metal']) . ' | <strong>Crystal:</strong> ' . fnum($resourceHub['current']['crystal']) . ' | <strong>Deuterium:</strong> ' . fnum($resourceHub['current']['deuterium']) . '</p>';
+        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
+        echo '</div>';
     }
 }
 
@@ -708,6 +1304,231 @@ if ($main === 'intel') {
     }
     if ($sub === 'map') {
         echo '<div class="card"><h4>Sector Map</h4><p>Use race, rank, and alliance data from profile scans to map influence zones.</p></div>';
+    }
+}
+
+if ($main === 'universe') {
+    if ($sub === 'galaxies') {
+        echo '<div class="card"><h4>Universe Control Seed</h4>';
+        echo '<p><strong>Seed:</strong> U-' . h($universe['seed']) . '</p>';
+        echo '<p><strong>Galaxy Clusters:</strong> ' . fnum($universe['summary']['totalGalaxies']) . '</p>';
+        echo '<p><strong>Total Worlds:</strong> ' . fnum($universe['summary']['totalWorlds']) . '</p>';
+        echo '<p><strong>Colonizable Worlds:</strong> ' . fnum($universe['summary']['colonizableWorlds']) . '</p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Expansion Command</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'planets\'); return false">Open Planet Registry</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'objects\'); return false">Scan Interstellar Objects</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'expedition\'); return false">Open Expedition Control</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Galaxy Cluster Matrix</h4>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Galaxy</th><th align="left">Sectors</th><th align="left">Worlds</th><th align="left">Avg Habitability</th><th align="left">Moon Count</th></tr>';
+        foreach ($universe['galaxies'] as $gal) {
+            echo '<tr><td>' . h($gal['name']) . '</td><td>' . fnum($gal['sectors']) . '</td><td>' . fnum($gal['worlds']) . '</td><td>' . fnum($gal['avgHab']) . '%</td><td>' . fnum($gal['moons']) . '</td></tr>';
+        }
+        echo '</table></div>';
+    }
+
+    if ($sub === 'planets') {
+        echo '<div class="card"><h4>Colony Totals</h4>';
+        echo '<p><strong>Owned Colonies:</strong> ' . fnum($universe['summary']['ownedColonies']) . '</p>';
+        echo '<p><strong>Total Moons:</strong> ' . fnum($universe['summary']['totalMoons']) . '</p>';
+        echo '<p><strong>Available Colonization Targets:</strong> ' . fnum($universe['summary']['colonizableWorlds']) . '</p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Planetary Actions</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'planets\'); return false">Open Empire Planet Module</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'technology\',\'get\',\'mainDisplay\'); return false">Open Technology Upgrades</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Colony Sustainment</h4>';
+        echo '<p><strong>Food Reserves:</strong> ' . fnum($resourceHub['current']['food']) . '</p>';
+        echo '<p><strong>Water Reserves:</strong> ' . fnum($resourceHub['current']['water']) . '</p>';
+        echo '<p><strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Planet, Moon, and Biome Registry</h4>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Resource Signature</th><th align="left">Status</th></tr>';
+        foreach (array_slice($universe['worlds'], 0, 48) as $w) {
+            $resSig = 'M' . fnum($w['metal']) . ' / C' . fnum($w['crystal']) . ' / D' . fnum($w['deut']);
+            $moonSig = ($w['moons'] > 0) ? (fnum($w['moons']) . ' (' . h($w['moonClass']) . ')') : '0';
+            echo '<tr><td>' . h($w['coord']) . '</td><td>' . h($w['name']) . '</td><td>' . h($w['type']) . '</td><td>' . h($w['biome']) . '</td><td>' . fnum($w['habitability']) . '%</td><td>' . $moonSig . '</td><td>' . $resSig . '</td><td>' . h($w['owner']) . '</td></tr>';
+        }
+        echo '</table></div>';
+    }
+
+    if ($sub === 'objects') {
+        echo '<div class="card"><h4>Interstellar Recovery</h4>';
+        echo '<p>Use debris and asteroid routes to power recycler loops and rebuild tempo.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'market\',\'get\',\'mainDisplay\'); return false">Open Market Logistics</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'bank\',\'get\',\'mainDisplay\'); return false">Open Treasury Routing</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Scout Loop</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'spy\',\'get\',\'mainDisplay\'); return false">Open Spy Module</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'rank\',\'get\',\'mainDisplay\'); return false">Open Regional Rankings</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Interstellar Object Density Matrix</h4>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Galaxy</th><th align="left">Asteroid Belts</th><th align="left">Debris Fields</th><th align="left">Nebulae</th><th align="left">Comet Streams</th><th align="left">Wormholes</th><th align="left">Ancient Ruins</th></tr>';
+        foreach ($universe['objects'] as $obj) {
+            echo '<tr><td>' . h($obj['galaxy']) . '</td><td>' . fnum($obj['asteroidBelts']) . '</td><td>' . fnum($obj['debrisFields']) . '</td><td>' . fnum($obj['nebulae']) . '</td><td>' . fnum($obj['cometStreams']) . '</td><td>' . fnum($obj['wormholes']) . '</td><td>' . fnum($obj['ancientRuins']) . '</td></tr>';
+        }
+        echo '</table></div>';
+    }
+
+    if ($sub === 'expedition') {
+        echo '<div class="card"><h4>Mission Dispatch</h4>';
+        echo '<p>Target UID dispatch:</p>';
+        echo '<p><input id="uniTargetUid" type="number" min="1" value="1" style="width:110px"> ';
+        echo '<a href="javascript:void(0)" onclick="var t=parseInt(document.getElementById(\'uniTargetUid\').value,10)||0;if(t>0){sendData(\'action\',\'get\',t,\'spy\');} return false">Spy</a> | ';
+        echo '<a href="javascript:void(0)" onclick="var t=parseInt(document.getElementById(\'uniTargetUid\').value,10)||0;if(t>0){sendData(\'action\',\'get\',t,\'raid\');} return false">Raid</a> | ';
+        echo '<a href="javascript:void(0)" onclick="var t=parseInt(document.getElementById(\'uniTargetUid\').value,10)||0;if(t>0){sendData(\'action\',\'get\',t,\'attack\');} return false">Attack</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Expansion Workflows</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Fleet Dock</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Orbital Stations Command</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_shipyard\'); return false">Upgrade Shipyard</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'upgrade_bay\'); return false">Upgrade Mothership Bay</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'planets\'); return false">Candidate Worlds</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'technology\',\'get\',\'mainDisplay\'); return false">Astro/Tech Upgrades</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Expedition and Colonization Doctrine</h4>';
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">Mission</th><th align="left">Purpose</th><th align="left">Typical Cost</th><th align="left">Risk Tier</th></tr>';
+        echo '<tr><td>Deep Expedition</td><td>Find debris, anomalies, and bonus resources</td><td>Fleet + covert turns</td><td>Medium</td></tr>';
+        echo '<tr><td>Colonization Wave</td><td>Claim high-habitability worlds with moon potential</td><td>Fleet + economy reserve</td><td>Medium-High</td></tr>';
+        echo '<tr><td>Debris Recovery</td><td>Recycle post-combat fields into growth capital</td><td>Recycler allocation + travel time</td><td>Low</td></tr>';
+        echo '<tr><td>Rapid Strike Route</td><td>Use wormhole lanes for pressure projection</td><td>Attack turns + logistics</td><td>High</td></tr>';
+        echo '</table></div>';
+    }
+
+    if ($sub === 'bases') {
+        echo '<div class="card"><h4>Stations and Bases Command</h4>';
+        echo '<p>Build Space Stations, Starbases, and Moon Bases to anchor fleet operations and improve expedition consistency.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Open Orbital Base Command</a></p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Integration Paths</h4>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'fleet\'); return false">Military Fleet Directorate</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Fleet Dock and Missions</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'expedition\'); return false">Expedition Planner</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Orbital Infrastructure Doctrine</h4>';
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">Installation</th><th align="left">Primary Role</th><th align="left">Synergy</th><th align="left">Suggested Timing</th></tr>';
+        echo '<tr><td>Space Station</td><td>Orbital logistics, ship throughput, and fleet support</td><td>Shipyard and Mega Forge output cycles</td><td>Early-mid expansion</td></tr>';
+        echo '<tr><td>Starbase</td><td>Defensive projection and warfront staging</td><td>Fleet Dock mission readiness and deterrence</td><td>Mid-game before sustained wars</td></tr>';
+        echo '<tr><td>Moon Base</td><td>Surveillance, scan depth, and expedition resilience</td><td>Universe expedition routes and object recovery</td><td>After first stable offensive wing</td></tr>';
+        echo '</table></div>';
+    }
+}
+
+if ($main === 'research') {
+    if ($sub === 'tree') {
+        echo '<div class="card full wows-brief">';
+        echo '<h4>Research Fleet Tree</h4>';
+        echo '<p>Progress each domain left-to-right through six tiers. Nodes marked <strong>available</strong> are current unlock candidates based on your level state.</p>';
+        echo '<div class="wows-pill-row">';
+        echo '<span class="wows-pill">Command Lv ' . fnum($researchHub['level']['commandLevel']) . '</span>';
+        echo '<span class="wows-pill">Research Lv ' . fnum($researchHub['level']['researchLevel']) . '</span>';
+        echo '<span class="wows-pill">Ascension ' . fnum($researchHub['level']['ascension']) . '</span>';
+        echo '<span class="wows-pill">XP To Next ' . fnum($researchHub['level']['xpToNext']) . '</span>';
+        echo '</div>';
+        echo '</div>';
+
+        echo '<div class="card full">';
+        echo '<h4>Research Tree Matrix</h4>';
+        renderTreeBoard($researchHub['researchTree'], (int)$researchHub['level']['researchLevel'], 'researchTreeBoard', 'R-Tier');
+        echo '</div>';
+
+        echo '<div class="card"><h4>Primary Stats</h4><ul>';
+        foreach ($researchHub['stats'] as $statName => $statVal) {
+            echo '<li>' . h($statName) . ': ' . fnum($statVal) . '</li>';
+        }
+        echo '</ul></div>';
+
+        echo '<div class="card"><h4>Sub Stats</h4><ul>';
+        foreach ($researchHub['subStats'] as $statName => $statVal) {
+            echo '<li>' . h($statName) . ': ' . fnum($statVal) . '</li>';
+        }
+        echo '</ul></div>';
+
+        echo '<div class="card full"><h4>Research Resource Requirements</h4>';
+        echo '<p>Advanced research phases consume strategic resources from the 5-resource economy.</p>';
+        echo '<p><strong>Metal:</strong> ' . fnum($resourceHub['current']['metal']) . ' | <strong>Crystal:</strong> ' . fnum($resourceHub['current']['crystal']) . ' | <strong>Deuterium:</strong> ' . fnum($resourceHub['current']['deuterium']) . '</p>';
+        echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . '</p>';
+        echo '</div>';
+    }
+
+    if ($sub === 'techlib') {
+        echo '<div class="card full wows-brief"><h4>Technology Fleet Tree</h4>';
+        echo '<p>Technology progression follows branch lanes similar to naval class lines, where each tier unlocks deeper specialization and output power.</p>';
+        echo '<div class="wows-pill-row">';
+        echo '<span class="wows-pill">Technology Lv ' . fnum($researchHub['level']['technologyLevel']) . '</span>';
+        echo '<span class="wows-pill">Class Entries ' . fnum($researchHub['counts']['classes']) . '</span>';
+        echo '<span class="wows-pill">Talent Pool ' . fnum($researchHub['counts']['talents']) . '</span>';
+        echo '</div>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'technology\',\'get\',\'mainDisplay\'); return false">Open Legacy Technology Module</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Technology Tree Matrix</h4>';
+        renderTreeBoard($researchHub['techTree'], (int)$researchHub['level']['technologyLevel'], 'technologyTreeBoard', 'T-Tier');
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Type and Sub-Type Index</h4>';
+        echo '<p><strong>Types:</strong> ' . h(implode(', ', $researchHub['types'])) . '</p>';
+        echo '<p><strong>Sub Types:</strong> ' . h(implode(', ', $researchHub['subTypes'])) . '</p>';
+        echo '</div>';
+    }
+
+    if ($sub === 'classes') {
+        echo '<div class="card"><h4>Class Doctrine Summary</h4>';
+        echo '<p>90 class entries are generated with matching subclasses, types, and sub-types for deep build planning.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'megaforge\',\'get\',\'mainDisplay\'); return false">Open Mega Forge Construction</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Class and Sub-Class Library (90)</h4>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">ID</th><th align="left">Class</th><th align="left">Sub Class</th><th align="left">Type</th><th align="left">Sub Type</th></tr>';
+        foreach ($researchHub['classes'] as $entry) {
+            echo '<tr><td>' . fnum($entry['id']) . '</td><td>' . h($entry['className']) . '</td><td>' . h($entry['subClass']) . '</td><td>' . h($entry['type']) . '</td><td>' . h($entry['subType']) . '</td></tr>';
+        }
+        echo '</table></div>';
+    }
+
+    if ($sub === 'talents') {
+        $researchTalents = 0;
+        $techTalents = 0;
+        foreach ($researchHub['talents'] as $talent) {
+            if ($talent['branch'] === 'Research') {
+                $researchTalents++;
+            } else {
+                $techTalents++;
+            }
+        }
+
+        echo '<div class="card"><h4>Talent Pool Summary</h4>';
+        echo '<p><strong>Total Talents:</strong> ' . fnum($researchHub['counts']['talents']) . '</p>';
+        echo '<p><strong>Research Talents:</strong> ' . fnum($researchTalents) . '</p>';
+        echo '<p><strong>Technology Talents:</strong> ' . fnum($techTalents) . '</p>';
+        echo '</div>';
+
+        echo '<div class="card"><h4>Talent Tier Bands</h4>';
+        echo '<p>Tier bands are grouped every 30 talents to create 8 progression bands across the full library.</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'megaforge\',\'get\',\'mainDisplay\'); return false">Use Talents With Mega Forge Builds</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Talent Library (240)</h4>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">ID</th><th align="left">Branch</th><th align="left">Domain</th><th align="left">Talent</th><th align="left">Focus</th><th align="left">Tier</th><th align="left">Effect</th></tr>';
+        foreach ($researchHub['talents'] as $talent) {
+            echo '<tr><td>' . fnum($talent['id']) . '</td><td>' . h($talent['branch']) . '</td><td>' . h($talent['domain']) . '</td><td>' . h($talent['name']) . '</td><td>' . h($talent['focus']) . '</td><td>' . fnum($talent['tier']) . '</td><td>' . h($talent['effect']) . '</td></tr>';
+        }
+        echo '</table></div>';
     }
 }
 

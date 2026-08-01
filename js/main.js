@@ -61,7 +61,13 @@ function toggle_visible (elName) {
     el.style.display = isVisible ? "inline" : "none";
 }
 function sendData(page,type,id,atype,subject,message){
-	bb_save_state();
+    if (typeof bb_save_state === 'function') {
+        try {
+            bb_save_state();
+        } catch (e) {
+            // Continue even if back-button cache state is unavailable.
+        }
+    }
 	date = new Date();
 	if (type =="post")
 	{

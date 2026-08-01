@@ -13,6 +13,12 @@
       <div class="stat-pill"><span>Turns</span><strong id="turns"></strong></div>
       <div class="stat-pill"><span>Naquadah</span><strong id="inHand"></strong></div>
       <div class="stat-pill"><span>In Bank</span><strong id="inBank"></strong></div>
+      <div class="stat-pill"><span>Metal</span><strong id="metal"></strong></div>
+      <div class="stat-pill"><span>Crystal</span><strong id="crystal"></strong></div>
+      <div class="stat-pill"><span>Deuterium</span><strong id="deuterium"></strong></div>
+      <div class="stat-pill"><span>Food</span><strong id="food"></strong></div>
+      <div class="stat-pill"><span>Water</span><strong id="water"></strong></div>
+      <div class="stat-pill"><span>Population</span><strong id="population"></strong></div>
       <div class="stat-pill"><span>Next Turn</span><strong id="next">&nbsp;</strong></div>
       <div class="stat-pill"><span>Messages</span><strong><a href="javascript:void(0)" onclick="sendData('messages','get','mainDisplay'); return false" id="messages"></a></strong></div>
     </div>
@@ -39,6 +45,15 @@
     <aside class="left-menu">
       <h3>Main Navigation</h3>
 
+      <details>
+        <summary>Universe</summary>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','universe','galaxies'); return false">Galaxy Clusters</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','universe','planets'); return false">Planets &amp; Moons</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','universe','objects'); return false">Interstellar Objects</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','universe','expedition'); return false">Expedition Control</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','universe','bases'); return false">Stations &amp; Bases</a>
+      </details>
+
       <details open>
         <summary>Empire</summary>
         <a href="javascript:void(0)" onclick="sendData('pages','get','empire','overview'); return false">Base Overview</a>
@@ -53,6 +68,8 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','armory'); return false">Armory</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','training'); return false">Training</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','fleet'); return false">Fleet</a>
+        <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations Command</a>
+        <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Mega Forge 90/90/90</a>
       </details>
 
       <details>
@@ -69,6 +86,15 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','market'); return false">Market</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','technology'); return false">Technology</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','production'); return false">Production</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','economy','resources'); return false">Resource Hub</a>
+      </details>
+
+      <details>
+        <summary>Research</summary>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','research','tree'); return false">Research Tree</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','research','techlib'); return false">Technology Tree</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','research','classes'); return false">Class Library</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','research','talents'); return false">Talent Library</a>
       </details>
 
       <details>
@@ -115,6 +141,10 @@
 
   <div class="bottom-header">
     <a href="javascript:void(0)" onclick="sendData('pages','get','empire','overview'); return false">Home</a>
+    <a href="javascript:void(0)" onclick="sendData('pages','get','universe','galaxies'); return false">Universe</a>
+    <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations</a>
+    <a href="javascript:void(0)" onclick="sendData('pages','get','research','tree'); return false">Research</a>
+    <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Forge</a>
     <a href="javascript:void(0)" onclick="sendData('pages','get','economy','banking'); return false">Bank</a>
     <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','messages'); return false">Messages</a>
     <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Logs</a>

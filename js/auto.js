@@ -19,7 +19,14 @@ function autoHandle(){
 			stylizeDiv(obj[3],document.getElementById("turns"));
 			stylizeDiv(obj[2],document.getElementById("isRank"));
 			stylizeDiv(obj[1],document.getElementById("inBank"));
-			stylizeDiv(obj[0],document.getElementById("inHand"));			
+            stylizeDiv(obj[0],document.getElementById("inHand"));
+
+            if (document.getElementById("metal")) { stylizeDiv(obj[7],document.getElementById("metal")); }
+            if (document.getElementById("crystal")) { stylizeDiv(obj[8],document.getElementById("crystal")); }
+            if (document.getElementById("deuterium")) { stylizeDiv(obj[9],document.getElementById("deuterium")); }
+            if (document.getElementById("food")) { stylizeDiv(obj[10],document.getElementById("food")); }
+            if (document.getElementById("water")) { stylizeDiv(obj[11],document.getElementById("water")); }
+            if (document.getElementById("population")) { stylizeDiv(obj[12],document.getElementById("population")); }			
         } else {
             alert("A problem occurred with communicating between the XMLHttpRequest object and the server program .//Auto Problem");
         }
