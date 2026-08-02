@@ -1121,6 +1121,93 @@ function universeSeedSlice(int $uid, int $page, int $perPage): array {
     return ['rows' => $rows, 'page' => $page, 'perPage' => $perPage, 'maxPage' => $maxPage, 'start' => $start, 'end' => $end, 'total' => $total];
 }
 
+function pageSafeToken(string $value): string {
+    $clean = preg_replace('/[^A-Za-z0-9 _:\/-]/', '', $value);
+    return str_replace("'", "''", $clean ?? '');
+}
+
+function militaryTroopCatalog(): array {
+    $legions = ['Aegis', 'Vanguard', 'Tempest', 'Orion', 'Helios', 'Nyx', 'Atlas', 'Leviathan', 'Draco', 'Sentinel', 'Obsidian', 'Solaris'];
+    $roles = [
+        ['rank' => 'Cadet', 'title' => 'Initiate', 'class' => 'Line', 'subclass' => 'Infantry', 'type' => 'Assault', 'subtype' => 'Rifle', 'a1' => 'Resolve', 'a2' => 'Awareness'],
+        ['rank' => 'Specialist', 'title' => 'Pathfinder', 'class' => 'Line', 'subclass' => 'Infantry', 'type' => 'Recon', 'subtype' => 'Scout', 'a1' => 'Awareness', 'a2' => 'Mobility'],
+        ['rank' => 'Corporal', 'title' => 'Breacher', 'class' => 'Line', 'subclass' => 'Shock', 'type' => 'Assault', 'subtype' => 'Breach', 'a1' => 'Breach', 'a2' => 'Resolve'],
+        ['rank' => 'Sergeant', 'title' => 'Shieldbearer', 'class' => 'Line', 'subclass' => 'Defender', 'type' => 'Bulwark', 'subtype' => 'Aegis', 'a1' => 'Fortitude', 'a2' => 'Discipline'],
+        ['rank' => 'Staff Sergeant', 'title' => 'Siege Marshal', 'class' => 'Heavy', 'subclass' => 'Artillery', 'type' => 'Siege', 'subtype' => 'Plasma', 'a1' => 'Barrage', 'a2' => 'Control'],
+        ['rank' => 'Gunnery Sergeant', 'title' => 'Bastion Gunner', 'class' => 'Heavy', 'subclass' => 'Artillery', 'type' => 'Support', 'subtype' => 'Suppressor', 'a1' => 'Control', 'a2' => 'Discipline'],
+        ['rank' => 'Lieutenant', 'title' => 'Field Commander', 'class' => 'Command', 'subclass' => 'Tactics', 'type' => 'Leadership', 'subtype' => 'Battleline', 'a1' => 'Command', 'a2' => 'Tactics'],
+        ['rank' => 'Captain', 'title' => 'Strike Captain', 'class' => 'Command', 'subclass' => 'Tactics', 'type' => 'Assault', 'subtype' => 'Spearhead', 'a1' => 'Command', 'a2' => 'Breach'],
+        ['rank' => 'Major', 'title' => 'Vanguard Major', 'class' => 'Command', 'subclass' => 'Doctrine', 'type' => 'Coordination', 'subtype' => 'Joint Ops', 'a1' => 'Doctrine', 'a2' => 'Discipline'],
+        ['rank' => 'Commander', 'title' => 'Wing Commander', 'class' => 'Aerospace', 'subclass' => 'Interdiction', 'type' => 'Air Superiority', 'subtype' => 'Interceptor', 'a1' => 'Mobility', 'a2' => 'Control'],
+        ['rank' => 'Commodore', 'title' => 'Orbital Overseer', 'class' => 'Aerospace', 'subclass' => 'Orbital', 'type' => 'Support', 'subtype' => 'Orbital Fire', 'a1' => 'Command', 'a2' => 'Barrage'],
+        ['rank' => 'Colonel', 'title' => 'Task Colonel', 'class' => 'Heavy', 'subclass' => 'Armor', 'type' => 'Shock', 'subtype' => 'Breaker', 'a1' => 'Fortitude', 'a2' => 'Breach'],
+        ['rank' => 'Brigadier', 'title' => 'Doctrine Brigadier', 'class' => 'Command', 'subclass' => 'Doctrine', 'type' => 'Planning', 'subtype' => 'War Room', 'a1' => 'Doctrine', 'a2' => 'Command'],
+        ['rank' => 'General', 'title' => 'Battle General', 'class' => 'Command', 'subclass' => 'High Command', 'type' => 'Leadership', 'subtype' => 'Theater', 'a1' => 'Command', 'a2' => 'Resolve'],
+        ['rank' => 'Marshal', 'title' => 'Front Marshal', 'class' => 'Command', 'subclass' => 'High Command', 'type' => 'Leadership', 'subtype' => 'Grand Strategy', 'a1' => 'Doctrine', 'a2' => 'Discipline'],
+        ['rank' => 'Shadow Operative', 'title' => 'Ghost Lance', 'class' => 'Covert', 'subclass' => 'Infiltration', 'type' => 'Stealth', 'subtype' => 'Ghost', 'a1' => 'Stealth', 'a2' => 'Awareness'],
+        ['rank' => 'Phantom Operative', 'title' => 'Nightblade', 'class' => 'Covert', 'subclass' => 'Sabotage', 'type' => 'Disruption', 'subtype' => 'Saboteur', 'a1' => 'Stealth', 'a2' => 'Breach'],
+        ['rank' => 'Counter Agent', 'title' => 'Signal Warden', 'class' => 'Security', 'subclass' => 'Counterintel', 'type' => 'Counter-Covert', 'subtype' => 'Interceptor', 'a1' => 'Awareness', 'a2' => 'Control'],
+        ['rank' => 'Warden', 'title' => 'Citadel Warden', 'class' => 'Security', 'subclass' => 'Fortress', 'type' => 'Defense', 'subtype' => 'Sentinel', 'a1' => 'Fortitude', 'a2' => 'Discipline'],
+        ['rank' => 'Ascendant', 'title' => 'Star Legate', 'class' => 'Elite', 'subclass' => 'Ascended', 'type' => 'Mythic', 'subtype' => 'Paragon', 'a1' => 'Resolve', 'a2' => 'Command'],
+    ];
+
+    $rows = [];
+    $id = 1;
+    foreach ($legions as $li => $legion) {
+        foreach ($roles as $ri => $role) {
+            $tier = $ri + 1;
+            $power = (int)(80 + ($tier * 34) + ($li * 7));
+            $attack = (int)round($power * (1.02 + (($ri % 3) * 0.08)));
+            $defense = (int)round($power * (0.96 + (($ri % 4) * 0.07)));
+            $covert = (int)round($power * (0.70 + (($ri % 5) * 0.06)));
+            $anti = (int)round($power * (0.68 + (($ri % 6) * 0.05)));
+            $mobility = max(24, (int)(170 - ($tier * 4) - ($li % 3)));
+            $morale = (int)(52 + ($tier * 2) + ($li % 8));
+            $logistics = (int)(42 + ($tier * 2) + ($li % 6));
+            $tactics = (int)(30 + ($tier * 3) + ($li % 5));
+            $resilience = (int)(34 + ($tier * 3) + ($li % 7));
+            $discipline = (int)(38 + ($tier * 2) + ($li % 9));
+            $subA = (int)(26 + ($tier * 2) + ($li % 4));
+            $subB = (int)(24 + ($tier * 2) + (($li + $ri) % 6));
+            $code = 'TRP-' . str_pad((string)$id, 3, '0', STR_PAD_LEFT);
+            $name = $legion . ' ' . $role['title'];
+            $title = $role['rank'] . ' of ' . $legion;
+
+            $rows[] = [
+                'troop_id' => $id,
+                'troop_code' => $code,
+                'troop_name' => $name,
+                'troop_rank' => $role['rank'],
+                'troop_title' => $title,
+                'class_name' => $role['class'],
+                'class_subclass' => $role['subclass'],
+                'troop_type' => $role['type'],
+                'troop_subtype' => $role['subtype'],
+                'power_stat' => $power,
+                'attack_stat' => $attack,
+                'defense_stat' => $defense,
+                'covert_stat' => $covert,
+                'anti_covert_stat' => $anti,
+                'mobility_stat' => $mobility,
+                'morale_stat' => $morale,
+                'logistics_stat' => $logistics,
+                'tactic_substat' => $tactics,
+                'resilience_substat' => $resilience,
+                'discipline_substat' => $discipline,
+                'attribute_primary' => $role['a1'],
+                'attribute_secondary' => $role['a2'],
+                'sub_attribute_a' => $subA,
+                'sub_attribute_b' => $subB,
+                'legion_name' => $legion,
+                'tier' => $tier,
+            ];
+            $id++;
+        }
+    }
+
+    return $rows;
+}
+
 $main = isset($_GET['id']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['id'])) : 'empire';
 $sub = isset($_GET['atype']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['atype'])) : '';
 
@@ -1152,7 +1239,7 @@ $subDefaults = [
 
 $subLabels = [
     'empire' => ['home' => 'Home', 'overview' => 'Overview', 'planets' => 'Planets', 'command' => 'Command', 'progress' => 'Progression', 'logistics' => 'Logistics Hub', 'doctrine' => 'Doctrine Board'],
-    'military' => ['personnel' => 'Personnel', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet', 'navy' => 'Navy Ops', 'defensegrid' => 'Defense Grid'],
+    'military' => ['personnel' => 'Personnel', 'troops' => 'Troop Catalog', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet', 'navy' => 'Navy Ops', 'defensegrid' => 'Defense Grid'],
     'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs', 'commandqueue' => 'Command Queue', 'diplomacyops' => 'Diplomatic Ops'],
     'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'OGame Buildings', 'logistics' => 'Supply Logistics', 'treasury' => 'Treasury Policy'],
     'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain', 'governance' => 'Commander Governance', 'treaties' => 'Treaties', 'councils' => 'Councils'],
@@ -1202,6 +1289,12 @@ $systemDetails = [
             'functions' => ['Break down unit classes', 'Expose untrained reserve depth', 'Guide training allocation'],
             'features' => ['Role-by-role unit table', 'Readable totals', 'Linked to training decisions'],
             'logic' => ['Untrained units are conversion input', 'Role balance impacts attack/defense outcomes', 'Covert and anti-covert stats affect intel warfare'],
+        ],
+        'troops' => [
+            'brief' => 'Expanded roster library with 240 troops, ranks, titles, classes, and combat metadata.',
+            'functions' => ['Browse 240 troop identities', 'Filter by class and legion doctrine', 'Compare stats, sub-stats, and attributes'],
+            'features' => ['Paged 240-row catalog', 'Class filters and quick doctrine links', 'Stats and sub-attribute matrix'],
+            'logic' => ['Troop rows are deterministic and balanced by tier', 'Sub-stats scale by role and legion profile', 'Attribute pairings define tactical specialization lanes'],
         ],
         'armory' => [
             'brief' => 'Equipment readiness and force amplification center.',
@@ -1479,6 +1572,11 @@ $uid = (int)$_SESSION['userid'];
 $requestedPage = isset($_GET['p']) ? (int)$_GET['p'] : 1;
 $requestedPerPage = isset($_GET['pp']) ? (int)$_GET['pp'] : 50;
 $cmd = isset($_GET['cmd']) ? preg_replace('/[^a-z_]/', '', strtolower((string)$_GET['cmd'])) : '';
+$troopClassFilter = isset($_GET['tcclass']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['tcclass'])) : 'all';
+$troopLegionFilter = isset($_GET['tclegion']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['tclegion'])) : 'all';
+$troopPage = isset($_GET['tp']) ? (int)$_GET['tp'] : 1;
+$troopPickId = isset($_GET['tpid']) ? (int)$_GET['tpid'] : 0;
+$troopPickQty = isset($_GET['tqty']) ? (int)$_GET['tqty'] : 1;
 $targetWorld = isset($_GET['target']) ? (int)$_GET['target'] : 0;
 $bpId = isset($_GET['bp']) ? (int)$_GET['bp'] : 0;
 $bpQty = isset($_GET['qty']) ? (int)$_GET['qty'] : 1;
@@ -1508,6 +1606,255 @@ $blueprintOwned = [];
 $blueprintHangar = [];
 $seedSlice = ['rows' => [], 'page' => 1, 'perPage' => 25, 'maxPage' => 1, 'start' => 0, 'end' => 0, 'total' => 0];
 $seedBookmarks = [];
+
+if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
+    $s->query("CREATE TABLE IF NOT EXISTS military_command_state (
+        uid INT NOT NULL PRIMARY KEY,
+        readiness_index INT NOT NULL DEFAULT 50,
+        drill_xp INT NOT NULL DEFAULT 0,
+        navy_focus VARCHAR(24) NOT NULL DEFAULT 'balanced',
+        defense_posture VARCHAR(24) NOT NULL DEFAULT 'standard',
+        logistics_posture VARCHAR(24) NOT NULL DEFAULT 'steady',
+        war_games INT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+    $s->query("INSERT IGNORE INTO military_command_state (uid) VALUES (" . $uid . ")");
+    $troopCatalog = militaryTroopCatalog();
+    $s->query("CREATE TABLE IF NOT EXISTS military_troop_catalog (
+        troop_id INT NOT NULL PRIMARY KEY,
+        troop_code VARCHAR(20) NOT NULL,
+        troop_name VARCHAR(120) NOT NULL,
+        troop_rank VARCHAR(60) NOT NULL,
+        troop_title VARCHAR(120) NOT NULL,
+        class_name VARCHAR(40) NOT NULL,
+        class_subclass VARCHAR(60) NOT NULL,
+        troop_type VARCHAR(60) NOT NULL,
+        troop_subtype VARCHAR(60) NOT NULL,
+        power_stat INT NOT NULL DEFAULT 0,
+        attack_stat INT NOT NULL DEFAULT 0,
+        defense_stat INT NOT NULL DEFAULT 0,
+        covert_stat INT NOT NULL DEFAULT 0,
+        anti_covert_stat INT NOT NULL DEFAULT 0,
+        mobility_stat INT NOT NULL DEFAULT 0,
+        morale_stat INT NOT NULL DEFAULT 0,
+        logistics_stat INT NOT NULL DEFAULT 0,
+        tactic_substat INT NOT NULL DEFAULT 0,
+        resilience_substat INT NOT NULL DEFAULT 0,
+        discipline_substat INT NOT NULL DEFAULT 0,
+        attribute_primary VARCHAR(60) NOT NULL,
+        attribute_secondary VARCHAR(60) NOT NULL,
+        sub_attribute_a INT NOT NULL DEFAULT 0,
+        sub_attribute_b INT NOT NULL DEFAULT 0,
+        legion_name VARCHAR(60) NOT NULL,
+        tier INT NOT NULL DEFAULT 1
+    )");
+    $troopCountQ = $s->query("SELECT COUNT(*) AS c FROM military_troop_catalog");
+    $troopCount = $troopCountQ ? (int)($troopCountQ->fetch_object()->c ?? 0) : 0;
+    if ($troopCount !== 240) {
+        foreach ($troopCatalog as $t) {
+            $s->query("REPLACE INTO military_troop_catalog (
+                troop_id, troop_code, troop_name, troop_rank, troop_title, class_name, class_subclass,
+                troop_type, troop_subtype, power_stat, attack_stat, defense_stat, covert_stat, anti_covert_stat,
+                mobility_stat, morale_stat, logistics_stat, tactic_substat, resilience_substat, discipline_substat,
+                attribute_primary, attribute_secondary, sub_attribute_a, sub_attribute_b, legion_name, tier
+            ) VALUES (
+                " . (int)$t['troop_id'] . ",
+                '" . pageSafeToken((string)$t['troop_code']) . "',
+                '" . pageSafeToken((string)$t['troop_name']) . "',
+                '" . pageSafeToken((string)$t['troop_rank']) . "',
+                '" . pageSafeToken((string)$t['troop_title']) . "',
+                '" . pageSafeToken((string)$t['class_name']) . "',
+                '" . pageSafeToken((string)$t['class_subclass']) . "',
+                '" . pageSafeToken((string)$t['troop_type']) . "',
+                '" . pageSafeToken((string)$t['troop_subtype']) . "',
+                " . (int)$t['power_stat'] . ",
+                " . (int)$t['attack_stat'] . ",
+                " . (int)$t['defense_stat'] . ",
+                " . (int)$t['covert_stat'] . ",
+                " . (int)$t['anti_covert_stat'] . ",
+                " . (int)$t['mobility_stat'] . ",
+                " . (int)$t['morale_stat'] . ",
+                " . (int)$t['logistics_stat'] . ",
+                " . (int)$t['tactic_substat'] . ",
+                " . (int)$t['resilience_substat'] . ",
+                " . (int)$t['discipline_substat'] . ",
+                '" . pageSafeToken((string)$t['attribute_primary']) . "',
+                '" . pageSafeToken((string)$t['attribute_secondary']) . "',
+                " . (int)$t['sub_attribute_a'] . ",
+                " . (int)$t['sub_attribute_b'] . ",
+                '" . pageSafeToken((string)$t['legion_name']) . "',
+                " . (int)$t['tier'] . "
+            )");
+        }
+    }
+
+    $troopById = [];
+    foreach ($troopCatalog as $t) {
+        $troopById[(int)$t['troop_id']] = $t;
+    }
+
+    if (strpos($cmd, 'mil_') === 0) {
+        $turnQ = $s->query("SELECT actionTurns FROM userdata WHERE uid=" . $uid . " LIMIT 1");
+        $turns = $turnQ ? (int)($turnQ->fetch_object()->actionTurns ?? 0) : 0;
+        $resQ = $s->query("SELECT metal,crystal,deuterium,food,water,population FROM player_resources WHERE uid=" . $uid . " LIMIT 1");
+        $res = $resQ ? $resQ->fetch_object() : (object)['metal' => 0, 'crystal' => 0, 'deuterium' => 0, 'food' => 0, 'water' => 0, 'population' => 0];
+        $unitQ = $s->query("SELECT untrained,attack,defense,covert,anticovert FROM units WHERE uid=" . $uid . " LIMIT 1");
+        $unitsObj = $unitQ ? $unitQ->fetch_object() : (object)['untrained' => 0, 'attack' => 0, 'defense' => 0, 'covert' => 0, 'anticovert' => 0];
+        $bankObj = $bank ?: (object)['onHand' => 0];
+
+        if ($cmd === 'mil_personnel_drill') {
+            $needTurns = 2;
+            $needFood = 2600;
+            $needWater = 2400;
+            $needUu = 140;
+            if ($turns < $needTurns) {
+                $pageActionStatus = 'Personnel drill failed: insufficient action turns.';
+            } elseif ((int)$res->food < $needFood || (int)$res->water < $needWater) {
+                $pageActionStatus = 'Personnel drill failed: insufficient food/water reserves.';
+            } elseif ((int)$unitsObj->untrained < $needUu) {
+                $pageActionStatus = 'Personnel drill failed: insufficient untrained units.';
+            } else {
+                $atkGain = 70;
+                $defGain = 45;
+                $covGain = 25;
+                $s->query("UPDATE player_resources SET food=food-" . $needFood . ", water=water-" . $needWater . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . $needTurns . ") WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE units SET untrained=untrained-" . $needUu . ", attack=attack+" . $atkGain . ", defense=defense+" . $defGain . ", covert=covert+" . $covGain . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE military_command_state SET drill_xp=drill_xp+12, readiness_index=LEAST(100, readiness_index+4) WHERE uid=" . $uid . " LIMIT 1");
+                $pageActionStatus = 'Personnel drill complete: +' . fnum($atkGain) . ' ATK, +' . fnum($defGain) . ' DEF, +' . fnum($covGain) . ' COV.';
+            }
+        }
+
+        if ($cmd === 'mil_armory_refit') {
+            $needTurns = 2;
+            $needMetal = 18000;
+            $needCrystal = 11000;
+            $needDeut = 7000;
+            if ($turns < $needTurns) {
+                $pageActionStatus = 'Armory refit failed: insufficient action turns.';
+            } elseif ((int)$res->metal < $needMetal || (int)$res->crystal < $needCrystal || (int)$res->deuterium < $needDeut) {
+                $pageActionStatus = 'Armory refit failed: insufficient strategic resources.';
+            } else {
+                $s->query("UPDATE player_resources SET metal=metal-" . $needMetal . ", crystal=crystal-" . $needCrystal . ", deuterium=deuterium-" . $needDeut . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . $needTurns . ") WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE shipyard SET dock_efficiency=LEAST(40, dock_efficiency+1) WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE military_command_state SET readiness_index=LEAST(100, readiness_index+3) WHERE uid=" . $uid . " LIMIT 1");
+                $pageActionStatus = 'Armory refit complete: dock efficiency improved and readiness increased.';
+            }
+        }
+
+        if ($cmd === 'mil_training_surge') {
+            $needTurns = 1;
+            $needNaq = 120000;
+            if ($turns < $needTurns) {
+                $pageActionStatus = 'Training surge failed: insufficient action turns.';
+            } elseif ((int)$bankObj->onHand < $needNaq) {
+                $pageActionStatus = 'Training surge failed: insufficient Naquadah.';
+            } else {
+                $crewGain = 850;
+                $s->query("UPDATE bank SET onHand=onHand-" . $needNaq . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . $needTurns . ") WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE units SET untrained=untrained+" . $crewGain . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE military_command_state SET logistics_posture='surge', readiness_index=LEAST(100, readiness_index+2) WHERE uid=" . $uid . " LIMIT 1");
+                $pageActionStatus = 'Training surge complete: +' . fnum($crewGain) . ' untrained units ready for specialization.';
+            }
+        }
+
+        if ($cmd === 'mil_fleet_wargame') {
+            $needTurns = 3;
+            $needDeut = 9500;
+            $needFood = 6000;
+            if ($turns < $needTurns) {
+                $pageActionStatus = 'Fleet war-game failed: insufficient action turns.';
+            } elseif ((int)$res->deuterium < $needDeut || (int)$res->food < $needFood) {
+                $pageActionStatus = 'Fleet war-game failed: insufficient deuterium/food.';
+            } else {
+                $s->query("UPDATE player_resources SET deuterium=deuterium-" . $needDeut . ", food=food-" . $needFood . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . $needTurns . ") WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE military_command_state SET war_games=war_games+1, readiness_index=LEAST(100, readiness_index+5), navy_focus='aggressive' WHERE uid=" . $uid . " LIMIT 1");
+                $pageActionStatus = 'Fleet war-game successful: navy focus shifted to aggressive and readiness increased.';
+            }
+        }
+
+        if ($cmd === 'mil_setfocus_aggressive' || $cmd === 'mil_setfocus_balanced' || $cmd === 'mil_setfocus_defensive') {
+            $focus = 'balanced';
+            if ($cmd === 'mil_setfocus_aggressive') {
+                $focus = 'aggressive';
+            }
+            if ($cmd === 'mil_setfocus_defensive') {
+                $focus = 'defensive';
+            }
+            $s->query("UPDATE military_command_state SET navy_focus='" . $focus . "' WHERE uid=" . $uid . " LIMIT 1");
+            $pageActionStatus = 'Navy focus updated to ' . ucfirst($focus) . '.';
+        }
+
+        if ($cmd === 'mil_recruit_troop') {
+            $qty = max(1, min(500, $troopPickQty));
+            $troopMeta = $troopById[$troopPickId] ?? null;
+            if ($troopMeta === null) {
+                $pageActionStatus = 'Troop recruitment failed: troop profile not found.';
+            } else {
+                $turnCost = max(1, (int)ceil($qty / 20));
+                $unitNeed = $qty;
+                $naqCost = (int)round(((int)$troopMeta['power_stat'] * 120) * $qty);
+                $foodCost = (int)round(((int)$troopMeta['morale_stat'] * 2) * $qty);
+                $waterCost = (int)round(((int)$troopMeta['logistics_stat'] * 2) * $qty);
+                $deutCost = (int)round(((int)$troopMeta['mobility_stat'] * 4) * $qty);
+
+                if ($turns < $turnCost) {
+                    $pageActionStatus = 'Troop recruitment failed: insufficient action turns.';
+                } elseif ((int)$unitsObj->untrained < $unitNeed) {
+                    $pageActionStatus = 'Troop recruitment failed: insufficient untrained units.';
+                } elseif ((int)$bankObj->onHand < $naqCost) {
+                    $pageActionStatus = 'Troop recruitment failed: insufficient Naquadah.';
+                } elseif ((int)$res->food < $foodCost || (int)$res->water < $waterCost || (int)$res->deuterium < $deutCost) {
+                    $pageActionStatus = 'Troop recruitment failed: insufficient food/water/deuterium reserves.';
+                } else {
+                    $unitField = 'attack';
+                    $className = strtolower((string)$troopMeta['class_name']);
+                    $typeName = strtolower((string)$troopMeta['troop_type']);
+                    if ($className === 'covert') {
+                        $unitField = 'covert';
+                    }
+                    if ($className === 'security' || $typeName === 'counter-covert') {
+                        $unitField = 'anticovert';
+                    }
+                    if ($className === 'heavy' || $typeName === 'defense' || $typeName === 'bulwark') {
+                        $unitField = 'defense';
+                    }
+
+                    $xpGain = max(2, (int)ceil($qty / 10));
+                    $readinessGain = max(1, (int)ceil($qty / 80));
+
+                    $s->query("UPDATE bank SET onHand=onHand-" . $naqCost . " WHERE uid=" . $uid . " LIMIT 1");
+                    $s->query("UPDATE player_resources SET food=food-" . $foodCost . ", water=water-" . $waterCost . ", deuterium=deuterium-" . $deutCost . " WHERE uid=" . $uid . " LIMIT 1");
+                    $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . $turnCost . ") WHERE uid=" . $uid . " LIMIT 1");
+                    $s->query("UPDATE units SET untrained=untrained-" . $unitNeed . ", " . $unitField . "=" . $unitField . "+" . $qty . " WHERE uid=" . $uid . " LIMIT 1");
+                    $s->query("UPDATE military_command_state SET drill_xp=drill_xp+" . $xpGain . ", readiness_index=LEAST(100, readiness_index+" . $readinessGain . ") WHERE uid=" . $uid . " LIMIT 1");
+
+                    $pageActionStatus = 'Troop recruitment complete: ' . fnum($qty) . 'x ' . (string)$troopMeta['troop_name'] . ' assigned to ' . strtoupper($unitField) . ' corps.';
+                }
+            }
+        }
+
+        if ($cmd === 'mil_defense_harden') {
+            $needTurns = 2;
+            $needMetal = 16000;
+            $needCrystal = 9000;
+            if ($turns < $needTurns) {
+                $pageActionStatus = 'Defense hardening failed: insufficient action turns.';
+            } elseif ((int)$res->metal < $needMetal || (int)$res->crystal < $needCrystal) {
+                $pageActionStatus = 'Defense hardening failed: insufficient metal/crystal.';
+            } else {
+                $s->query("UPDATE player_resources SET metal=metal-" . $needMetal . ", crystal=crystal-" . $needCrystal . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . $needTurns . ") WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE units SET defense=defense+120, anticovert=anticovert+45 WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE military_command_state SET defense_posture='fortified', readiness_index=LEAST(100, readiness_index+4) WHERE uid=" . $uid . " LIMIT 1");
+                $pageActionStatus = 'Defense hardening complete: +120 defense and +45 anti-covert units integrated.';
+            }
+        }
+    }
+}
 
 if (($main === 'research' && $sub === 'blueprints') || ($main === 'universe' && $sub === 'seeds') || strpos($cmd, 'bp_') === 0 || $cmd === 'seed_bookmark') {
     blueprintEnsureTables($s, $blueprintCatalog);
@@ -1668,6 +2015,7 @@ $featureButtons = [
     'military' => [
         ['label' => 'Armory', 'js' => "sendData('armory','get','mainDisplay'); return false"],
         ['label' => 'Training', 'js' => "sendData('train','get','mainDisplay'); return false"],
+        ['label' => 'Troop Catalog', 'js' => "sendData('pages','get','military','troops'); return false"],
         ['label' => 'Fleet Dock', 'js' => "sendData('fleetdock','get','mainDisplay'); return false"],
         ['label' => 'Navy Ops', 'js' => "sendData('pages','get','military','navy'); return false"],
         ['label' => 'Mega Forge', 'js' => "sendData('megaforge','get','mainDisplay'); return false"],
@@ -1756,6 +2104,7 @@ $subPageGroups = [
     'military' => [
         'Command Layers' => [
             ['personnel', 'Personnel'],
+            ['troops', 'Troop Catalog'],
             ['fleet', 'Fleet'],
             ['navy', 'Navy Ops'],
             ['defensegrid', 'Defense Grid'],
@@ -2026,6 +2375,36 @@ if ($main === 'empire' && $sub === 'doctrine') {
 }
 
 if ($main === 'military') {
+    $mStateQ = $s->query("SELECT readiness_index, drill_xp, navy_focus, defense_posture, logistics_posture, war_games FROM military_command_state WHERE uid=" . $uid . " LIMIT 1");
+    $mState = $mStateQ ? $mStateQ->fetch_object() : (object)['readiness_index' => 50, 'drill_xp' => 0, 'navy_focus' => 'balanced', 'defense_posture' => 'standard', 'logistics_posture' => 'steady', 'war_games' => 0];
+
+    echo '<div class="card full"><h4>Military Command Console</h4>';
+    echo '<p><strong>Readiness:</strong> ' . fnum((int)$mState->readiness_index) . '% | <strong>Drill XP:</strong> ' . fnum((int)$mState->drill_xp) . ' | <strong>Navy Focus:</strong> ' . h((string)$mState->navy_focus) . ' | <strong>Defense Posture:</strong> ' . h((string)$mState->defense_posture) . ' | <strong>War Games:</strong> ' . fnum((int)$mState->war_games) . '</p>';
+    echo '<div class="page-subnav feature-subnav">';
+    echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_personnel_drill\'); return false">Personnel Drill</a>';
+    echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_armory_refit\'); return false">Armory Refit</a>';
+    echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_training_surge\'); return false">Training Surge</a>';
+    echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_fleet_wargame\'); return false">Fleet War-Game</a>';
+    echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_defense_harden\'); return false">Defense Harden</a>';
+    echo '</div>';
+    echo '<p style="margin-top:8px;"><strong>Navy Focus Sub Buttons:</strong> '
+        . '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_setfocus_aggressive\'); return false">Aggressive</a> | '
+        . '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_setfocus_balanced\'); return false">Balanced</a> | '
+        . '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=mil_setfocus_defensive\'); return false">Defensive</a></p>';
+    echo '<p><label>Command Dropdown '
+        . '<select id="milCommandDropdown">'
+        . '<option value="mil_personnel_drill">Personnel Drill</option>'
+        . '<option value="mil_armory_refit">Armory Refit</option>'
+        . '<option value="mil_training_surge">Training Surge</option>'
+        . '<option value="mil_fleet_wargame">Fleet War-Game</option>'
+        . '<option value="mil_defense_harden">Defense Harden</option>'
+        . '<option value="mil_setfocus_aggressive">Set Focus: Aggressive</option>'
+        . '<option value="mil_setfocus_balanced">Set Focus: Balanced</option>'
+        . '<option value="mil_setfocus_defensive">Set Focus: Defensive</option>'
+        . '</select></label> '
+        . '<a href="javascript:void(0)" onclick="(function(){var x=document.getElementById(\'milCommandDropdown\'); if(x){sendData(\'pages\',\'get\',\'military\',\'' . h($sub) . '&cmd=\'+x.value);} return false;})(); return false">Execute Command</a></p>';
+    echo '</div>';
+
     if ($sub === 'personnel') {
         echo '<div class="card full"><h4>Personnel Breakdown</h4>';
         echo '<table width="100%" border="0">';
@@ -2035,14 +2414,117 @@ if ($main === 'military') {
         echo '<tr><td>Covert Units</td><td>' . fnum($personnel->covertCount ?? 0) . '</td></tr>';
         echo '<tr><td>Anti-Covert Units</td><td>' . fnum($personnel->anticovertCount ?? 0) . '</td></tr>';
         echo '</table>';
+        echo '<div class="page-subnav feature-subnav"><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'personnel&cmd=mil_personnel_drill\'); return false">Run Personnel Drill</a><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'training&cmd=mil_training_surge\'); return false">Run Training Surge</a></div>';
+        echo '</div>';
+    }
+    if ($sub === 'troops') {
+        $allTroops = militaryTroopCatalog();
+        $classOptions = ['all' => 'All Classes'];
+        $legionOptions = ['all' => 'All Legions'];
+        foreach ($allTroops as $tt) {
+            $ck = strtolower((string)$tt['class_name']);
+            $lk = strtolower((string)$tt['legion_name']);
+            if (!isset($classOptions[$ck])) {
+                $classOptions[$ck] = (string)$tt['class_name'];
+            }
+            if (!isset($legionOptions[$lk])) {
+                $legionOptions[$lk] = (string)$tt['legion_name'];
+            }
+        }
+        if (!isset($classOptions[$troopClassFilter])) {
+            $troopClassFilter = 'all';
+        }
+        if (!isset($legionOptions[$troopLegionFilter])) {
+            $troopLegionFilter = 'all';
+        }
+
+        $filteredTroops = [];
+        foreach ($allTroops as $tt) {
+            $classMatch = ($troopClassFilter === 'all') || (strtolower((string)$tt['class_name']) === $troopClassFilter);
+            $legionMatch = ($troopLegionFilter === 'all') || (strtolower((string)$tt['legion_name']) === $troopLegionFilter);
+            if ($classMatch && $legionMatch) {
+                $filteredTroops[] = $tt;
+            }
+        }
+
+        $perPage = 24;
+        $totalTroops = count($filteredTroops);
+        $maxTroopPage = max(1, (int)ceil($totalTroops / $perPage));
+        $troopPage = max(1, min($maxTroopPage, $troopPage));
+        $startIndex = ($troopPage - 1) * $perPage;
+        $sliceTroops = array_slice($filteredTroops, $startIndex, $perPage);
+
+        echo '<div class="card full"><h4>240 Troop Rank, Title, and Attribute Library</h4>';
+        echo '<p><strong>Total Troops:</strong> 240 | <strong>Classes:</strong> ' . fnum(count($classOptions) - 1) . ' | <strong>Legions:</strong> ' . fnum(count($legionOptions) - 1) . '</p>';
+        echo '<p><strong>Filters:</strong> Class=' . h($classOptions[$troopClassFilter]) . ' | Legion=' . h($legionOptions[$troopLegionFilter]) . ' | Showing ' . fnum($startIndex + 1) . '-' . fnum(min($totalTroops, $startIndex + $perPage)) . ' of ' . fnum($totalTroops) . '</p>';
+        echo '<div class="page-subnav feature-subnav">';
+        foreach ($classOptions as $classKey => $className) {
+            echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($classKey) . '&tclegion=' . h($troopLegionFilter) . '&tp=1\'); return false">' . h($className) . '</a>';
+        }
+        echo '</div>';
+        echo '<div class="page-subnav feature-subnav">';
+        foreach ($legionOptions as $legionKey => $legionName) {
+            echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($legionKey) . '&tp=1\'); return false">' . h($legionName) . '</a>';
+        }
+        echo '</div>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Troop Recruitment Control</h4>';
+        echo '<p>Recruit selected troop profiles directly from untrained reserves into military corps using turns and resources.</p>';
+        echo '<p><label>Troop Profile '
+            . '<select id="troopRecruitSelect">';
+        foreach ($sliceTroops as $tt) {
+            echo '<option value="' . (int)$tt['troop_id'] . '">' . h((string)$tt['troop_code']) . ' - ' . h((string)$tt['troop_rank']) . ' - ' . h((string)$tt['troop_name']) . '</option>';
+        }
+        echo '</select></label> '
+            . '<label>Quantity <input id="troopRecruitQty" type="number" min="1" max="500" value="25" style="width:80px;" /></label> '
+            . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_recruit_troop&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Recruit Troop</a></p>';
+        echo '</div>';
+
+        echo '<div class="card full"><h4>Troop Matrix</h4>';
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">Code</th><th align="left">Name</th><th align="left">Rank & Title</th><th align="left">Class Tree</th><th align="left">Type Tree</th><th align="left">Stats</th><th align="left">Sub Stats / Attributes</th><th align="left">Action</th></tr>';
+        foreach ($sliceTroops as $tt) {
+            $statsText = 'PWR ' . fnum((int)$tt['power_stat'])
+                . ' | ATK ' . fnum((int)$tt['attack_stat'])
+                . ' | DEF ' . fnum((int)$tt['defense_stat'])
+                . ' | COV ' . fnum((int)$tt['covert_stat'])
+                . ' | A-COV ' . fnum((int)$tt['anti_covert_stat'])
+                . ' | MOB ' . fnum((int)$tt['mobility_stat'])
+                . ' | MOR ' . fnum((int)$tt['morale_stat'])
+                . ' | LOG ' . fnum((int)$tt['logistics_stat']);
+            $subText = 'TAC ' . fnum((int)$tt['tactic_substat'])
+                . ' | RES ' . fnum((int)$tt['resilience_substat'])
+                . ' | DIS ' . fnum((int)$tt['discipline_substat'])
+                . ' | ' . h((string)$tt['attribute_primary']) . '/' . h((string)$tt['attribute_secondary'])
+                . ' | SUB-A ' . fnum((int)$tt['sub_attribute_a'])
+                . ' | SUB-B ' . fnum((int)$tt['sub_attribute_b']);
+            echo '<tr>';
+            echo '<td>' . h((string)$tt['troop_code']) . '</td>';
+            echo '<td>' . h((string)$tt['troop_name']) . ' <br><small>Legion: ' . h((string)$tt['legion_name']) . ' | Tier ' . fnum((int)$tt['tier']) . '</small></td>';
+            echo '<td>' . h((string)$tt['troop_rank']) . '<br><small>' . h((string)$tt['troop_title']) . '</small></td>';
+            echo '<td>' . h((string)$tt['class_name']) . ' / ' . h((string)$tt['class_subclass']) . '</td>';
+            echo '<td>' . h((string)$tt['troop_type']) . ' / ' . h((string)$tt['troop_subtype']) . '</td>';
+            echo '<td>' . $statsText . '</td>';
+            echo '<td>' . $subText . '</td>';
+            echo '<td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_recruit_troop&tpid=' . (int)$tt['troop_id'] . '&tqty=10\'); return false">Recruit x10</a></td>';
+            echo '</tr>';
+        }
+        echo '</table>';
+        echo '<p><strong>Pages:</strong> ';
+        for ($p = 1; $p <= $maxTroopPage; $p++) {
+            $label = ($p === $troopPage) ? ('[' . $p . ']') : (string)$p;
+            echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $p . '\'); return false">' . h($label) . '</a> ';
+        }
+        echo '</p>';
         echo '</div>';
     }
     if ($sub === 'armory') {
-        echo '<div class="card"><h4>Armory Control</h4><p>Manage attack/defense equipment loadouts and repair weapons.</p><p><a href="javascript:void(0)" onclick="sendData(\'armory\',\'get\',\'mainDisplay\'); return false">Open Armory</a></p></div>';
+        echo '<div class="card"><h4>Armory Control</h4><p>Manage attack/defense equipment loadouts and repair weapons.</p><p><a href="javascript:void(0)" onclick="sendData(\'armory\',\'get\',\'mainDisplay\'); return false">Open Armory</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'armory&cmd=mil_armory_refit\'); return false">Run Armory Refit</a></p></div>';
     }
     if ($sub === 'training') {
         echo '<div class="card"><h4>Training Command</h4><p>Convert untrained units into combat-ready specialists.</p><p><a href="javascript:void(0)" onclick="sendData(\'train\',\'get\',\'mainDisplay\'); return false">Open Training</a></p></div>';
-        echo '<div class="card"><h4>Demobilization</h4><p>Reverse assignments when strategy shifts.</p><p><a href="javascript:void(0)" onclick="sendData(\'untrain\',\'get\',\'mainDisplay\'); return false">Open Untrain</a></p></div>';
+        echo '<div class="card"><h4>Demobilization</h4><p>Reverse assignments when strategy shifts.</p><p><a href="javascript:void(0)" onclick="sendData(\'untrain\',\'get\',\'mainDisplay\'); return false">Open Untrain</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'training&cmd=mil_training_surge\'); return false">Run Training Surge</a></p></div>';
     }
     if ($sub === 'fleet') {
         echo '<div class="card"><h4>Fleet Operations</h4><p>Deploy, reposition, and monitor fleet readiness.</p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'objects\'); return false">Scan Debris Fields</a></p></div>';
@@ -2051,10 +2533,10 @@ if ($main === 'military') {
         echo '<div class="card"><h4>Interstellar Travel Network</h4><p>Use Jump Gates, Stargates, and hyperspace lanes for long-range force projection.</p><p><a href="javascript:void(0)" onclick="sendData(\'hyperspace\',\'get\',\'mainDisplay\'); return false">Open Hyperspace Transit Command</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'travel\'); return false">Open Universe Travel Matrix</a></p></div>';
     }
     if ($sub === 'navy') {
-        echo '<div class="card"><h4>Navy Operations</h4><p>Coordinate fleet waves, escort sequencing, and timing windows by operation type.</p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p></div>';
+        echo '<div class="card"><h4>Navy Operations</h4><p>Coordinate fleet waves, escort sequencing, and timing windows by operation type.</p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'navy&cmd=mil_fleet_wargame\'); return false">Run Fleet War-Game</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'navy&cmd=mil_setfocus_aggressive\'); return false">Set Aggressive Focus</a> | <a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'navy&cmd=mil_setfocus_defensive\'); return false">Set Defensive Focus</a></p></div>';
     }
     if ($sub === 'defensegrid') {
-        echo '<div class="card full"><h4>Defense Grid</h4><p>Layer defense systems across planets, stations, and fleet routes to reduce raid exposure.</p><p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Open Stations Defense</a></p></div>';
+        echo '<div class="card full"><h4>Defense Grid</h4><p>Layer defense systems across planets, stations, and fleet routes to reduce raid exposure.</p><p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Open Stations Defense</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'defensegrid&cmd=mil_defense_harden\'); return false">Run Defense Hardening</a></p></div>';
     }
 }
 
