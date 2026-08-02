@@ -246,6 +246,41 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
     background: #113f3f;
 }
 
+.left-menu details details {
+    margin: 4px 8px 8px 8px;
+    border: 1px solid #214a4a;
+    background: rgba(4, 20, 20, 0.6);
+}
+
+.left-menu details details > summary {
+    padding: 7px 10px;
+    font-size: 11px;
+    color: #b9f0f0;
+}
+
+.left-menu details details > a {
+    padding-left: 18px;
+    font-size: 11px;
+    border-top: 1px dotted #225555;
+}
+
+.left-menu details details details {
+    margin: 4px 8px 8px 8px;
+    border: 1px solid #1d4040;
+    background: rgba(2, 14, 14, 0.72);
+}
+
+.left-menu details details details > summary {
+    padding: 6px 10px;
+    font-size: 10px;
+    color: #a7dede;
+}
+
+.left-menu details details details > a {
+    padding-left: 24px;
+    font-size: 10px;
+}
+
 .content-panel {
     flex: 1;
     min-width: 0;

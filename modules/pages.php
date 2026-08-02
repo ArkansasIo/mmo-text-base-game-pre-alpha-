@@ -851,7 +851,7 @@ function renderInteractiveCalculators(string $main, string $sub, $baseData, $per
         echo '</div>';
     }
 
-    if (($main === 'economy' && ($sub === 'banking' || $sub === 'market' || $sub === 'production')) || ($main === 'help' && $sub === 'mechanics') || ($main === 'empire' && $sub === 'overview')) {
+    if (($main === 'economy' && ($sub === 'banking' || $sub === 'market' || $sub === 'production')) || ($main === 'help' && $sub === 'mechanics') || ($main === 'empire' && ($sub === 'home' || $sub === 'overview'))) {
         echo '<div class="card full">';
         echo '<h4>Turn Economy Planner</h4>';
         echo '<div class="calc-grid">';
@@ -983,7 +983,7 @@ function renderFeatureWorkbenches(string $main, string $sub, $baseData, $personn
         echo '</div>';
     }
 
-    if ($main === 'empire' && $sub === 'overview') {
+    if ($main === 'empire' && ($sub === 'home' || $sub === 'overview')) {
         $planetCount = count($planets);
         echo '<div class="card full">';
         echo '<h4>Empire Operations Board</h4>';
@@ -996,6 +996,129 @@ function renderFeatureWorkbenches(string $main, string $sub, $baseData, $personn
         echo '</table>';
         echo '</div>';
     }
+}
+
+function blueprintCatalog(): array {
+    return [
+        1 => ['name' => 'Raptor Interceptor', 'hull' => 'Interceptor', 'tier' => 1, 'copy_cost' => 75000, 'base_metal' => 4200, 'base_crystal' => 2400, 'base_deuterium' => 1200, 'base_turns' => 5, 'base_power' => 22],
+        2 => ['name' => 'Valkyrie Frigate', 'hull' => 'Frigate', 'tier' => 2, 'copy_cost' => 145000, 'base_metal' => 9800, 'base_crystal' => 5600, 'base_deuterium' => 3400, 'base_turns' => 8, 'base_power' => 52],
+        3 => ['name' => 'Argent Cruiser', 'hull' => 'Cruiser', 'tier' => 3, 'copy_cost' => 290000, 'base_metal' => 22000, 'base_crystal' => 13000, 'base_deuterium' => 8200, 'base_turns' => 12, 'base_power' => 124],
+        4 => ['name' => 'Leviathan Battleship', 'hull' => 'Battleship', 'tier' => 4, 'copy_cost' => 520000, 'base_metal' => 46000, 'base_crystal' => 29000, 'base_deuterium' => 17000, 'base_turns' => 18, 'base_power' => 248],
+        5 => ['name' => 'Aurora Carrier', 'hull' => 'Carrier', 'tier' => 5, 'copy_cost' => 880000, 'base_metal' => 78000, 'base_crystal' => 51000, 'base_deuterium' => 30000, 'base_turns' => 24, 'base_power' => 410],
+        6 => ['name' => 'Aegis Dreadnought', 'hull' => 'Dreadnought', 'tier' => 6, 'copy_cost' => 1280000, 'base_metal' => 125000, 'base_crystal' => 86000, 'base_deuterium' => 52000, 'base_turns' => 32, 'base_power' => 680],
+    ];
+}
+
+function blueprintEnsureTables(Game $s, array $catalog): void {
+    $s->query("CREATE TABLE IF NOT EXISTS blueprint_catalog (
+        blueprint_id INT NOT NULL PRIMARY KEY,
+        bp_name VARCHAR(96) NOT NULL,
+        hull_class VARCHAR(40) NOT NULL,
+        tier INT NOT NULL DEFAULT 1,
+        copy_cost INT NOT NULL DEFAULT 0,
+        base_metal INT NOT NULL DEFAULT 0,
+        base_crystal INT NOT NULL DEFAULT 0,
+        base_deuterium INT NOT NULL DEFAULT 0,
+        base_turns INT NOT NULL DEFAULT 1,
+        base_power INT NOT NULL DEFAULT 0
+    )");
+
+    $s->query("CREATE TABLE IF NOT EXISTS player_blueprints (
+        uid INT NOT NULL,
+        blueprint_id INT NOT NULL,
+        owned_copies INT NOT NULL DEFAULT 0,
+        me_level INT NOT NULL DEFAULT 0,
+        te_level INT NOT NULL DEFAULT 0,
+        run_count INT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY(uid, blueprint_id)
+    )");
+
+    $s->query("CREATE TABLE IF NOT EXISTS blueprint_hangar (
+        uid INT NOT NULL,
+        blueprint_id INT NOT NULL,
+        hull_class VARCHAR(40) NOT NULL,
+        quantity INT NOT NULL DEFAULT 0,
+        total_power BIGINT NOT NULL DEFAULT 0,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        PRIMARY KEY(uid, blueprint_id)
+    )");
+
+    foreach ($catalog as $id => $bp) {
+        $id = (int)$id;
+        $name = preg_replace('/[^A-Za-z0-9 _-]/', '', (string)$bp['name']);
+        $hull = preg_replace('/[^A-Za-z0-9 _-]/', '', (string)$bp['hull']);
+        $tier = (int)$bp['tier'];
+        $copy = (int)$bp['copy_cost'];
+        $m = (int)$bp['base_metal'];
+        $c = (int)$bp['base_crystal'];
+        $d = (int)$bp['base_deuterium'];
+        $t = (int)$bp['base_turns'];
+        $p = (int)$bp['base_power'];
+        $s->query("REPLACE INTO blueprint_catalog (blueprint_id,bp_name,hull_class,tier,copy_cost,base_metal,base_crystal,base_deuterium,base_turns,base_power)
+            VALUES (" . $id . ", '" . $name . "', '" . $hull . "', " . $tier . ", " . $copy . ", " . $m . ", " . $c . ", " . $d . ", " . $t . ", " . $p . ")");
+    }
+}
+
+function blueprintOrderCosts(array $bp, int $qty, int $me, int $te): array {
+    $qty = max(1, $qty);
+    $materialFactor = max(0.55, 1 - min(0.45, $me * 0.02));
+    $timeFactor = max(0.45, 1 - min(0.55, $te * 0.03));
+    $metal = (int)round(((int)$bp['base_metal'] * $qty) * $materialFactor);
+    $crystal = (int)round(((int)$bp['base_crystal'] * $qty) * $materialFactor);
+    $deuterium = (int)round(((int)$bp['base_deuterium'] * $qty) * $materialFactor);
+    $turns = max(1, (int)ceil((((int)$bp['base_turns'] * $qty) * $timeFactor) / 6));
+    $power = (int)$bp['base_power'] * $qty;
+    return ['metal' => $metal, 'crystal' => $crystal, 'deuterium' => $deuterium, 'turns' => $turns, 'power' => $power];
+}
+
+function universeSeedSystem(int $uid, int $index): array {
+    $seed = (($uid + 97) * 1259 + ($index * 4051)) & 0x7fffffff;
+    $starClasses = ['Red Dwarf', 'Yellow Main Sequence', 'Blue Giant', 'White Dwarf', 'Neutron', 'Binary'];
+    $biomes = ['Lush', 'Arid', 'Frozen', 'Volcanic', 'Toxic', 'Oceanic', 'Irradiated', 'Relic'];
+    $hazards = ['Calm', 'Radiation Storms', 'Acid Rain', 'Electro Tempests', 'Cryo Squalls', 'Pirate Activity'];
+
+    $star = universePick($seed, $starClasses);
+    $biome = universePick($seed, $biomes);
+    $hazard = universePick($seed, $hazards);
+    $richness = universeRand($seed, 20, 98);
+    $sentinel = universeRand($seed, 0, 5);
+    $planets = universeRand($seed, 2, 12);
+    $moons = universeRand($seed, 0, 18);
+    $glyphA = strtoupper(dechex(universeRand($seed, 16, 255)));
+    $glyphB = strtoupper(dechex(universeRand($seed, 16, 255)));
+    $seedKey = 'NMS-' . $uid . '-' . $index . '-' . $glyphA . $glyphB;
+
+    return [
+        'index' => $index,
+        'seedKey' => $seedKey,
+        'star' => $star,
+        'biome' => $biome,
+        'hazard' => $hazard,
+        'richness' => $richness,
+        'sentinel' => $sentinel,
+        'planets' => $planets,
+        'moons' => $moons,
+    ];
+}
+
+function universeSeedSlice(int $uid, int $page, int $perPage): array {
+    $total = 50000;
+    $page = max(1, $page);
+    $perPage = max(10, min(100, $perPage));
+    $maxPage = max(1, (int)ceil($total / $perPage));
+    if ($page > $maxPage) {
+        $page = $maxPage;
+    }
+    $start = (($page - 1) * $perPage) + 1;
+    $end = min($total, $start + $perPage - 1);
+
+    $rows = [];
+    for ($i = $start; $i <= $end; $i++) {
+        $rows[] = universeSeedSystem($uid, $i);
+    }
+
+    return ['rows' => $rows, 'page' => $page, 'perPage' => $perPage, 'maxPage' => $maxPage, 'start' => $start, 'end' => $end, 'total' => $total];
 }
 
 $main = isset($_GET['id']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['id'])) : 'empire';
@@ -1015,7 +1138,7 @@ $mainTitles = [
 ];
 
 $subDefaults = [
-    'empire' => 'overview',
+    'empire' => 'home',
     'military' => 'personnel',
     'operations' => 'attack',
     'economy' => 'banking',
@@ -1028,20 +1151,26 @@ $subDefaults = [
 ];
 
 $subLabels = [
-    'empire' => ['overview' => 'Overview', 'planets' => 'Planets', 'command' => 'Command', 'progress' => 'Progression'],
-    'military' => ['personnel' => 'Personnel', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet'],
-    'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs'],
-    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'OGame Buildings'],
-    'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain', 'governance' => 'Commander Governance'],
-    'intel' => ['rankings' => 'Rankings', 'reports' => 'Battle Reports', 'threats' => 'Threat Matrix', 'map' => 'Sector Map'],
-    'community' => ['forums' => 'Forums', 'updates' => 'Updates', 'contact' => 'Contact', 'faq' => 'FAQ'],
-    'help' => ['newplayer' => 'New Player', 'mechanics' => 'Mechanics', 'glossary' => 'Glossary', 'support' => 'Support'],
-    'universe' => ['galaxies' => 'Galaxies', 'planets' => 'Planets & Moons', 'objects' => 'Interstellar Objects', 'expedition' => 'Expedition', 'bases' => 'Stations & Bases', 'travel' => 'Jumpgate & Hyperspace'],
-    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'infrastructure' => 'Tech Library Buildings', 'classes' => 'Class Library', 'talents' => 'Talent Library', 'stargate' => 'Stargate Tech'],
+    'empire' => ['home' => 'Home', 'overview' => 'Overview', 'planets' => 'Planets', 'command' => 'Command', 'progress' => 'Progression', 'logistics' => 'Logistics Hub', 'doctrine' => 'Doctrine Board'],
+    'military' => ['personnel' => 'Personnel', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet', 'navy' => 'Navy Ops', 'defensegrid' => 'Defense Grid'],
+    'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs', 'commandqueue' => 'Command Queue', 'diplomacyops' => 'Diplomatic Ops'],
+    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'OGame Buildings', 'logistics' => 'Supply Logistics', 'treasury' => 'Treasury Policy'],
+    'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain', 'governance' => 'Commander Governance', 'treaties' => 'Treaties', 'councils' => 'Councils'],
+    'intel' => ['rankings' => 'Rankings', 'reports' => 'Battle Reports', 'threats' => 'Threat Matrix', 'map' => 'Sector Map', 'signals' => 'Signal Watch', 'dossiers' => 'Target Dossiers'],
+    'community' => ['forums' => 'Forums', 'updates' => 'Updates', 'contact' => 'Contact', 'faq' => 'FAQ', 'events' => 'Events', 'academy' => 'Academy'],
+    'help' => ['newplayer' => 'New Player', 'mechanics' => 'Mechanics', 'glossary' => 'Glossary', 'support' => 'Support', 'troubleshooting' => 'Troubleshooting', 'hotkeys' => 'Quick Commands'],
+    'universe' => ['galaxies' => 'Galaxies', 'planets' => 'Planets & Moons', 'objects' => 'Interstellar Objects', 'expedition' => 'Expedition', 'bases' => 'Stations & Bases', 'travel' => 'Jumpgate & Hyperspace', 'lanes' => 'Transit Lanes', 'anomalies' => 'Anomaly Index', 'seeds' => 'Universe Seeds'],
+    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'infrastructure' => 'Tech Library Buildings', 'classes' => 'Class Library', 'talents' => 'Talent Library', 'stargate' => 'Stargate Tech', 'projects' => 'Projects', 'labs' => 'Lab Network', 'blueprints' => 'Blueprint Systems'],
 ];
 
 $systemDetails = [
     'empire' => [
+        'home' => [
+            'brief' => 'Primary empire home page with strategic status, subsystem links, and planning context.',
+            'functions' => ['Review command-level KPIs at a glance', 'Route quickly to core empire systems', 'Track readiness trends before committing turns'],
+            'features' => ['Operational status cards', 'Subsystem routing matrix', 'Readiness and reserve indicators'],
+            'logic' => ['Values blend bank, resources, personnel, and planetary data', 'Readiness is derived from economy and force balance', 'Home page is tuned for rapid command decisions'],
+        ],
         'overview' => [
             'brief' => 'Central empire dashboard showing economy, army growth, and strategic readiness.',
             'functions' => ['View economy and production snapshots', 'Open base, technology, and progress modules', 'Track current military scale'],
@@ -1351,6 +1480,9 @@ $requestedPage = isset($_GET['p']) ? (int)$_GET['p'] : 1;
 $requestedPerPage = isset($_GET['pp']) ? (int)$_GET['pp'] : 50;
 $cmd = isset($_GET['cmd']) ? preg_replace('/[^a-z_]/', '', strtolower((string)$_GET['cmd'])) : '';
 $targetWorld = isset($_GET['target']) ? (int)$_GET['target'] : 0;
+$bpId = isset($_GET['bp']) ? (int)$_GET['bp'] : 0;
+$bpQty = isset($_GET['qty']) ? (int)$_GET['qty'] : 1;
+$bpMode = isset($_GET['mode']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['mode'])) : 'me';
 $s->updatePower($uid);
 
 $baseData = $s->baseVars();
@@ -1370,6 +1502,138 @@ $techView = $s->viewTech();
 $researchHub = buildResearchDirectorate($uid, $techView, $personnel);
 $resourceHub = resourceEnsureAndTick($s, $uid, $baseData, $planets, $techView);
 
+$pageActionStatus = '';
+$blueprintCatalog = blueprintCatalog();
+$blueprintOwned = [];
+$blueprintHangar = [];
+$seedSlice = ['rows' => [], 'page' => 1, 'perPage' => 25, 'maxPage' => 1, 'start' => 0, 'end' => 0, 'total' => 0];
+$seedBookmarks = [];
+
+if (($main === 'research' && $sub === 'blueprints') || ($main === 'universe' && $sub === 'seeds') || strpos($cmd, 'bp_') === 0 || $cmd === 'seed_bookmark') {
+    blueprintEnsureTables($s, $blueprintCatalog);
+    $s->query("CREATE TABLE IF NOT EXISTS universe_seed_bookmarks (
+        uid INT NOT NULL,
+        seed_index INT NOT NULL,
+        seed_key VARCHAR(64) NOT NULL,
+        note VARCHAR(120) NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY(uid, seed_index)
+    )");
+
+    foreach ($blueprintCatalog as $id => $bp) {
+        $s->query("INSERT IGNORE INTO player_blueprints (uid, blueprint_id) VALUES (" . $uid . ", " . (int)$id . ")");
+    }
+
+    if (strpos($cmd, 'bp_') === 0 && isset($blueprintCatalog[$bpId])) {
+        $bp = $blueprintCatalog[$bpId];
+        $resQ = $s->query("SELECT metal,crystal,deuterium FROM player_resources WHERE uid=" . $uid . " LIMIT 1");
+        $resObj = $resQ ? $resQ->fetch_object() : (object)['metal' => 0, 'crystal' => 0, 'deuterium' => 0];
+        $turnQ = $s->query("SELECT actionTurns FROM userdata WHERE uid=" . $uid . " LIMIT 1");
+        $turnObj = $turnQ ? $turnQ->fetch_object() : (object)['actionTurns' => 0];
+        $bankObj = $bank ?: (object)['onHand' => 0];
+        $bpRowQ = $s->query("SELECT owned_copies, me_level, te_level, run_count FROM player_blueprints WHERE uid=" . $uid . " AND blueprint_id=" . $bpId . " LIMIT 1");
+        $bpRow = $bpRowQ ? $bpRowQ->fetch_object() : (object)['owned_copies' => 0, 'me_level' => 0, 'te_level' => 0, 'run_count' => 0];
+
+        if ($cmd === 'bp_acquire') {
+            $copyCost = (int)$bp['copy_cost'];
+            if ((int)$bankObj->onHand < $copyCost) {
+                $pageActionStatus = 'Blueprint acquisition failed: insufficient Naquadah.';
+            } else {
+                $s->query("UPDATE bank SET onHand=onHand-" . $copyCost . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE player_blueprints SET owned_copies=owned_copies+1 WHERE uid=" . $uid . " AND blueprint_id=" . $bpId . " LIMIT 1");
+                $pageActionStatus = 'Blueprint acquired: ' . (string)$bp['name'] . '.';
+            }
+        }
+
+        if ($cmd === 'bp_research') {
+            $mode = ($bpMode === 'te') ? 'te' : 'me';
+            $curLevel = (int)(($mode === 'me') ? $bpRow->me_level : $bpRow->te_level);
+            $nextLevel = $curLevel + 1;
+            $costM = (int)round(((int)$bp['base_metal'] * 0.60) * pow(1.22, $curLevel));
+            $costC = (int)round(((int)$bp['base_crystal'] * 0.65) * pow(1.24, $curLevel));
+            $costD = (int)round(((int)$bp['base_deuterium'] * 0.70) * pow(1.20, $curLevel));
+            $turnCost = max(2, (int)ceil(((int)$bp['base_turns'] * $nextLevel) / 2));
+
+            if ((int)$bpRow->owned_copies < 1) {
+                $pageActionStatus = 'Blueprint research failed: acquire a copy first.';
+            } elseif ((int)$turnObj->actionTurns < $turnCost) {
+                $pageActionStatus = 'Blueprint research failed: insufficient action turns.';
+            } elseif ((int)$resObj->metal < $costM || (int)$resObj->crystal < $costC || (int)$resObj->deuterium < $costD) {
+                $pageActionStatus = 'Blueprint research failed: insufficient strategic resources.';
+            } else {
+                $s->query("UPDATE player_resources SET metal=metal-" . $costM . ", crystal=crystal-" . $costC . ", deuterium=deuterium-" . $costD . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE userdata SET actionTurns=GREATEST(0, actionTurns-" . $turnCost . ") WHERE uid=" . $uid . " LIMIT 1");
+                if ($mode === 'me') {
+                    $s->query("UPDATE player_blueprints SET me_level=me_level+1 WHERE uid=" . $uid . " AND blueprint_id=" . $bpId . " LIMIT 1");
+                    $pageActionStatus = 'Material Efficiency upgraded for ' . (string)$bp['name'] . ' to ME ' . $nextLevel . '.';
+                } else {
+                    $s->query("UPDATE player_blueprints SET te_level=te_level+1 WHERE uid=" . $uid . " AND blueprint_id=" . $bpId . " LIMIT 1");
+                    $pageActionStatus = 'Time Efficiency upgraded for ' . (string)$bp['name'] . ' to TE ' . $nextLevel . '.';
+                }
+            }
+        }
+
+        if ($cmd === 'bp_build') {
+            $qty = max(1, min(200, $bpQty));
+            $costs = blueprintOrderCosts($bp, $qty, (int)$bpRow->me_level, (int)$bpRow->te_level);
+            if ((int)$bpRow->owned_copies < 1) {
+                $pageActionStatus = 'Manufacturing failed: blueprint copy not owned.';
+            } elseif ((int)$turnObj->actionTurns < (int)$costs['turns']) {
+                $pageActionStatus = 'Manufacturing failed: insufficient action turns.';
+            } elseif ((int)$resObj->metal < (int)$costs['metal'] || (int)$resObj->crystal < (int)$costs['crystal'] || (int)$resObj->deuterium < (int)$costs['deuterium']) {
+                $pageActionStatus = 'Manufacturing failed: insufficient resources.';
+            } else {
+                $hull = preg_replace('/[^A-Za-z0-9 _-]/', '', (string)$bp['hull']);
+                $s->query("UPDATE player_resources SET metal=metal-" . (int)$costs['metal'] . ", crystal=crystal-" . (int)$costs['crystal'] . ", deuterium=deuterium-" . (int)$costs['deuterium'] . " WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("UPDATE userdata SET actionTurns=GREATEST(0, actionTurns-" . (int)$costs['turns'] . ") WHERE uid=" . $uid . " LIMIT 1");
+                $s->query("INSERT INTO blueprint_hangar (uid, blueprint_id, hull_class, quantity, total_power)
+                    VALUES (" . $uid . ", " . $bpId . ", '" . $hull . "', " . $qty . ", " . (int)$costs['power'] . ")
+                    ON DUPLICATE KEY UPDATE quantity=quantity+" . $qty . ", total_power=total_power+" . (int)$costs['power']);
+                $s->query("UPDATE player_blueprints SET run_count=run_count+" . $qty . " WHERE uid=" . $uid . " AND blueprint_id=" . $bpId . " LIMIT 1");
+                $pageActionStatus = 'Manufacturing complete: ' . fnum($qty) . 'x ' . (string)$bp['name'] . ' added to blueprint hangar.';
+            }
+        }
+    }
+
+    if ($main === 'universe' && $cmd === 'seed_bookmark' && $targetWorld > 0) {
+        $seedSys = universeSeedSystem($uid, $targetWorld);
+        $note = preg_replace('/[^A-Za-z0-9 _:-]/', '', $seedSys['star'] . ' | ' . $seedSys['biome']);
+        $seedKey = preg_replace('/[^A-Za-z0-9-]/', '', (string)$seedSys['seedKey']);
+        $s->query("INSERT IGNORE INTO universe_seed_bookmarks (uid, seed_index, seed_key, note)
+            VALUES (" . $uid . ", " . $targetWorld . ", '" . $seedKey . "', '" . $note . "')");
+        $pageActionStatus = 'Universe seed bookmarked: #' . $targetWorld . ' (' . $seedSys['seedKey'] . ').';
+    }
+
+    $ownedQ = $s->query("SELECT blueprint_id, owned_copies, me_level, te_level, run_count FROM player_blueprints WHERE uid=" . $uid);
+    if ($ownedQ) {
+        while ($r = $ownedQ->fetch_assoc()) {
+            $blueprintOwned[(int)$r['blueprint_id']] = [
+                'owned_copies' => (int)$r['owned_copies'],
+                'me_level' => (int)$r['me_level'],
+                'te_level' => (int)$r['te_level'],
+                'run_count' => (int)$r['run_count'],
+            ];
+        }
+    }
+
+    $hangarQ = $s->query("SELECT blueprint_id, quantity, total_power FROM blueprint_hangar WHERE uid=" . $uid);
+    if ($hangarQ) {
+        while ($r = $hangarQ->fetch_assoc()) {
+            $blueprintHangar[(int)$r['blueprint_id']] = ['quantity' => (int)$r['quantity'], 'total_power' => (int)$r['total_power']];
+        }
+    }
+
+    if ($main === 'universe' && $sub === 'seeds') {
+        $seedSlice = universeSeedSlice($uid, $requestedPage, 25);
+        $bookQ = $s->query("SELECT seed_index, seed_key, note, created_at FROM universe_seed_bookmarks WHERE uid=" . $uid . " ORDER BY seed_index ASC LIMIT 40");
+        if ($bookQ) {
+            while ($r = $bookQ->fetch_assoc()) {
+                $seedBookmarks[] = $r;
+            }
+        }
+    }
+}
+
 $title = $mainTitles[$main];
 $subTitle = $subLabels[$main][$sub];
 
@@ -1380,6 +1644,9 @@ echo '<p>Page: ' . h($main) . ' / ' . h($sub) . ' | Player: ' . h($_SESSION['use
 echo '</div>';
 if ($universeActionStatus !== '') {
     echo '<div class="card full"><strong>' . h($universeActionStatus) . '</strong></div>';
+}
+if ($pageActionStatus !== '') {
+    echo '<div class="card full"><strong>' . h($pageActionStatus) . '</strong></div>';
 }
 
 echo '<div class="page-subnav-title">Sub Pages</div>';
@@ -1396,11 +1663,13 @@ $featureButtons = [
         ['label' => 'Progress', 'js' => "sendData('progress','get','mainDisplay'); return false"],
         ['label' => 'Bank', 'js' => "sendData('bank','get','mainDisplay'); return false"],
         ['label' => 'Research', 'js' => "sendData('pages','get','research','tree'); return false"],
+        ['label' => 'Logistics Hub', 'js' => "sendData('pages','get','empire','logistics'); return false"],
     ],
     'military' => [
         ['label' => 'Armory', 'js' => "sendData('armory','get','mainDisplay'); return false"],
         ['label' => 'Training', 'js' => "sendData('train','get','mainDisplay'); return false"],
         ['label' => 'Fleet Dock', 'js' => "sendData('fleetdock','get','mainDisplay'); return false"],
+        ['label' => 'Navy Ops', 'js' => "sendData('pages','get','military','navy'); return false"],
         ['label' => 'Mega Forge', 'js' => "sendData('megaforge','get','mainDisplay'); return false"],
         ['label' => 'Stations', 'js' => "sendData('stations','get','mainDisplay'); return false"],
         ['label' => 'Hyperspace', 'js' => "sendData('hyperspace','get','mainDisplay'); return false"],
@@ -1410,12 +1679,14 @@ $featureButtons = [
         ['label' => 'Spy', 'js' => "sendData('spy','get','mainDisplay'); return false"],
         ['label' => 'Combat Logs', 'js' => "sendData('logs','get','mainDisplay'); return false"],
         ['label' => 'Action Reports', 'js' => "sendData('actionLogs','get','mainDisplay'); return false"],
+        ['label' => 'Command Queue', 'js' => "sendData('pages','get','operations','commandqueue'); return false"],
     ],
     'economy' => [
         ['label' => 'Bank', 'js' => "sendData('bank','get','mainDisplay'); return false"],
         ['label' => 'Market', 'js' => "sendData('market','get','mainDisplay'); return false"],
         ['label' => 'Resource HQ', 'js' => "sendData('resourcehq','get','mainDisplay'); return false"],
         ['label' => 'OGame Buildings', 'js' => "sendData('ogamebuildings','get','mainDisplay'); return false"],
+        ['label' => 'Supply Logistics', 'js' => "sendData('pages','get','economy','logistics'); return false"],
         ['label' => 'Technology', 'js' => "sendData('technology','get','mainDisplay'); return false"],
         ['label' => 'Stargate Tech', 'js' => "sendData('stargatetech','get','mainDisplay'); return false"],
     ],
@@ -1423,11 +1694,13 @@ $featureButtons = [
         ['label' => 'Messages', 'js' => "sendData('messages','get','mainDisplay'); return false"],
         ['label' => 'Alliance', 'js' => "sendData('ally_mlist','get','mainDisplay'); return false"],
         ['label' => 'Relations', 'js' => "sendData('pages','get','diplomacy','relations'); return false"],
+        ['label' => 'Treaties', 'js' => "sendData('pages','get','diplomacy','treaties'); return false"],
         ['label' => 'Commander Systems', 'js' => "sendData('commandergov','get','mainDisplay'); return false"],
     ],
     'intel' => [
         ['label' => 'Rankings', 'js' => "sendData('rank','get','mainDisplay'); return false"],
         ['label' => 'Reports', 'js' => "sendData('actionLogs','get','mainDisplay'); return false"],
+        ['label' => 'Signal Watch', 'js' => "sendData('pages','get','intel','signals'); return false"],
         ['label' => 'Spy', 'js' => "sendData('spy','get','mainDisplay'); return false"],
     ],
     'community' => [
@@ -1439,9 +1712,11 @@ $featureButtons = [
         ['label' => 'Guide', 'js' => "sendData('pages','get','help','newplayer'); return false"],
         ['label' => 'Mechanics', 'js' => "sendData('pages','get','help','mechanics'); return false"],
         ['label' => 'Glossary', 'js' => "sendData('pages','get','help','glossary'); return false"],
+        ['label' => 'Troubleshooting', 'js' => "sendData('pages','get','help','troubleshooting'); return false"],
     ],
     'universe' => [
         ['label' => 'Galaxy Map', 'js' => "sendData('pages','get','universe','galaxies'); return false"],
+        ['label' => 'Transit Lanes', 'js' => "sendData('pages','get','universe','lanes'); return false"],
         ['label' => 'Stations', 'js' => "sendData('stations','get','mainDisplay'); return false"],
         ['label' => 'Hyperspace', 'js' => "sendData('hyperspace','get','mainDisplay'); return false"],
         ['label' => 'Expedition', 'js' => "sendData('pages','get','universe','expedition'); return false"],
@@ -1450,6 +1725,7 @@ $featureButtons = [
         ['label' => 'Research Tree', 'js' => "sendData('pages','get','research','tree'); return false"],
         ['label' => 'Technology Tree', 'js' => "sendData('pages','get','research','techlib'); return false"],
         ['label' => 'Tech Library Buildings', 'js' => "sendData('techlib','get','mainDisplay'); return false"],
+        ['label' => 'Projects', 'js' => "sendData('pages','get','research','projects'); return false"],
         ['label' => 'Classes', 'js' => "sendData('pages','get','research','classes'); return false"],
         ['label' => 'Talents', 'js' => "sendData('pages','get','research','talents'); return false"],
         ['label' => 'Stargate Tech', 'js' => "sendData('stargatetech','get','mainDisplay'); return false"],
@@ -1465,7 +1741,213 @@ if (isset($featureButtons[$main]) && count($featureButtons[$main]) > 0) {
     echo '</div>';
 }
 
+$subPageGroups = [
+    'empire' => [
+        'Command Home' => [
+            ['home', 'Empire Home'],
+            ['overview', 'Operations Overview'],
+            ['command', 'Command Structure'],
+        ],
+        'Empire Layers' => [
+            ['logistics', 'Logistics Hub'],
+            ['doctrine', 'Doctrine Board'],
+        ],
+    ],
+    'military' => [
+        'Command Layers' => [
+            ['personnel', 'Personnel'],
+            ['fleet', 'Fleet'],
+            ['navy', 'Navy Ops'],
+            ['defensegrid', 'Defense Grid'],
+        ],
+    ],
+    'operations' => [
+        'Mission Routing' => [
+            ['attack', 'Attack Missions'],
+            ['raid', 'Raid Missions'],
+            ['spy', 'Spy Network'],
+            ['commandqueue', 'Command Queue'],
+            ['diplomacyops', 'Diplomatic Ops'],
+        ],
+    ],
+    'economy' => [
+        'Economic Layers' => [
+            ['banking', 'Banking'],
+            ['resources', 'Resource Hub'],
+            ['logistics', 'Supply Logistics'],
+            ['treasury', 'Treasury Policy'],
+        ],
+    ],
+    'diplomacy' => [
+        'Diplomacy Layers' => [
+            ['relations', 'Relations'],
+            ['governance', 'Commander Governance'],
+            ['treaties', 'Treaties'],
+            ['councils', 'Councils'],
+        ],
+    ],
+    'intel' => [
+        'Intelligence Layers' => [
+            ['rankings', 'Rankings'],
+            ['reports', 'Battle Reports'],
+            ['signals', 'Signal Watch'],
+            ['dossiers', 'Target Dossiers'],
+        ],
+    ],
+    'community' => [
+        'Community Layers' => [
+            ['forums', 'Forums'],
+            ['events', 'Events'],
+            ['academy', 'Academy'],
+        ],
+    ],
+    'help' => [
+        'Help Layers' => [
+            ['newplayer', 'New Player'],
+            ['mechanics', 'Mechanics'],
+            ['troubleshooting', 'Troubleshooting'],
+            ['hotkeys', 'Quick Commands'],
+        ],
+    ],
+    'universe' => [
+        'Universe Layers' => [
+            ['galaxies', 'Galaxies'],
+            ['planets', 'Planets & Moons'],
+            ['lanes', 'Transit Lanes'],
+            ['anomalies', 'Anomaly Index'],
+        ],
+    ],
+    'research' => [
+        'Research Layers' => [
+            ['tree', 'Research Tree'],
+            ['techlib', 'Technology Tree'],
+            ['projects', 'Projects'],
+            ['labs', 'Lab Network'],
+        ],
+    ],
+];
+
+if (isset($subPageGroups[$main])) {
+    echo '<div class="card full"><h4>Sub Menu Groups</h4>';
+    foreach ($subPageGroups[$main] as $groupTitle => $groupItems) {
+        echo '<p><strong>' . h($groupTitle) . ':</strong></p>';
+        echo '<div class="page-subnav feature-subnav">';
+        foreach ($groupItems as $item) {
+            echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'' . h($main) . '\',\'' . h($item[0]) . '\'); return false">' . h($item[1]) . '</a>';
+        }
+        echo '</div>';
+    }
+    echo '</div>';
+}
+
 echo '<div class="page-grid">';
+
+if ($main === 'empire' && $sub === 'home') {
+    $armySize = (int)($userStats->armySize ?? 0);
+    $treasury = (int)($bank->onHand ?? 0);
+    $income = (int)($baseData->income ?? 0);
+    $up = (int)($baseData->up ?? 0);
+    $planetCount = count($planets);
+    $turnQ = $s->query("SELECT actionTurns FROM userdata WHERE uid=" . (int)$uid . " LIMIT 1");
+    $actionTurns = $turnQ ? (int)($turnQ->fetch_object()->actionTurns ?? 0) : 0;
+    $reservePressure = max(0, (int)round(($income > 0) ? ($treasury / $income) : 0));
+    $readiness = min(100, max(1, (int)round((($up / 1000) * 25) + (($armySize / 100000) * 35) + (($planetCount / max(1, (int)$uCfg['maxColonies'])) * 20) + (($treasury / 1000000) * 20))));
+    $colonyCap = max(1, (int)$uCfg['maxColonies']);
+    $colonyUsage = (int)round(($planetCount / $colonyCap) * 100);
+    $warPosture = ($readiness >= 62 || ($armySize >= 180000 && $up >= 260));
+    $postureLabel = $warPosture ? 'War Posture' : 'Growth Posture';
+    $critTurns = $warPosture ? 10 : 6;
+    $warnTurns = $warPosture ? 18 : 12;
+    $critReserve = $warPosture ? 6 : 4;
+    $warnReserve = $warPosture ? 10 : 7;
+    $critReadiness = $warPosture ? 48 : 35;
+    $warnReadiness = $warPosture ? 66 : 52;
+    $warnColonyUsage = $warPosture ? 85 : 93;
+    $warnUpFloor = $warPosture ? 260 : 150;
+    $foodFloor = $warPosture ? max(22000, (int)$resourceHub['rates']['food'] * 4) : max(14000, (int)$resourceHub['rates']['food'] * 3);
+    $waterFloor = $warPosture ? max(22000, (int)$resourceHub['rates']['water'] * 4) : max(14000, (int)$resourceHub['rates']['water'] * 3);
+    $energyFloor = $warPosture ? max(22000, (int)$resourceHub['rates']['energy'] * 4) : max(14000, (int)$resourceHub['rates']['energy'] * 3);
+    $alerts = [];
+
+    if ($actionTurns <= $critTurns) {
+        $alerts[] = ['level' => 'Critical', 'message' => 'Low action turns (' . fnum($actionTurns) . '). Prioritize turn-efficient moves.'];
+    } elseif ($actionTurns <= $warnTurns) {
+        $alerts[] = ['level' => 'Warning', 'message' => 'Action turns are tightening (' . fnum($actionTurns) . '). Queue only high-value actions.'];
+    }
+
+    if ($reservePressure <= $critReserve) {
+        $alerts[] = ['level' => 'Critical', 'message' => 'Reserve runway is short (' . fnum($reservePressure) . ' turns). Stabilize treasury before escalation.'];
+    } elseif ($reservePressure <= $warnReserve) {
+        $alerts[] = ['level' => 'Warning', 'message' => 'Reserve runway is moderate (' . fnum($reservePressure) . ' turns). Limit optional spending.'];
+    }
+
+    if ((int)$resourceHub['current']['food'] < $foodFloor || (int)$resourceHub['current']['water'] < $waterFloor || (int)$resourceHub['current']['energy'] < $energyFloor) {
+        $alerts[] = ['level' => 'Critical', 'message' => 'Food/Water/Energy buffers are low. Population stability risk is rising.'];
+    }
+
+    if ($up < $warnUpFloor) {
+        $alerts[] = ['level' => 'Warning', 'message' => 'Unit production is under tactical pace (' . fnum($up) . '/turn). Consider progression and infrastructure upgrades.'];
+    }
+
+    if ($colonyUsage >= $warnColonyUsage) {
+        $alerts[] = ['level' => 'Warning', 'message' => 'Colony capacity is near cap (' . fnum($planetCount) . '/' . fnum($colonyCap) . '). Plan expansion unlocks.'];
+    }
+
+    if ($readiness <= $critReadiness) {
+        $alerts[] = ['level' => 'Critical', 'message' => 'Readiness is low (' . fnum($readiness) . '%). Avoid multi-front operations until stabilized.'];
+    } elseif ($readiness <= $warnReadiness) {
+        $alerts[] = ['level' => 'Warning', 'message' => 'Readiness is moderate (' . fnum($readiness) . '%). Use selective operations and preserve reserves.'];
+    }
+
+    if (count($alerts) === 0) {
+        $alerts[] = ['level' => 'Stable', 'message' => 'All core command indicators are stable. Safe window for growth or offensive planning.'];
+    }
+
+    echo '<div class="card full">';
+    echo '<h4>Empire Home Alerts</h4>';
+    echo '<table class="mini-table" border="0" width="100%">';
+    echo '<tr><th align="left">Operational Posture</th><td>' . h($postureLabel) . '</td></tr>';
+    echo '<tr><th align="left">Severity</th><th align="left">Alert</th></tr>';
+    foreach ($alerts as $alert) {
+        echo '<tr><td><strong>' . h($alert['level']) . '</strong></td><td>' . h($alert['message']) . '</td></tr>';
+    }
+    echo '</table>';
+    echo '</div>';
+
+    echo '<div class="card">';
+    echo '<h4>Empire Home Snapshot</h4>';
+    echo '<p><strong>Readiness Index:</strong> ' . fnum($readiness) . '%</p>';
+    echo '<p><strong>Treasury On Hand:</strong> ' . fnum($treasury) . ' Naquadah</p>';
+    echo '<p><strong>Army Size:</strong> ' . fnum($armySize) . '</p>';
+    echo '<p><strong>Planets Controlled:</strong> ' . fnum($planetCount) . ' / ' . fnum((int)$uCfg['maxColonies']) . '</p>';
+    echo '</div>';
+
+    echo '<div class="card">';
+    echo '<h4>Command Signals</h4>';
+    echo '<p><strong>Income/Turn:</strong> ' . fnum($income) . '</p>';
+    echo '<p><strong>Unit Production/Turn:</strong> ' . fnum($up) . '</p>';
+    echo '<p><strong>Reserve Coverage:</strong> ' . fnum($reservePressure) . ' turns</p>';
+    echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'overview\'); return false">Open Operations Overview</a></p>';
+    echo '</div>';
+
+    echo '<div class="card full">';
+    echo '<h4>Empire Systems Home Matrix</h4>';
+    echo '<table class="mini-table" border="0" width="100%">';
+    echo '<tr><th align="left">System</th><th align="left">Current Detail</th><th align="left">Primary Action</th><th align="left">Information Focus</th></tr>';
+    echo '<tr><td>Territory</td><td>' . fnum($planetCount) . ' colonies with moon and bonus metadata</td><td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'planets\'); return false">Open Planets</a></td><td>Expansion slots, biome potential, moon utility</td></tr>';
+    echo '<tr><td>Command</td><td>Commander chain, rank, and alliance posture</td><td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'command\'); return false">Open Command</a></td><td>Diplomatic leverage and coordination tempo</td></tr>';
+    echo '<tr><td>Progression</td><td>Growth pacing and upgrade sequencing</td><td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'progress\'); return false">Open Progress</a></td><td>UP scaling, planet cap, economy acceleration</td></tr>';
+    echo '<tr><td>Logistics</td><td>Resource routing and reserve floor management</td><td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'logistics\'); return false">Open Logistics</a></td><td>War spend discipline and buffer policy</td></tr>';
+    echo '<tr><td>Doctrine</td><td>War, economy, and intel posture alignment</td><td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'doctrine\'); return false">Open Doctrine</a></td><td>Campaign stance and risk governance</td></tr>';
+    echo '</table>';
+    echo '</div>';
+
+    echo '<div class="card full">';
+    echo '<h4>Home Information Board</h4>';
+    echo '<p><strong>Operational Guidance:</strong> Use this home page to validate reserve health, force readiness, and expansion headroom before issuing attack, research, or build commands.</p>';
+    echo '<p><strong>Recommended Loop:</strong> Home -> Logistics -> Military/Fleet -> Operations -> Home (re-check readiness).</p>';
+    echo '</div>';
+}
 
 if ($main === 'empire' && $sub === 'overview') {
     echo '<div class="card"><h4>Empire Snapshot</h4>';
@@ -1534,6 +2016,15 @@ if ($main === 'empire' && $sub === 'progress') {
     echo '</div>';
 }
 
+if ($main === 'empire' && $sub === 'logistics') {
+    echo '<div class="card"><h4>Logistics Hub</h4><p>Route resources between economy, war, and expansion programs with a stable reserve floor.</p></div>';
+    echo '<div class="card"><h4>Active Supply Links</h4><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'economy\',\'resources\'); return false">Resource Hub</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'economy\',\'logistics\'); return false">Supply Logistics</a></p></div>';
+}
+
+if ($main === 'empire' && $sub === 'doctrine') {
+    echo '<div class="card full"><h4>Doctrine Board</h4><p>Set command posture for conflict, growth, and intelligence in one synchronized board.</p><table class="mini-table" border="0" width="100%"><tr><th align="left">Track</th><th align="left">Current Focus</th></tr><tr><td>War</td><td>Fleet pressure with controlled risk</td></tr><tr><td>Economy</td><td>Compounding production and reserve retention</td></tr><tr><td>Intel</td><td>Scouting before commitment</td></tr></table></div>';
+}
+
 if ($main === 'military') {
     if ($sub === 'personnel') {
         echo '<div class="card full"><h4>Personnel Breakdown</h4>';
@@ -1559,6 +2050,12 @@ if ($main === 'military') {
         echo '<div class="card"><h4>Orbital Installations</h4><p>Expand stations and bases to improve fleet staging and defensive projection.</p><p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Open Stations Command</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'bases\'); return false">Open Universe Base Matrix</a></p></div>';
         echo '<div class="card"><h4>Interstellar Travel Network</h4><p>Use Jump Gates, Stargates, and hyperspace lanes for long-range force projection.</p><p><a href="javascript:void(0)" onclick="sendData(\'hyperspace\',\'get\',\'mainDisplay\'); return false">Open Hyperspace Transit Command</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'travel\'); return false">Open Universe Travel Matrix</a></p></div>';
     }
+    if ($sub === 'navy') {
+        echo '<div class="card"><h4>Navy Operations</h4><p>Coordinate fleet waves, escort sequencing, and timing windows by operation type.</p><p><a href="javascript:void(0)" onclick="sendData(\'fleetdock\',\'get\',\'mainDisplay\'); return false">Open Fleet Dock</a></p></div>';
+    }
+    if ($sub === 'defensegrid') {
+        echo '<div class="card full"><h4>Defense Grid</h4><p>Layer defense systems across planets, stations, and fleet routes to reduce raid exposure.</p><p><a href="javascript:void(0)" onclick="sendData(\'stations\',\'get\',\'mainDisplay\'); return false">Open Stations Defense</a></p></div>';
+    }
 }
 
 if ($main === 'operations') {
@@ -1573,6 +2070,12 @@ if ($main === 'operations') {
     }
     if ($sub === 'logs') {
         echo '<div class="card"><h4>Combat Logs</h4><p>Review outcomes and refine strategy.</p><p><a href="javascript:void(0)" onclick="sendData(\'logs\',\'get\',\'mainDisplay\'); return false">Open Logs</a></p></div>';
+    }
+    if ($sub === 'commandqueue') {
+        echo '<div class="card full"><h4>Command Queue</h4><p>Queue mission phases: recon, strike, raid, and recovery to avoid turn waste.</p><table class="mini-table" border="0" width="100%"><tr><th align="left">Phase</th><th align="left">Recommended Action</th></tr><tr><td>1</td><td>Spy and verify defenses</td></tr><tr><td>2</td><td>Launch primary attack wave</td></tr><tr><td>3</td><td>Execute raid follow-up</td></tr><tr><td>4</td><td>Recover and reposition</td></tr></table></div>';
+    }
+    if ($sub === 'diplomacyops') {
+        echo '<div class="card"><h4>Diplomatic Operations</h4><p>Use messages and relation changes to reduce escalation before or after operations.</p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'diplomacy\',\'messages\'); return false">Open Messaging</a></p></div>';
     }
 }
 
@@ -1655,6 +2158,14 @@ if ($main === 'economy') {
         echo '<tr><td>Defense Layers</td><td>Protect economy and fleets from raid pressure.</td><td>Any phase under threat</td></tr>';
         echo '</table></div>';
     }
+
+    if ($sub === 'logistics') {
+        echo '<div class="card"><h4>Supply Logistics</h4><p>Balance transport and spending across combat, expansion, and research lanes.</p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'empire\',\'logistics\'); return false">Open Empire Logistics Hub</a></p></div>';
+    }
+
+    if ($sub === 'treasury') {
+        echo '<div class="card full"><h4>Treasury Policy</h4><p>Set reserve thresholds to avoid operational lock during spikes in war spending.</p><ul><li>War reserve: 35%</li><li>Research reserve: 20%</li><li>Expansion reserve: 15%</li><li>Flexible capital: 30%</li></ul></div>';
+    }
 }
 
 if ($main === 'diplomacy') {
@@ -1682,6 +2193,12 @@ if ($main === 'diplomacy') {
         echo '<tr><td>Intelligence Governance</td><td>Harden covert resilience and strategic awareness.</td><td>Shadow/High-alert setups</td></tr>';
         echo '</table></div>';
     }
+    if ($sub === 'treaties') {
+        echo '<div class="card full"><h4>Treaty Desk</h4><p>Track active pacts and peace windows. Use this before multi-target operations.</p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'diplomacy\',\'relations\'); return false">Open Relations</a></p></div>';
+    }
+    if ($sub === 'councils') {
+        echo '<div class="card"><h4>Council Chamber</h4><p>Coordinate alliance leadership votes and campaign-wide directives.</p><p><a href="javascript:void(0)" onclick="sendData(\'ally_mlist\',\'get\',\'mainDisplay\'); return false">Open Alliance Roster</a></p></div>';
+    }
 }
 
 if ($main === 'intel') {
@@ -1696,6 +2213,12 @@ if ($main === 'intel') {
     }
     if ($sub === 'map') {
         echo '<div class="card"><h4>Sector Map</h4><p>Use race, rank, and alliance data from profile scans to map influence zones.</p></div>';
+    }
+    if ($sub === 'signals') {
+        echo '<div class="card"><h4>Signal Watch</h4><p>Monitor sudden rank jumps, repeated scout activity, and hostile message bursts.</p></div>';
+    }
+    if ($sub === 'dossiers') {
+        echo '<div class="card full"><h4>Target Dossiers</h4><p>Build dossiers for high-value rivals before campaign waves.</p><p><a href="javascript:void(0)" onclick="sendData(\'rank\',\'get\',\'mainDisplay\'); return false">Open Rankings</a></p></div>';
     }
 }
 
@@ -1967,6 +2490,14 @@ if ($main === 'universe') {
         echo '<tr><td>Hyperspace Core</td><td>Cooldown compression and transit efficiency</td><td>Deuterium + sustainment (food/water)</td><td>Late-stage expedition and colonization loops</td></tr>';
         echo '</table></div>';
     }
+
+    if ($sub === 'lanes') {
+        echo '<div class="card full"><h4>Transit Lanes</h4><p>Use lane planning to distribute fleets and reduce route bottlenecks.</p><table class="mini-table" border="0" width="100%"><tr><th align="left">Lane Type</th><th align="left">Best Use</th></tr><tr><td>Inner Lanes</td><td>Fast military response</td></tr><tr><td>Outer Lanes</td><td>Colonization and deep expeditions</td></tr></table></div>';
+    }
+
+    if ($sub === 'anomalies') {
+        echo '<div class="card"><h4>Anomaly Index</h4><p>Catalog wormholes, ruins, and volatile fields for expedition targeting.</p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'objects\'); return false">Open Object Scanner</a></p></div>';
+    }
 }
 
 if ($main === 'research') {
@@ -2131,6 +2662,14 @@ if ($main === 'research') {
         echo '<tr><td>Late</td><td>Ancient Systems and high-tier threat-response lines</td><td>Maximum interstellar control and campaign endurance</td></tr>';
         echo '</table></div>';
     }
+
+    if ($sub === 'projects') {
+        echo '<div class="card full"><h4>Research Projects</h4><p>Track active projects by branch and priority band.</p><ul><li>Military Optimization Project</li><li>Economic Throughput Project</li><li>Gate Stability Project</li></ul></div>';
+    }
+
+    if ($sub === 'labs') {
+        echo '<div class="card"><h4>Lab Network</h4><p>Coordinate infrastructure levels across research campuses and archives.</p><p><a href="javascript:void(0)" onclick="sendData(\'techlib\',\'get\',\'mainDisplay\'); return false">Open Tech Library Buildings</a></p></div>';
+    }
 }
 
 if ($main === 'community') {
@@ -2146,6 +2685,12 @@ if ($main === 'community') {
     if ($sub === 'faq') {
         echo '<div class="card"><h4>FAQ</h4><p>Core rules, policy, and progression advice are available here.</p><p><a href="javascript:void(0)" onclick="sendData(\'faq\',\'get\',\'mainDisplay\'); return false">Open FAQ</a></p></div>';
     }
+    if ($sub === 'events') {
+        echo '<div class="card"><h4>Events Calendar</h4><p>Track alliance events, challenge windows, and campaign checkpoints.</p></div>';
+    }
+    if ($sub === 'academy') {
+        echo '<div class="card full"><h4>Academy</h4><p>Structured training path for new and returning commanders.</p><ol><li>Basics: economy and turns</li><li>Intermediate: raids and intel</li><li>Advanced: multi-front doctrine</li></ol></div>';
+    }
 }
 
 if ($main === 'help') {
@@ -2160,6 +2705,12 @@ if ($main === 'help') {
     }
     if ($sub === 'support') {
         echo '<div class="card"><h4>Support Desk</h4><p>For account issues, use in-game contact and community channels. Include mission timestamps and affected players in reports.</p></div>';
+    }
+    if ($sub === 'troubleshooting') {
+        echo '<div class="card full"><h4>Troubleshooting</h4><ul><li>If module output stalls, reload and retry the menu action.</li><li>If actions fail, verify enough turns and resources.</li><li>If target actions fail, refresh rank/profile intelligence first.</li></ul></div>';
+    }
+    if ($sub === 'hotkeys') {
+        echo '<div class="card"><h4>Quick Commands</h4><p>Use the left command tree and feature action buttons for rapid sub-page switching.</p></div>';
     }
 }
 
