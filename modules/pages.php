@@ -1311,6 +1311,18 @@ function militaryQueueProcessReady(Game $s, int $uid, array $troopById, int $lim
     return ['processed' => $processed, 'waiting' => $waiting, 'failed' => $failed];
 }
 
+function militaryQueueNormalizePriorities(Game $s, int $uid): void {
+    $q = $s->query("SELECT queue_id FROM military_troop_queue WHERE uid=" . $uid . " AND status='queued' ORDER BY priority_order ASC, queue_id ASC");
+    if (!$q) {
+        return;
+    }
+    $prio = 1;
+    while ($row = $q->fetch_object()) {
+        $s->query("UPDATE military_troop_queue SET priority_order=" . $prio . " WHERE queue_id=" . (int)$row->queue_id . " AND uid=" . $uid . " LIMIT 1");
+        $prio++;
+    }
+}
+
 $main = isset($_GET['id']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['id'])) : 'empire';
 $sub = isset($_GET['atype']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['atype'])) : '';
 
@@ -1924,11 +1936,18 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
             if ($troopMeta === null) {
                 $pageActionStatus = 'Recruitment queue failed: troop profile not found.';
             } else {
+                $queuedCountQ = $s->query("SELECT COUNT(*) AS c FROM military_troop_queue WHERE uid=" . $uid . " AND status='queued'");
+                $queuedCount = $queuedCountQ ? (int)($queuedCountQ->fetch_object()->c ?? 0) : 0;
+                if ($queuedCount >= 60) {
+                    $pageActionStatus = 'Recruitment queue failed: queue is at capacity (60 queued batches).';
+                } else {
                 $eta = max(120, (int)(120 + ($qty * 8) + ((int)$troopMeta['tier'] * 18)));
                 $prioQ = $s->query("SELECT COALESCE(MAX(priority_order), 0) AS p FROM military_troop_queue WHERE uid=" . $uid . "");
                 $nextPrio = $prioQ ? ((int)($prioQ->fetch_object()->p ?? 0) + 1) : 1;
                 $s->query("INSERT INTO military_troop_queue (uid, troop_id, quantity, priority_order, eta_seconds, status) VALUES (" . $uid . ", " . (int)$troopPickId . ", " . $qty . ", " . $nextPrio . ", " . $eta . ", 'queued')");
+                militaryQueueNormalizePriorities($s, $uid);
                 $pageActionStatus = 'Recruitment queued: ' . fnum($qty) . 'x ' . (string)$troopMeta['troop_name'] . ' (ETA ' . fnum($eta) . 's).';
+                }
             }
         }
 
@@ -1966,6 +1985,7 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
 
         if ($cmd === 'mil_queue_process_all') {
             $sync = militaryQueueProcessReady($s, $uid, $troopById, 25);
+            militaryQueueNormalizePriorities($s, $uid);
             $pageActionStatus = 'Queue process all: processed ' . fnum((int)$sync['processed']) . ', waiting ' . fnum((int)$sync['waiting']) . ', failed ' . fnum((int)$sync['failed']) . '.';
         }
 
@@ -1981,8 +2001,21 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
                     $pageActionStatus = 'Queue cancel skipped: batch is already ' . h((string)$row->status) . '.';
                 } else {
                     $s->query("UPDATE military_troop_queue SET status='cancelled', completed_at=NOW() WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
+                    militaryQueueNormalizePriorities($s, $uid);
                     $pageActionStatus = 'Queue batch #' . fnum($troopQueueId) . ' cancelled.';
                 }
+            }
+        }
+
+        if ($cmd === 'mil_queue_cancel_all') {
+            $countQ = $s->query("SELECT COUNT(*) AS c FROM military_troop_queue WHERE uid=" . $uid . " AND status='queued'");
+            $cancelCount = $countQ ? (int)($countQ->fetch_object()->c ?? 0) : 0;
+            if ($cancelCount <= 0) {
+                $pageActionStatus = 'Queue cancel-all skipped: no queued batches found.';
+            } else {
+                $s->query("UPDATE military_troop_queue SET status='cancelled', completed_at=NOW() WHERE uid=" . $uid . " AND status='queued'");
+                militaryQueueNormalizePriorities($s, $uid);
+                $pageActionStatus = 'Queue cancel-all complete: ' . fnum($cancelCount) . ' queued batches cancelled.';
             }
         }
 
@@ -2002,6 +2035,7 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
                         $prioQ = $s->query("SELECT COALESCE(MAX(priority_order), 0) AS p FROM military_troop_queue WHERE uid=" . $uid . "");
                         $nextPrio = $prioQ ? ((int)($prioQ->fetch_object()->p ?? 0) + 1) : 1;
                         $s->query("UPDATE military_troop_queue SET status='queued', created_at=NOW(), completed_at=NULL, priority_order=" . $nextPrio . " WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
+                        militaryQueueNormalizePriorities($s, $uid);
                         $pageActionStatus = 'Queue batch #' . fnum($troopQueueId) . ' moved back to queued status.';
                     }
                 }
@@ -2012,6 +2046,7 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
             $countQ = $s->query("SELECT COUNT(*) AS c FROM military_troop_queue WHERE uid=" . $uid . " AND status<>'queued'");
             $clearCount = $countQ ? (int)($countQ->fetch_object()->c ?? 0) : 0;
             $s->query("DELETE FROM military_troop_queue WHERE uid=" . $uid . " AND status<>'queued'");
+            militaryQueueNormalizePriorities($s, $uid);
             $pageActionStatus = 'Queue history cleared: removed ' . fnum($clearCount) . ' completed/cancelled/failed rows.';
         }
 
@@ -2039,6 +2074,7 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
                         $adjPrio = (int)$adj->priority_order;
                         $s->query("UPDATE military_troop_queue SET priority_order=" . $adjPrio . " WHERE queue_id=" . (int)$self->queue_id . " AND uid=" . $uid . " LIMIT 1");
                         $s->query("UPDATE military_troop_queue SET priority_order=" . $selfPrio . " WHERE queue_id=" . (int)$adj->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                        militaryQueueNormalizePriorities($s, $uid);
                         $pageActionStatus = 'Queue priority updated for batch #' . fnum((int)$self->queue_id) . '.';
                     }
                 }
@@ -2047,6 +2083,7 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
 
         if ($sub === 'troops' && $cmd === '') {
             $sync = militaryQueueProcessReady($s, $uid, $troopById, 10);
+            militaryQueueNormalizePriorities($s, $uid);
             if ((int)$sync['processed'] > 0 || (int)$sync['failed'] > 0) {
                 $pageActionStatus = 'Auto queue sync: processed ' . fnum((int)$sync['processed']) . ', failed ' . fnum((int)$sync['failed']) . ', still waiting ' . fnum((int)$sync['waiting']) . '.';
             }
@@ -2697,6 +2734,7 @@ if ($main === 'military') {
             . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_recruit&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Add To Queue</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_process\'); return false">Process Next Ready Queue Batch</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_process_all\'); return false">Process All Ready Queue Batches</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_cancel_all\'); return false">Cancel All Queued Batches</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_clear_history\'); return false">Clear Completed/Cancelled/Failed History</a></p>';
         echo '</div>';
 
