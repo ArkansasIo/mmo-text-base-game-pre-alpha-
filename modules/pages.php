@@ -1274,6 +1274,43 @@ function militaryRecruitApply(Game $s, int $uid, array $troopMeta, int $qty): st
     return 'Troop recruitment complete: ' . fnum($qty) . 'x ' . (string)$troopMeta['troop_name'] . ' assigned to ' . strtoupper($unitField) . ' corps.';
 }
 
+function militaryQueueProcessReady(Game $s, int $uid, array $troopById, int $limit = 25): array {
+    $limit = max(1, min(100, $limit));
+    $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, UNIX_TIMESTAMP(created_at) AS created_ts
+        FROM military_troop_queue
+        WHERE uid=" . $uid . " AND status='queued'
+        ORDER BY queue_id ASC LIMIT " . $limit);
+    $processed = 0;
+    $failed = 0;
+    $waiting = 0;
+
+    if ($queueQ) {
+        while ($qItem = $queueQ->fetch_object()) {
+            $elapsed = max(0, time() - (int)$qItem->created_ts);
+            if ($elapsed < (int)$qItem->eta_seconds) {
+                $waiting++;
+                continue;
+            }
+            $troopMeta = $troopById[(int)$qItem->troop_id] ?? null;
+            if ($troopMeta === null) {
+                $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                $failed++;
+                continue;
+            }
+            $applyResult = militaryRecruitApply($s, $uid, $troopMeta, (int)$qItem->quantity);
+            if (strpos($applyResult, 'Troop recruitment complete:') === 0) {
+                $s->query("UPDATE military_troop_queue SET status='done', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                $processed++;
+            } else {
+                $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                $failed++;
+            }
+        }
+    }
+
+    return ['processed' => $processed, 'waiting' => $waiting, 'failed' => $failed];
+}
+
 $main = isset($_GET['id']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['id'])) : 'empire';
 $sub = isset($_GET['atype']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['atype'])) : '';
 
@@ -1920,37 +1957,8 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
         }
 
         if ($cmd === 'mil_queue_process_all') {
-            $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, UNIX_TIMESTAMP(created_at) AS created_ts
-                FROM military_troop_queue
-                WHERE uid=" . $uid . " AND status='queued'
-                ORDER BY queue_id ASC LIMIT 25");
-            $processed = 0;
-            $failed = 0;
-            $waiting = 0;
-            if ($queueQ) {
-                while ($qItem = $queueQ->fetch_object()) {
-                    $elapsed = max(0, time() - (int)$qItem->created_ts);
-                    if ($elapsed < (int)$qItem->eta_seconds) {
-                        $waiting++;
-                        continue;
-                    }
-                    $troopMeta = $troopById[(int)$qItem->troop_id] ?? null;
-                    if ($troopMeta === null) {
-                        $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
-                        $failed++;
-                        continue;
-                    }
-                    $applyResult = militaryRecruitApply($s, $uid, $troopMeta, (int)$qItem->quantity);
-                    if (strpos($applyResult, 'Troop recruitment complete:') === 0) {
-                        $s->query("UPDATE military_troop_queue SET status='done', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
-                        $processed++;
-                    } else {
-                        $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
-                        $failed++;
-                    }
-                }
-            }
-            $pageActionStatus = 'Queue process all: processed ' . fnum($processed) . ', waiting ' . fnum($waiting) . ', failed ' . fnum($failed) . '.';
+            $sync = militaryQueueProcessReady($s, $uid, $troopById, 25);
+            $pageActionStatus = 'Queue process all: processed ' . fnum((int)$sync['processed']) . ', waiting ' . fnum((int)$sync['waiting']) . ', failed ' . fnum((int)$sync['failed']) . '.';
         }
 
         if ($cmd === 'mil_queue_cancel') {
@@ -1967,6 +1975,13 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
                     $s->query("UPDATE military_troop_queue SET status='cancelled', completed_at=NOW() WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
                     $pageActionStatus = 'Queue batch #' . fnum($troopQueueId) . ' cancelled.';
                 }
+            }
+        }
+
+        if ($sub === 'troops' && $cmd === '') {
+            $sync = militaryQueueProcessReady($s, $uid, $troopById, 10);
+            if ((int)$sync['processed'] > 0 || (int)$sync['failed'] > 0) {
+                $pageActionStatus = 'Auto queue sync: processed ' . fnum((int)$sync['processed']) . ', failed ' . fnum((int)$sync['failed']) . ', still waiting ' . fnum((int)$sync['waiting']) . '.';
             }
         }
 
