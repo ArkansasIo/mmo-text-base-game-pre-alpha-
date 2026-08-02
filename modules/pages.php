@@ -6,7 +6,7 @@ $pagegen->round_to = 4;
 $pagegen->start();
 
 $s = new Game();
-if (!$s->loggedIn || !$_GET['time']) {
+if (!$s->loggedIn || !isset($_GET['time'])) {
     header("Location: ../index.php");
     exit;
 }
@@ -33,21 +33,28 @@ function universePick(int &$seed, array $list): string {
     return (string)$list[$idx];
 }
 
+function universeTaxonomy(): array {
+    return [
+        'worldTypes' => ['Terran', 'Oceanic', 'Arid', 'Volcanic', 'Ice', 'Gas Dwarf', 'Toxic', 'Crystalline', 'Relic'],
+        'biomes' => [
+            'Terran' => ['Temperate Forest', 'Grassland', 'Rain Basin'],
+            'Oceanic' => ['Archipelago', 'Kelp Expanse', 'Storm Sea'],
+            'Arid' => ['Dune Basin', 'Canyon Belt', 'Salt Flats'],
+            'Volcanic' => ['Magma Rift', 'Ash Plateau', 'Basalt Sea'],
+            'Ice' => ['Glacier Shield', 'Frozen Canyons', 'Polar Sink'],
+            'Gas Dwarf' => ['Upper Cloudline', 'Ionic Layer', 'Hydrogen Drift'],
+            'Toxic' => ['Acid Mire', 'Sulfur Crust', 'Caustic Foglands'],
+            'Crystalline' => ['Shard Plains', 'Prism Caves', 'Quartz Highlands'],
+            'Relic' => ['Ancient Arcology', 'Derelict Ring', 'Vault Ruins'],
+        ],
+    ];
+}
+
 function buildUniverseSnapshot(int $uid, array $ownedPlanets): array {
     $seed = (($uid + 11) * 7919) & 0x7fffffff;
-
-    $worldTypes = ['Terran', 'Oceanic', 'Arid', 'Volcanic', 'Ice', 'Gas Dwarf', 'Toxic', 'Crystalline', 'Relic'];
-    $biomes = [
-        'Terran' => ['Temperate Forest', 'Grassland', 'Rain Basin'],
-        'Oceanic' => ['Archipelago', 'Kelp Expanse', 'Storm Sea'],
-        'Arid' => ['Dune Basin', 'Canyon Belt', 'Salt Flats'],
-        'Volcanic' => ['Magma Rift', 'Ash Plateau', 'Basalt Sea'],
-        'Ice' => ['Glacier Shield', 'Frozen Canyons', 'Polar Sink'],
-        'Gas Dwarf' => ['Upper Cloudline', 'Ionic Layer', 'Hydrogen Drift'],
-        'Toxic' => ['Acid Mire', 'Sulfur Crust', 'Caustic Foglands'],
-        'Crystalline' => ['Shard Plains', 'Prism Caves', 'Quartz Highlands'],
-        'Relic' => ['Ancient Arcology', 'Derelict Ring', 'Vault Ruins'],
-    ];
+    $taxonomy = universeTaxonomy();
+    $worldTypes = $taxonomy['worldTypes'];
+    $biomes = $taxonomy['biomes'];
 
     $galaxies = [];
     $worlds = [];
@@ -142,6 +149,213 @@ function buildUniverseSnapshot(int $uid, array $ownedPlanets): array {
             'ownedColonies' => count($ownedPlanets),
         ],
     ];
+}
+
+function universeConfig(): array {
+    $galaxies = 134;
+    $systemsPerGalaxy = 499;
+    $positionsPerSystem = 15;
+    $maxWorlds = $galaxies * $systemsPerGalaxy * $positionsPerSystem;
+
+    return [
+        'maxWorlds' => $maxWorlds,
+        'maxColonies' => 1000000,
+        'maxMoons' => 1000000,
+        'galaxies' => $galaxies,
+        'systemsPerGalaxy' => $systemsPerGalaxy,
+        'positionsPerSystem' => $positionsPerSystem,
+        'sectorsPerGalaxy' => $systemsPerGalaxy,
+        'orbitsPerSector' => $positionsPerSystem,
+    ];
+}
+
+function universeWorldByIndex(int $uid, array $ownedPlanets, int $index, array $cfg): array {
+    $seed = (($uid + 17) * 6151 + ($index * 97)) & 0x7fffffff;
+    $taxonomy = universeTaxonomy();
+    $worldTypes = $taxonomy['worldTypes'];
+    $biomes = $taxonomy['biomes'];
+
+    $type = universePick($seed, $worldTypes);
+    $biome = universePick($seed, $biomes[$type] ?? ['Unknown']);
+    $habitability = universeRand($seed, 18, 98);
+    $metal = universeRand($seed, 220, 1200);
+    $crystal = universeRand($seed, 120, 980);
+    $deut = universeRand($seed, 60, 760);
+    $moonCount = ($type === 'Gas Dwarf' || $type === 'Relic') ? universeRand($seed, 1, 3) : universeRand($seed, 0, 2);
+    $moonClass = $moonCount > 0 ? universePick($seed, ['Rocky', 'Icy', 'Metallic', 'Ruined']) : '-';
+    $slots = max(2, (int)floor($habitability / 12));
+
+    $systemsPerGalaxy = (int)($cfg['systemsPerGalaxy'] ?? $cfg['sectorsPerGalaxy']);
+    $positionsPerSystem = (int)($cfg['positionsPerSystem'] ?? $cfg['orbitsPerSector']);
+    $worldsPerGalaxy = (int)($systemsPerGalaxy * $positionsPerSystem);
+    $galaxyIndex = (int)floor(($index - 1) / $worldsPerGalaxy) + 1;
+    $withinGalaxy = (($index - 1) % $worldsPerGalaxy) + 1;
+    $system = (int)floor(($withinGalaxy - 1) / $positionsPerSystem) + 1;
+    $position = (($withinGalaxy - 1) % $positionsPerSystem) + 1;
+
+    $owner = 'Unclaimed';
+    $planetLabel = 'G' . $galaxyIndex . '-' . $system . ':' . $position;
+    if ($index <= count($ownedPlanets)) {
+        $owner = 'Player Colony';
+        $planetLabel = (string)($ownedPlanets[$index - 1]['name'] ?? $planetLabel);
+    }
+
+    return [
+        'idx' => $index,
+        'coord' => 'G' . $galaxyIndex . ' [' . $system . ':' . $position . ']',
+        'system' => $system,
+        'position' => $position,
+        'name' => $planetLabel,
+        'type' => $type,
+        'biome' => $biome,
+        'habitability' => $habitability,
+        'slots' => $slots,
+        'metal' => $metal,
+        'crystal' => $crystal,
+        'deut' => $deut,
+        'moons' => $moonCount,
+        'moonClass' => $moonClass,
+        'owner' => $owner,
+    ];
+}
+
+function universeWorldSlice(int $uid, array $ownedPlanets, array $cfg, int $page, int $perPage): array {
+    $total = (int)$cfg['maxWorlds'];
+    $page = max(1, $page);
+    $perPage = max(10, min(200, $perPage));
+    $maxPage = max(1, (int)ceil($total / $perPage));
+    if ($page > $maxPage) {
+        $page = $maxPage;
+    }
+    $start = (($page - 1) * $perPage) + 1;
+    $end = min($total, $start + $perPage - 1);
+
+    $rows = [];
+    for ($i = $start; $i <= $end; $i++) {
+        $rows[] = universeWorldByIndex($uid, $ownedPlanets, $i, $cfg);
+    }
+
+    return [
+        'rows' => $rows,
+        'page' => $page,
+        'perPage' => $perPage,
+        'maxPage' => $maxPage,
+        'start' => $start,
+        'end' => $end,
+        'total' => $total,
+    ];
+}
+
+function universeColonizeCosts(array $world): array {
+    $habitability = (int)($world['habitability'] ?? 0);
+    $slots = (int)($world['slots'] ?? 2);
+    $moons = (int)($world['moons'] ?? 0);
+
+    $naqCost = 120000 + ((100 - max(0, min(100, $habitability))) * 1500) + ($moons * 25000);
+    $deutCost = 12000 + ($slots * 1300);
+    $foodCost = 9000 + ($slots * 900);
+    $waterCost = 9000 + ($slots * 900);
+    $popCost = 5000 + ($slots * 450);
+    $turnCost = 25;
+
+    return [
+        'naq' => $naqCost,
+        'deut' => $deutCost,
+        'food' => $foodCost,
+        'water' => $waterCost,
+        'pop' => $popCost,
+        'turns' => $turnCost,
+    ];
+}
+
+function universeColonizeWorld(Game $s, int $uid, array $cfg, array $ownedPlanets, int $targetWorld): string {
+    if ($targetWorld < 1 || $targetWorld > (int)$cfg['maxWorlds']) {
+        return 'Colonization failed: invalid world target.';
+    }
+
+    if (count($ownedPlanets) >= (int)$cfg['maxColonies']) {
+        return 'Colonization failed: colony cap reached.';
+    }
+
+    if ($targetWorld <= count($ownedPlanets)) {
+        return 'Colonization failed: target already owned.';
+    }
+
+    $world = universeWorldByIndex($uid, $ownedPlanets, $targetWorld, $cfg);
+    if ((string)($world['owner'] ?? '') !== 'Unclaimed') {
+        return 'Colonization failed: target world is no longer available.';
+    }
+    if ((int)($world['habitability'] ?? 0) < 46) {
+        return 'Colonization failed: habitability too low. Requires 46%+.';
+    }
+
+    $turnQ = $s->query("SELECT actionTurns FROM userdata WHERE uid=" . (int)$uid . " LIMIT 1");
+    $turns = $turnQ ? (int)($turnQ->fetch_object()->actionTurns ?? 0) : 0;
+    $costs = universeColonizeCosts($world);
+    if ($turns < (int)$costs['turns']) {
+        return 'Colonization failed: not enough action turns.';
+    }
+
+    $bank = $s->bank();
+    $onHand = (int)($bank->onHand ?? 0);
+    if ($onHand < (int)$costs['naq']) {
+        return 'Colonization failed: insufficient Naquadah on hand.';
+    }
+
+    $s->query("CREATE TABLE IF NOT EXISTS player_resources (
+        uid INT NOT NULL PRIMARY KEY,
+        metal BIGINT NOT NULL DEFAULT 80000,
+        crystal BIGINT NOT NULL DEFAULT 60000,
+        deuterium BIGINT NOT NULL DEFAULT 45000,
+        food BIGINT NOT NULL DEFAULT 55000,
+        water BIGINT NOT NULL DEFAULT 55000,
+        population BIGINT NOT NULL DEFAULT 120000,
+        energy BIGINT NOT NULL DEFAULT 50000,
+        last_tick_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    )");
+    $s->query("ALTER TABLE player_resources ADD COLUMN IF NOT EXISTS energy BIGINT NOT NULL DEFAULT 50000");
+    $s->query("INSERT IGNORE INTO player_resources (uid) VALUES (" . (int)$uid . ")");
+
+    $resQ = $s->query("SELECT deuterium,food,water,population FROM player_resources WHERE uid=" . (int)$uid . " LIMIT 1");
+    $resObj = $resQ ? $resQ->fetch_object() : null;
+    $curDeut = (int)($resObj->deuterium ?? 0);
+    $curFood = (int)($resObj->food ?? 0);
+    $curWater = (int)($resObj->water ?? 0);
+    $curPop = (int)($resObj->population ?? 0);
+
+    if ($curDeut < (int)$costs['deut'] || $curFood < (int)$costs['food'] || $curWater < (int)$costs['water'] || $curPop < (int)$costs['pop']) {
+        return 'Colonization failed: insufficient strategic resources (D/F/W/Population).';
+    }
+
+    $pidQ = $s->query("SELECT IFNULL(MAX(pid), 0) + 1 AS nextPid FROM planets WHERE uid=" . (int)$uid);
+    $nextPid = $pidQ ? (int)($pidQ->fetch_object()->nextPid ?? 1) : 1;
+    if ($nextPid < 1) {
+        $nextPid = 1;
+    }
+
+    $rawName = 'Colony ' . (int)$targetWorld;
+    $safeName = preg_replace('/[^A-Za-z0-9 _-]/', '', $rawName);
+    if (!$safeName) {
+        $safeName = 'Colony ' . (int)$targetWorld;
+    }
+    $safeText = preg_replace('/[^A-Za-z0-9 _:\[\]-]/', '', (string)($world['coord'] . ' ' . $world['type']));
+    $incomeBonus = max(20, (int)floor((int)$world['metal'] / 20));
+    $upBonus = max(8, (int)floor((int)$world['habitability'] / 6));
+    $sizeCode = max(0, min(9, (int)$world['slots'] - 2));
+
+    $insert = "INSERT INTO planets (uid, text, plnt_name, income_bonus, up_bonus, isHome, pid, plnt_size) VALUES ("
+        . (int)$uid . ", '" . $safeText . "', '" . $safeName . "', " . $incomeBonus . ", " . $upBonus . ", 0, " . $nextPid . ", " . $sizeCode . ")";
+    if (!$s->query($insert)) {
+        return 'Colonization failed: could not create colony record.';
+    }
+
+    $s->query("UPDATE bank SET onHand = GREATEST(0, onHand - " . (int)$costs['naq'] . ") WHERE uid=" . (int)$uid . " LIMIT 1");
+    $s->query("UPDATE player_resources SET deuterium = GREATEST(0, deuterium - " . (int)$costs['deut'] . "), food = GREATEST(0, food - " . (int)$costs['food'] . "), water = GREATEST(0, water - " . (int)$costs['water'] . "), population = GREATEST(0, population - " . (int)$costs['pop'] . ") WHERE uid=" . (int)$uid . " LIMIT 1");
+    $s->query("UPDATE userdata SET actionTurns = GREATEST(0, actionTurns - " . (int)$costs['turns'] . ") WHERE uid=" . (int)$uid . " LIMIT 1");
+    $s->updatePower($uid);
+
+    return 'Colonization successful: ' . $safeName . ' established at ' . (string)$world['coord'] . ' (Cost: ' . fnum($costs['naq']) . ' Naquadah, ' . fnum($costs['turns']) . ' turns).';
 }
 
 function researchPick(int &$seed, array $list): string {
@@ -545,13 +759,18 @@ function renderMechanicsMatrix(string $main, string $sub): void {
             'Support transfers should follow command objectives and risk posture.',
             'Leadership churn can reduce alliance execution quality.',
         ],
+        'diplomacy:governance' => [
+            'Governance systems tune command doctrine, policy cadence, and strategic automation layers.',
+            'Enable systems that match current doctrine while avoiding over-specialization in one branch.',
+            'Commander settings should align with war, economy, and expansion priorities each cycle.',
+        ],
         'help:mechanics' => [
             'Covert sabotage doctrine often accepts lower losses on success and higher losses on failure.',
             'Mothership progression includes high-cost entry, bay expansion, and weapon specialization.',
             'Effective macro play balances production growth, intel quality, and turn efficiency.',
         ],
         'universe:galaxies' => [
-            'Universe is divided into galaxy clusters, sectors, and orbital slots for expansion routing.',
+            'Universe is divided into OGame-style galaxies, systems, and orbital positions for expansion routing.',
             'Each world has a biome profile, habitability score, and distinct resource distribution.',
             'OGame-style growth favors staggered colonies across multiple galaxy lanes to reduce bottlenecks.',
         ],
@@ -813,12 +1032,12 @@ $subLabels = [
     'military' => ['personnel' => 'Personnel', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet'],
     'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs'],
     'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'OGame Buildings'],
-    'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain'],
+    'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain', 'governance' => 'Commander Governance'],
     'intel' => ['rankings' => 'Rankings', 'reports' => 'Battle Reports', 'threats' => 'Threat Matrix', 'map' => 'Sector Map'],
     'community' => ['forums' => 'Forums', 'updates' => 'Updates', 'contact' => 'Contact', 'faq' => 'FAQ'],
     'help' => ['newplayer' => 'New Player', 'mechanics' => 'Mechanics', 'glossary' => 'Glossary', 'support' => 'Support'],
     'universe' => ['galaxies' => 'Galaxies', 'planets' => 'Planets & Moons', 'objects' => 'Interstellar Objects', 'expedition' => 'Expedition', 'bases' => 'Stations & Bases', 'travel' => 'Jumpgate & Hyperspace'],
-    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'classes' => 'Class Library', 'talents' => 'Talent Library', 'stargate' => 'Stargate Tech'],
+    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'infrastructure' => 'Tech Library Buildings', 'classes' => 'Class Library', 'talents' => 'Talent Library', 'stargate' => 'Stargate Tech'],
 ];
 
 $systemDetails = [
@@ -962,6 +1181,12 @@ $systemDetails = [
             'functions' => ['Open commander tools', 'Manage parent chain context', 'Support command transfer workflows'],
             'features' => ['Commander shortcut', 'Chain visibility cues', 'Support-flow alignment'],
             'logic' => ['Command chain affects organizational flow', 'Support transfers should match hierarchy goals', 'Leadership stability improves campaign execution'],
+        ],
+        'governance' => [
+            'brief' => 'OGame-style commander governance systems and policy options center.',
+            'functions' => ['Manage 18 governance systems', 'Tune commander options/settings', 'Balance doctrine by campaign phase'],
+            'features' => ['Governance module entry point', 'Settings and option profiles', 'Per-system visual icon matrix'],
+            'logic' => ['Each governance system scales through level upgrades', 'Enabled/disabled systems alter effective strategic posture', 'Commander settings influence policy response cadence'],
         ],
     ],
     'intel' => [
@@ -1122,14 +1347,25 @@ if ($sub === '' || !isset($subLabels[$main][$sub])) {
 }
 
 $uid = (int)$_SESSION['userid'];
+$requestedPage = isset($_GET['p']) ? (int)$_GET['p'] : 1;
+$requestedPerPage = isset($_GET['pp']) ? (int)$_GET['pp'] : 50;
+$cmd = isset($_GET['cmd']) ? preg_replace('/[^a-z_]/', '', strtolower((string)$_GET['cmd'])) : '';
+$targetWorld = isset($_GET['target']) ? (int)$_GET['target'] : 0;
 $s->updatePower($uid);
 
 $baseData = $s->baseVars();
 $personnel = $s->getPersonnel($uid);
 $bank = $s->bank();
 $userStats = $s->getUserInfo($uid);
+$uCfg = universeConfig();
 $planets = $s->getUserPlanets($uid);
+$universeActionStatus = '';
+if ($main === 'universe' && $cmd === 'colonize') {
+    $universeActionStatus = universeColonizeWorld($s, $uid, $uCfg, $planets, $targetWorld);
+    $planets = $s->getUserPlanets($uid);
+}
 $universe = buildUniverseSnapshot($uid, $planets);
+$worldSlice = universeWorldSlice($uid, $planets, $uCfg, $requestedPage, $requestedPerPage);
 $techView = $s->viewTech();
 $researchHub = buildResearchDirectorate($uid, $techView, $personnel);
 $resourceHub = resourceEnsureAndTick($s, $uid, $baseData, $planets, $techView);
@@ -1142,6 +1378,9 @@ echo '<div class="page-hub-head">';
 echo '<h3>' . h($title) . ' - ' . h($subTitle) . '</h3>';
 echo '<p>Page: ' . h($main) . ' / ' . h($sub) . ' | Player: ' . h($_SESSION['username']) . '</p>';
 echo '</div>';
+if ($universeActionStatus !== '') {
+    echo '<div class="card full"><strong>' . h($universeActionStatus) . '</strong></div>';
+}
 
 echo '<div class="page-subnav-title">Sub Pages</div>';
 echo '<div class="page-subnav">';
@@ -1184,6 +1423,7 @@ $featureButtons = [
         ['label' => 'Messages', 'js' => "sendData('messages','get','mainDisplay'); return false"],
         ['label' => 'Alliance', 'js' => "sendData('ally_mlist','get','mainDisplay'); return false"],
         ['label' => 'Relations', 'js' => "sendData('pages','get','diplomacy','relations'); return false"],
+        ['label' => 'Commander Systems', 'js' => "sendData('commandergov','get','mainDisplay'); return false"],
     ],
     'intel' => [
         ['label' => 'Rankings', 'js' => "sendData('rank','get','mainDisplay'); return false"],
@@ -1209,6 +1449,7 @@ $featureButtons = [
     'research' => [
         ['label' => 'Research Tree', 'js' => "sendData('pages','get','research','tree'); return false"],
         ['label' => 'Technology Tree', 'js' => "sendData('pages','get','research','techlib'); return false"],
+        ['label' => 'Tech Library Buildings', 'js' => "sendData('techlib','get','mainDisplay'); return false"],
         ['label' => 'Classes', 'js' => "sendData('pages','get','research','classes'); return false"],
         ['label' => 'Talents', 'js' => "sendData('pages','get','research','talents'); return false"],
         ['label' => 'Stargate Tech', 'js' => "sendData('stargatetech','get','mainDisplay'); return false"],
@@ -1253,15 +1494,21 @@ if ($main === 'empire' && $sub === 'overview') {
 
 if ($main === 'empire' && $sub === 'planets') {
     echo '<div class="card full"><h4>Planet Registry</h4>';
+    echo '<p><strong>Colonization Capacity:</strong> ' . fnum($uCfg['maxColonies']) . ' worlds | <strong>Moon Capacity:</strong> ' . fnum($uCfg['maxMoons']) . '</p>';
+    echo '<p><strong>Owned Colonies:</strong> ' . fnum(count($planets)) . ' | <strong>Open Colony Slots:</strong> ' . fnum(max(0, $uCfg['maxColonies'] - count($planets))) . '</p>';
     if (count($planets) === 0) {
         echo '<p>No planets discovered in your registry yet.</p>';
     } else {
-        echo '<table width="100%" border="0"><tr><th align="left">Planet</th><th align="left">Size</th><th align="left">Bonus</th></tr>';
-        foreach ($planets as $planet) {
-            echo '<tr><td>' . h($planet['name']) . '</td><td>' . h($planet['size']) . '</td><td>' . h($planet['bonus']) . '</td></tr>';
+        echo '<table width="100%" border="0"><tr><th align="left">Planet</th><th align="left">Size</th><th align="left">Bonus</th><th align="left">Moons</th><th align="left">Moon Class</th><th align="left">World Slot</th></tr>';
+        foreach ($planets as $idx => $planet) {
+            $moonSeed = (($uid + 31) * 103 + (($idx + 1) * 17)) & 0x7fffffff;
+            $moonCount = universeRand($moonSeed, 0, 3);
+            $moonClass = $moonCount > 0 ? universePick($moonSeed, ['Rocky', 'Icy', 'Metallic', 'Ruined']) : '-';
+            echo '<tr><td>' . h($planet['name']) . '</td><td>' . h($planet['size']) . '</td><td>' . h($planet['bonus']) . '</td><td>' . fnum($moonCount) . '</td><td>' . h($moonClass) . '</td><td>#' . fnum($idx + 1) . '</td></tr>';
         }
         echo '</table>';
     }
+    echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'universe\',\'expedition\'); return false">Open Colonization Mission Control</a></p>';
     echo '</div>';
 }
 
@@ -1423,6 +1670,18 @@ if ($main === 'diplomacy') {
     if ($sub === 'commander') {
         echo '<div class="card"><h4>Commander Chain</h4><p>Assign commanders and issue support transfers from player profile pages.</p><p><a href="javascript:void(0)" onclick="sendData(\'user\',\'get\',\'' . $uid . '\'); return false">Open Commander Tools</a></p></div>';
     }
+    if ($sub === 'governance') {
+        echo '<div class="card"><h4>Commander Governance Systems</h4><p>Activate OGame-style commander governance with 18 policy systems, option profiles, and strategic settings.</p><p><a href="javascript:void(0)" onclick="sendData(\'commandergov\',\'get\',\'mainDisplay\'); return false">Open Commander Governance Console</a></p></div>';
+        echo '<div class="card"><h4>Command Links</h4><p><a href="javascript:void(0)" onclick="sendData(\'user\',\'get\',\'' . $uid . '\'); return false">Commander Chain Actions</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'operations\',\'logs\'); return false">Operation Logs</a></p><p><a href="javascript:void(0)" onclick="sendData(\'stargatetech\',\'get\',\'mainDisplay\'); return false">Stargate Technology</a></p></div>';
+        echo '<div class="card full"><h4>Governance Doctrine Overview</h4>';
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">Track</th><th align="left">Purpose</th><th align="left">Typical Focus</th></tr>';
+        echo '<tr><td>Policy Administration</td><td>Keep laws and command directives synchronized.</td><td>Balanced/Technocracy setups</td></tr>';
+        echo '<tr><td>War Governance</td><td>Accelerate conflict response and chain-of-command control.</td><td>Militarist/Warlord setups</td></tr>';
+        echo '<tr><td>Economic Governance</td><td>Optimize markets, quotas, and logistics governance.</td><td>Mercantile/Architect setups</td></tr>';
+        echo '<tr><td>Intelligence Governance</td><td>Harden covert resilience and strategic awareness.</td><td>Shadow/High-alert setups</td></tr>';
+        echo '</table></div>';
+    }
 }
 
 if ($main === 'intel') {
@@ -1444,9 +1703,10 @@ if ($main === 'universe') {
     if ($sub === 'galaxies') {
         echo '<div class="card"><h4>Universe Control Seed</h4>';
         echo '<p><strong>Seed:</strong> U-' . h($universe['seed']) . '</p>';
-        echo '<p><strong>Galaxy Clusters:</strong> ' . fnum($universe['summary']['totalGalaxies']) . '</p>';
-        echo '<p><strong>Total Worlds:</strong> ' . fnum($universe['summary']['totalWorlds']) . '</p>';
-        echo '<p><strong>Colonizable Worlds:</strong> ' . fnum($universe['summary']['colonizableWorlds']) . '</p>';
+        echo '<p><strong>Galaxy Clusters:</strong> ' . fnum($uCfg['galaxies']) . '</p>';
+        echo '<p><strong>Systems per Galaxy:</strong> ' . fnum((int)($uCfg['systemsPerGalaxy'] ?? $uCfg['sectorsPerGalaxy'])) . ' | <strong>Positions per System:</strong> ' . fnum((int)($uCfg['positionsPerSystem'] ?? $uCfg['orbitsPerSector'])) . '</p>';
+        echo '<p><strong>Total Worlds:</strong> ' . fnum($uCfg['maxWorlds']) . '</p>';
+        echo '<p><strong>Colonizable Worlds:</strong> ~' . fnum((int)floor($uCfg['maxWorlds'] * 0.52)) . '</p>';
         echo '</div>';
 
         echo '<div class="card"><h4>Expansion Command</h4>';
@@ -1456,32 +1716,45 @@ if ($main === 'universe') {
         echo '</div>';
 
         echo '<div class="card full"><h4>Galaxy Cluster Matrix</h4>';
-        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Galaxy</th><th align="left">Sectors</th><th align="left">Worlds</th><th align="left">Avg Habitability</th><th align="left">Moon Count</th></tr>';
-        foreach ($universe['galaxies'] as $gal) {
-            echo '<tr><td>' . h($gal['name']) . '</td><td>' . fnum($gal['sectors']) . '</td><td>' . fnum($gal['worlds']) . '</td><td>' . fnum($gal['avgHab']) . '%</td><td>' . fnum($gal['moons']) . '</td></tr>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Galaxy</th><th align="left">Systems</th><th align="left">Positions/System</th><th align="left">Worlds</th><th align="left">Avg Habitability</th><th align="left">Moon Count</th></tr>';
+        $galSampleMax = min(12, (int)$uCfg['galaxies']);
+        for ($g = 1; $g <= $galSampleMax; $g++) {
+            $systemsPerGalaxy = (int)($uCfg['systemsPerGalaxy'] ?? $uCfg['sectorsPerGalaxy']);
+            $positionsPerSystem = (int)($uCfg['positionsPerSystem'] ?? $uCfg['orbitsPerSector']);
+            $worldsPerGalaxy = (int)($systemsPerGalaxy * $positionsPerSystem);
+            $gSeed = (($uid + $g) * 31337) & 0x7fffffff;
+            $avgHab = universeRand($gSeed, 44, 69);
+            $moonCount = universeRand($gSeed, (int)floor($worldsPerGalaxy * 0.6), (int)floor($worldsPerGalaxy * 1.4));
+            echo '<tr><td>G' . fnum($g) . '</td><td>' . fnum($systemsPerGalaxy) . '</td><td>' . fnum($positionsPerSystem) . '</td><td>' . fnum($worldsPerGalaxy) . '</td><td>' . fnum($avgHab) . '%</td><td>' . fnum($moonCount) . '</td></tr>';
         }
         echo '</table></div>';
 
-        $worldsPerPage = 50;
-        $totalWorlds = count($universe['worlds']);
-        $totalPages = max(1, (int)ceil($totalWorlds / $worldsPerPage));
+        echo '<div class="card full"><h4>OGame Coordinate Systems</h4>';
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Layer</th><th align="left">Range</th><th align="left">Role</th></tr>';
+        echo '<tr><td>Galaxy</td><td>1-' . fnum((int)$uCfg['galaxies']) . '</td><td>Macro strategic region</td></tr>';
+        echo '<tr><td>System</td><td>1-' . fnum((int)($uCfg['systemsPerGalaxy'] ?? $uCfg['sectorsPerGalaxy'])) . '</td><td>Primary travel and targeting lane</td></tr>';
+        echo '<tr><td>Position</td><td>1-' . fnum((int)($uCfg['positionsPerSystem'] ?? $uCfg['orbitsPerSector'])) . '</td><td>Planet slot and moon anchor</td></tr>';
+        echo '</table>';
+        echo '</div>';
 
-        echo '<div class="card full"><h4>Planet and Moon Registry (50 Per Page)</h4>';
-        echo '<p>Total Worlds: ' . fnum($totalWorlds) . ' | Pages: ' . fnum($totalPages) . ' &mdash; <em>Click any planet or moon to view details</em></p>';
+        echo '<div class="card full"><h4>Planet and Moon Registry</h4>';
+        echo '<p>Showing worlds ' . fnum($worldSlice['start']) . '-' . fnum($worldSlice['end']) . ' of ' . fnum($worldSlice['total']) . ' | Page ' . fnum($worldSlice['page']) . ' / ' . fnum($worldSlice['maxPage']) . ' &mdash; <em>Click any planet or moon to view details</em></p>';
+
+        $prev = max(1, $worldSlice['page'] - 1);
+        $next = min($worldSlice['maxPage'], $worldSlice['page'] + 1);
+        $qsBase = "modules/pages.php?id=universe&atype=galaxies&pp=" . (int)$worldSlice['perPage'] . "&time=";
         echo '<p>';
-        for ($p = 1; $p <= $totalPages; $p++) {
-            echo '<a href="javascript:void(0)" onclick="showGalaxyPage(' . $p . ',' . $totalPages . '); return false" style="margin-right:8px;">Page ' . $p . '</a>';
-        }
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=1\',true); return false" style="margin-right:8px;">First</a>';
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=' . $prev . '\',true); return false" style="margin-right:8px;">Prev</a>';
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=' . $next . '\',true); return false" style="margin-right:8px;">Next</a>';
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=' . $worldSlice['maxPage'] . '\',true); return false">Last</a>';
         echo '</p>';
 
-        for ($p = 1; $p <= $totalPages; $p++) {
-            $slice = array_slice($universe['worlds'], ($p - 1) * $worldsPerPage, $worldsPerPage);
-            $display = ($p === 1) ? 'block' : 'none';
-            echo '<div id="galaxyPage' . $p . '" style="display:' . $display . ';">';
-            echo '<table class="mini-table" border="0" width="100%">';
-            echo '<tr><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Moon Class</th><th align="left">Status</th></tr>';
-            foreach ($slice as $w) {
+        echo '<table class="mini-table" border="0" width="100%">';
+        echo '<tr><th align="left">#</th><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Moon Class</th><th align="left">Status</th></tr>';
+            foreach ($worldSlice['rows'] as $w) {
                 $pd = htmlspecialchars(json_encode([
+                    'idx'    => $w['idx'],
                     'coord'  => $w['coord'],  'name'  => $w['name'],  'type'  => $w['type'],
                     'biome'  => $w['biome'],  'hab'   => $w['habitability'], 'slots' => $w['slots'],
                     'metal'  => $w['metal'],  'crystal' => $w['crystal'], 'deut' => $w['deut'],
@@ -1496,6 +1769,7 @@ if ($main === 'universe') {
                     $moonOnclick = ' onclick="showMoonDetail(' . $md . ')" style="cursor:pointer;text-decoration:underline;color:#8cf"';
                 }
                 echo '<tr>';
+                echo '<td>#' . fnum($w['idx']) . '</td>';
                 echo '<td>' . h($w['coord']) . '</td>';
                 echo '<td><a href="javascript:void(0)" onclick="showPlanetDetail(' . $pd . ')" style="color:#adf">' . h($w['name']) . '</a></td>';
                 echo '<td>' . h($w['type']) . '</td>';
@@ -1506,21 +1780,15 @@ if ($main === 'universe') {
                 echo '<td>' . h($w['owner']) . '</td>';
                 echo '</tr>';
             }
-            echo '</table>';
-            echo '</div>';
-        }
-
-        echo '<script type="text/javascript">';
-        echo 'function showGalaxyPage(page,total){for(var i=1;i<=total;i++){var el=document.getElementById("galaxyPage"+i);if(el){el.style.display=(i===page)?"block":"none";}}}';
-        echo '</script>';
+        echo '</table>';
         echo '</div>';
     }
 
     if ($sub === 'planets') {
         echo '<div class="card"><h4>Colony Totals</h4>';
-        echo '<p><strong>Owned Colonies:</strong> ' . fnum($universe['summary']['ownedColonies']) . '</p>';
-        echo '<p><strong>Total Moons:</strong> ' . fnum($universe['summary']['totalMoons']) . '</p>';
-        echo '<p><strong>Available Colonization Targets:</strong> ' . fnum($universe['summary']['colonizableWorlds']) . '</p>';
+        echo '<p><strong>Owned Colonies:</strong> ' . fnum(count($planets)) . ' / ' . fnum($uCfg['maxColonies']) . '</p>';
+        echo '<p><strong>Available Colony Slots:</strong> ' . fnum(max(0, $uCfg['maxColonies'] - count($planets))) . '</p>';
+        echo '<p><strong>Universe Worlds:</strong> ' . fnum($uCfg['maxWorlds']) . ' | <strong>Moon Capacity:</strong> ' . fnum($uCfg['maxMoons']) . '</p>';
         echo '</div>';
 
         echo '<div class="card"><h4>Planetary Actions</h4>';
@@ -1537,12 +1805,43 @@ if ($main === 'universe') {
         echo '</div>';
 
         echo '<div class="card full"><h4>Planet, Moon, and Biome Registry</h4>';
+        echo '<p>Showing worlds ' . fnum($worldSlice['start']) . '-' . fnum($worldSlice['end']) . ' of ' . fnum($worldSlice['total']) . ' | Page ' . fnum($worldSlice['page']) . ' / ' . fnum($worldSlice['maxPage']) . '</p>';
+        $prev = max(1, $worldSlice['page'] - 1);
+        $next = min($worldSlice['maxPage'], $worldSlice['page'] + 1);
+        $qsBase = "modules/pages.php?id=universe&atype=planets&pp=" . (int)$worldSlice['perPage'] . "&time=";
+        echo '<p>';
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=1\',true); return false" style="margin-right:8px;">First</a>';
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=' . $prev . '\',true); return false" style="margin-right:8px;">Prev</a>';
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=' . $next . '\',true); return false" style="margin-right:8px;">Next</a>';
+        echo '<a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $qsBase . '\'+(new Date().getTime())+\'&p=' . $worldSlice['maxPage'] . '\',true); return false">Last</a>';
+        echo '</p>';
         echo '<p><em>Click any planet or moon count to view details</em></p>';
-        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Resource Signature</th><th align="left">Status</th></tr>';
-        foreach (array_slice($universe['worlds'], 0, 48) as $w) {
+
+        $actBase = "modules/pages.php?id=universe&atype=planets&p=" . (int)$worldSlice['page'] . "&pp=" . (int)$worldSlice['perPage'] . "&cmd=colonize&target=";
+        $autoTarget = 0;
+        foreach ($worldSlice['rows'] as $cand) {
+            if ((string)$cand['owner'] === 'Unclaimed' && (int)$cand['habitability'] >= 46) {
+                $autoTarget = (int)$cand['idx'];
+                break;
+            }
+        }
+
+        echo '<div class="card"><h4>Colonization Console</h4>';
+        echo '<p>Requirements: 46%+ habitability, action turns, Naquadah, deuterium, food, water, and population.</p>';
+        if ($autoTarget > 0) {
+            echo '<p><a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $actBase . $autoTarget . '&time=\'+(new Date().getTime()),true); return false">Auto-Colonize Best Candidate On This Page</a></p>';
+        } else {
+            echo '<p>No eligible unclaimed world on this page. Try next page or lower requirements in strategy.</p>';
+        }
+        echo '</div>';
+
+        echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">#</th><th align="left">Coordinate</th><th align="left">World</th><th align="left">Type</th><th align="left">Biome</th><th align="left">Habitability</th><th align="left">Moons</th><th align="left">Resource Signature</th><th align="left">Status</th><th align="left">Action</th></tr>';
+        foreach ($worldSlice['rows'] as $w) {
             $resSig = 'M' . fnum($w['metal']) . ' / C' . fnum($w['crystal']) . ' / D' . fnum($w['deut']);
             $moonSig = ($w['moons'] > 0) ? (fnum($w['moons']) . ' (' . h($w['moonClass']) . ')') : '0';
+            $costs = universeColonizeCosts($w);
             $pd = htmlspecialchars(json_encode([
+            'idx'    => $w['idx'],
                 'coord'  => $w['coord'],  'name'  => $w['name'],  'type'  => $w['type'],
                 'biome'  => $w['biome'],  'hab'   => $w['habitability'], 'slots' => $w['slots'],
                 'metal'  => $w['metal'],  'crystal' => $w['crystal'], 'deut' => $w['deut'],
@@ -1557,6 +1856,7 @@ if ($main === 'universe') {
                 $moonOnclick = ' onclick="showMoonDetail(' . $md . ')" style="cursor:pointer;text-decoration:underline;color:#8cf"';
             }
             echo '<tr>';
+            echo '<td>#' . fnum($w['idx']) . '</td>';
             echo '<td>' . h($w['coord']) . '</td>';
             echo '<td><a href="javascript:void(0)" onclick="showPlanetDetail(' . $pd . ')" style="color:#adf">' . h($w['name']) . '</a></td>';
             echo '<td>' . h($w['type']) . '</td>';
@@ -1565,6 +1865,13 @@ if ($main === 'universe') {
             echo '<td' . $moonOnclick . '>' . $moonSig . '</td>';
             echo '<td>' . $resSig . '</td>';
             echo '<td>' . h($w['owner']) . '</td>';
+            if ((string)$w['owner'] === 'Unclaimed' && (int)$w['habitability'] >= 46) {
+                echo '<td><a href="javascript:void(0)" onclick="httpRequest(\'GET\',\'' . $actBase . (int)$w['idx'] . '&time=\'+(new Date().getTime()),true); return false">Colonize</a><br><small>' . fnum($costs['naq']) . ' Naq / ' . fnum($costs['turns']) . 'T</small></td>';
+            } elseif ((string)$w['owner'] === 'Unclaimed') {
+                echo '<td><small>Needs 46%+ hab</small></td>';
+            } else {
+                echo '<td><small>Owned</small></td>';
+            }
             echo '</tr>';
         }
         echo '</table></div>';
@@ -1663,6 +1970,28 @@ if ($main === 'universe') {
 }
 
 if ($main === 'research') {
+    $infraLevels = [
+        'research_campus' => 0,
+        'data_vault' => 0,
+        'simulation_core' => 0,
+        'quantum_archive' => 0,
+        'ai_directorate' => 0,
+    ];
+    $infraHas = $s->query("SHOW TABLES LIKE 'research_infrastructure'");
+    if ($infraHas && $infraHas->num_rows > 0) {
+        $infraQ = $s->query("SELECT research_campus, data_vault, simulation_core, quantum_archive, ai_directorate FROM research_infrastructure WHERE uid=" . (int)$uid . " LIMIT 1");
+        if ($infraQ && $infraQ->num_rows > 0) {
+            $i = $infraQ->fetch_object();
+            $infraLevels['research_campus'] = (int)($i->research_campus ?? 0);
+            $infraLevels['data_vault'] = (int)($i->data_vault ?? 0);
+            $infraLevels['simulation_core'] = (int)($i->simulation_core ?? 0);
+            $infraLevels['quantum_archive'] = (int)($i->quantum_archive ?? 0);
+            $infraLevels['ai_directorate'] = (int)($i->ai_directorate ?? 0);
+        }
+    }
+    $infraCostDiscount = min(45.0, ($infraLevels['data_vault'] * 1.5) + ($infraLevels['quantum_archive'] * 1.0) + ($infraLevels['ai_directorate'] * 0.5));
+    $infraResearchSpeed = 1 + (($infraLevels['research_campus'] * 0.03) + ($infraLevels['simulation_core'] * 0.015) + ($infraLevels['ai_directorate'] * 0.02));
+
     if ($sub === 'tree') {
         echo '<div class="card full wows-brief">';
         echo '<h4>Research Fleet Tree</h4>';
@@ -1696,6 +2025,8 @@ if ($main === 'research') {
         echo '<p>Advanced research phases consume strategic resources from the expanded economy.</p>';
         echo '<p><strong>Metal:</strong> ' . fnum($resourceHub['current']['metal']) . ' | <strong>Crystal:</strong> ' . fnum($resourceHub['current']['crystal']) . ' | <strong>Deuterium:</strong> ' . fnum($resourceHub['current']['deuterium']) . '</p>';
         echo '<p><strong>Food:</strong> ' . fnum($resourceHub['current']['food']) . ' | <strong>Water:</strong> ' . fnum($resourceHub['current']['water']) . ' | <strong>Population:</strong> ' . fnum($resourceHub['current']['population']) . ' | <strong>Energy:</strong> ' . fnum($resourceHub['current']['energy']) . '</p>';
+        echo '<p><strong>Infrastructure Research Speed:</strong> ' . fnum($infraResearchSpeed) . 'x | <strong>Infrastructure Tech Cost Reduction:</strong> ' . fnum($infraCostDiscount) . '%</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'techlib\',\'get\',\'mainDisplay\'); return false">Open Tech Library Buildings</a></p>';
         echo '</div>';
     }
 
@@ -1717,6 +2048,22 @@ if ($main === 'research') {
         echo '<div class="card full"><h4>Type and Sub-Type Index</h4>';
         echo '<p><strong>Types:</strong> ' . h(implode(', ', $researchHub['types'])) . '</p>';
         echo '<p><strong>Sub Types:</strong> ' . h(implode(', ', $researchHub['subTypes'])) . '</p>';
+        echo '<p><strong>Tech Library Cost Reduction:</strong> ' . fnum($infraCostDiscount) . '% | <strong>Research Speed:</strong> ' . fnum($infraResearchSpeed) . 'x</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'techlib\',\'get\',\'mainDisplay\'); return false">Manage Tech Library Buildings</a></p>';
+        echo '</div>';
+    }
+
+    if ($sub === 'infrastructure') {
+        echo '<div class="card full"><h4>Tech Library Buildings</h4>';
+        echo '<p>Infrastructure buildings increase research speed and reduce Stargate technology costs.</p>';
+        echo '<p><strong>Research Campus:</strong> ' . fnum($infraLevels['research_campus']) . '</p>';
+        echo '<p><strong>Data Vault:</strong> ' . fnum($infraLevels['data_vault']) . '</p>';
+        echo '<p><strong>Simulation Core:</strong> ' . fnum($infraLevels['simulation_core']) . '</p>';
+        echo '<p><strong>Quantum Archive:</strong> ' . fnum($infraLevels['quantum_archive']) . '</p>';
+        echo '<p><strong>AI Research Directorate:</strong> ' . fnum($infraLevels['ai_directorate']) . '</p>';
+        echo '<p><strong>Research Speed:</strong> ' . fnum($infraResearchSpeed) . 'x</p>';
+        echo '<p><strong>Tech Cost Reduction:</strong> ' . fnum($infraCostDiscount) . '%</p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'techlib\',\'get\',\'mainDisplay\'); return false">Open Tech Library Building Console</a></p>';
         echo '</div>';
     }
 

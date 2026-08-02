@@ -36,8 +36,16 @@ function bb_check_state() {
 	return;
     }
 
+    if (!window.frames['bbFrame1'] || !window.frames['bbFrame1'].document) {
+        return;
+    }
+
     var doc =  window.frames['bbFrame1'].document;
-    var new_idx = doc.getElementById('divFrameCount').innerHTML;
+    var countDiv = doc.getElementById('divFrameCount');
+    if (!countDiv) {
+        return;
+    }
+    var new_idx = countDiv.innerHTML;
 
     if (new_idx != bb_curr_idx) {
 
@@ -74,6 +82,9 @@ function bb_done_loading() {
 function bb_loadframe() {
 		//alert("loadframe");
     var bbFrame1 = document.getElementById("bbFrame1");
+    if (!bbFrame1) {
+        return;
+    }
     bb_iframe_loaded = false;
     bbFrame1.src = bb_iframe_script + "?count=" + bb_count;
 }
@@ -85,6 +96,9 @@ function bb_save_state() {
 		//alert("save state");
     // Store the new contents in the cache.
     var div_to_cache = document.getElementById(bb_target_div);
+    if (!div_to_cache) {
+        return;
+    }
     bb_count++;
     bb_cache[bb_count] = div_to_cache.innerHTML;
 

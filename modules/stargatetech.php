@@ -22,6 +22,50 @@ function sg_num($value): string {
     return number_format((float)$value);
 }
 
+function sg_research_infra(Game $s, int $uid): array {
+    $defaults = [
+        'research_campus' => 0,
+        'data_vault' => 0,
+        'simulation_core' => 0,
+        'quantum_archive' => 0,
+        'ai_directorate' => 0,
+        'cost_discount' => 0.0,
+        'research_speed' => 1.0,
+    ];
+
+    $has = $s->query("SHOW TABLES LIKE 'research_infrastructure'");
+    if (!$has || $has->num_rows === 0) {
+        return $defaults;
+    }
+
+    $q = $s->query("SELECT research_campus, data_vault, simulation_core, quantum_archive, ai_directorate FROM research_infrastructure WHERE uid=" . $uid . " LIMIT 1");
+    if (!$q || $q->num_rows === 0) {
+        return $defaults;
+    }
+
+    $row = $q->fetch_object();
+    $defaults['research_campus'] = (int)($row->research_campus ?? 0);
+    $defaults['data_vault'] = (int)($row->data_vault ?? 0);
+    $defaults['simulation_core'] = (int)($row->simulation_core ?? 0);
+    $defaults['quantum_archive'] = (int)($row->quantum_archive ?? 0);
+    $defaults['ai_directorate'] = (int)($row->ai_directorate ?? 0);
+
+    $discount =
+        ($defaults['data_vault'] * 0.015) +
+        ($defaults['quantum_archive'] * 0.010) +
+        ($defaults['ai_directorate'] * 0.005);
+    $defaults['cost_discount'] = min(0.45, $discount);
+
+    $speed =
+        1.0 +
+        ($defaults['research_campus'] * 0.030) +
+        ($defaults['simulation_core'] * 0.015) +
+        ($defaults['ai_directorate'] * 0.020);
+    $defaults['research_speed'] = max(1.0, $speed);
+
+    return $defaults;
+}
+
 function sg_catalog(): array {
     return [
         ['key' => 'naquadah_physics', 'name' => 'Naquadah Physics', 'domain' => 'Core Science', 'base' => ['nq' => 140000, 'metal' => 6000, 'crystal' => 9000, 'deut' => 3000, 'energy' => 1400], 'scale' => 1.58, 'effect' => 'Stargate core stability +2.5% per level.'],
@@ -98,6 +142,19 @@ $s->query("CREATE TABLE IF NOT EXISTS stargate_tech_levels (
 
 $s->query("INSERT IGNORE INTO player_resources (uid) VALUES (" . $uid . ")");
 
+$s->query("CREATE TABLE IF NOT EXISTS research_infrastructure (
+    uid INT NOT NULL PRIMARY KEY,
+    research_campus INT NOT NULL DEFAULT 0,
+    data_vault INT NOT NULL DEFAULT 0,
+    simulation_core INT NOT NULL DEFAULT 0,
+    quantum_archive INT NOT NULL DEFAULT 0,
+    ai_directorate INT NOT NULL DEFAULT 0,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+)");
+$s->query("INSERT IGNORE INTO research_infrastructure (uid) VALUES (" . $uid . ")");
+
+$infra = sg_research_infra($s, $uid);
+
 if (isset($_GET['id']) && $_GET['id'] === 'upgrade') {
     $techKey = isset($_GET['atype']) ? strtolower((string)$_GET['atype']) : '';
     if (!isset($catalogByKey[$techKey])) {
@@ -110,11 +167,16 @@ if (isset($_GET['id']) && $_GET['id'] === 'upgrade') {
             $cur = (int)($lvlQ->fetch_object()->level ?? 0);
         }
 
-        $costNq = (int)round($row['base']['nq'] * pow($row['scale'], $cur));
-        $costM = (int)round($row['base']['metal'] * pow($row['scale'], $cur));
-        $costC = (int)round($row['base']['crystal'] * pow($row['scale'], $cur));
-        $costD = (int)round($row['base']['deut'] * pow($row['scale'], $cur));
-        $costE = (int)round($row['base']['energy'] * pow($row['scale'], $cur));
+        $discountFactor = 1.0 - (float)$infra['cost_discount'];
+        if ($discountFactor < 0.55) {
+            $discountFactor = 0.55;
+        }
+
+        $costNq = (int)round(($row['base']['nq'] * pow($row['scale'], $cur)) * $discountFactor);
+        $costM = (int)round(($row['base']['metal'] * pow($row['scale'], $cur)) * $discountFactor);
+        $costC = (int)round(($row['base']['crystal'] * pow($row['scale'], $cur)) * $discountFactor);
+        $costD = (int)round(($row['base']['deut'] * pow($row['scale'], $cur)) * $discountFactor);
+        $costE = (int)round(($row['base']['energy'] * pow($row['scale'], $cur)) * $discountFactor);
 
         $bankQ = $s->query("SELECT onHand FROM bank WHERE uid=" . $uid . " LIMIT 1");
         $bank = $bankQ ? $bankQ->fetch_object() : (object)['onHand' => 0];
@@ -181,9 +243,12 @@ foreach ($levels as $lv) {
             <p><strong>Domains:</strong> <?= sg_num(count($groups)); ?></p>
             <p><strong>Total Technologies:</strong> <?= sg_num(count($catalog)); ?></p>
             <p><strong>Total Tech Levels:</strong> <?= sg_num($totalLevels); ?></p>
+            <p><strong>Research Speed Multiplier:</strong> <?= sg_num((float)$infra['research_speed']); ?>x</p>
+            <p><strong>Tech Cost Reduction:</strong> <?= sg_num((float)$infra['cost_discount'] * 100); ?>%</p>
             <p><a href="javascript:void(0)" onclick="sendData('technology','get','mainDisplay'); return false">Legacy Technology Module</a></p>
             <p><a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false">Hyperspace Command</a></p>
             <p><a href="javascript:void(0)" onclick="sendData('ogamebuildings','get','mainDisplay'); return false">OGame Buildings</a></p>
+            <p><a href="javascript:void(0)" onclick="sendData('techlib','get','mainDisplay'); return false">Tech Library Buildings</a></p>
         </div>
 
         <?php foreach ($groups as $domain => $items) { ?>
@@ -199,11 +264,15 @@ foreach ($levels as $lv) {
                 </tr>
                 <?php foreach ($items as $tech) {
                     $cur = (int)($levels[$tech['key']] ?? 0);
-                    $needNq = (int)round($tech['base']['nq'] * pow($tech['scale'], $cur));
-                    $needM = (int)round($tech['base']['metal'] * pow($tech['scale'], $cur));
-                    $needC = (int)round($tech['base']['crystal'] * pow($tech['scale'], $cur));
-                    $needD = (int)round($tech['base']['deut'] * pow($tech['scale'], $cur));
-                    $needE = (int)round($tech['base']['energy'] * pow($tech['scale'], $cur));
+                    $discountFactor = 1.0 - (float)$infra['cost_discount'];
+                    if ($discountFactor < 0.55) {
+                        $discountFactor = 0.55;
+                    }
+                    $needNq = (int)round(($tech['base']['nq'] * pow($tech['scale'], $cur)) * $discountFactor);
+                    $needM = (int)round(($tech['base']['metal'] * pow($tech['scale'], $cur)) * $discountFactor);
+                    $needC = (int)round(($tech['base']['crystal'] * pow($tech['scale'], $cur)) * $discountFactor);
+                    $needD = (int)round(($tech['base']['deut'] * pow($tech['scale'], $cur)) * $discountFactor);
+                    $needE = (int)round(($tech['base']['energy'] * pow($tech['scale'], $cur)) * $discountFactor);
                 ?>
                 <tr>
                     <td><?= sg_h($tech['name']); ?> (<?= sg_h($tech['key']); ?>)</td>

@@ -32,17 +32,20 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
             .autocomplete {border : 1px solid #000; width: 210px; margin-left: auto; margin-right: auto;}
 
 .app-shell {
-    width: 1100px;
+    width: min(1400px, 98vw);
     margin: 12px auto;
     border: 1px solid #2b6363;
     background: rgba(0, 0, 0, 0.72);
     box-shadow: 0 0 16px rgba(0, 0, 0, 0.7);
+    box-sizing: border-box;
 }
 
 .top-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
     padding: 12px;
     border-bottom: 1px solid #2b6363;
     background: linear-gradient(90deg, #021414 0%, #0c2f2f 45%, #113f3f 100%);
@@ -73,8 +76,9 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
 
 .top-stats {
     display: grid;
-    grid-template-columns: repeat(4, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
     gap: 8px;
+    width: min(760px, 100%);
 }
 
 .stat-pill {
@@ -131,10 +135,13 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
 .main-layout {
     display: flex;
     min-height: 620px;
+    align-items: stretch;
 }
 
 .left-menu {
     width: 280px;
+    flex: 0 0 280px;
+    max-width: 35vw;
     border-right: 1px solid #2b6363;
     background: #061c1c;
     padding: 12px;
@@ -241,8 +248,14 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
 
 .content-panel {
     flex: 1;
+    min-width: 0;
     padding: 12px;
     box-sizing: border-box;
+    overflow: hidden;
+}
+
+.content-panel > * {
+    max-width: 100%;
 }
 
 .content-header {
@@ -269,6 +282,12 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
     min-height: 500px;
     padding: 10px;
     box-sizing: border-box;
+    max-width: 100%;
+    overflow-x: auto;
+}
+
+#mainDisplay table {
+    max-width: 100%;
 }
 
 .bottom-header {
@@ -296,11 +315,16 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
 
 @media (max-width: 1200px) {
     .app-shell {
-        width: 98%;
+        width: min(1200px, 99vw);
     }
 
     .top-stats {
         grid-template-columns: repeat(3, minmax(120px, 1fr));
+    }
+
+    .left-menu {
+        flex-basis: 250px;
+        width: 250px;
     }
 }
 
@@ -325,15 +349,37 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
         width: 100%;
     }
 
+    .top-sub-header-left form {
+        flex-wrap: wrap;
+    }
+
+    .top-sub-header-left input[type="text"] {
+        width: 100%;
+    }
+
     .main-layout {
         flex-direction: column;
     }
 
     .left-menu {
         width: 100%;
+        flex: 0 0 auto;
+        max-width: 100%;
         border-right: 0;
         border-bottom: 1px solid #2b6363;
         max-height: 360px;
+    }
+}
+
+@media (max-width: 700px) {
+    .bottom-header {
+        justify-content: flex-start;
+        gap: 10px;
+    }
+
+    .site-footer {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 
@@ -494,6 +540,214 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
     color: #d8ffff;
 }
 
+.gov-head {
+    background: radial-gradient(140% 160% at 12% 10%, rgba(47, 118, 118, 0.35) 0%, rgba(5, 24, 24, 0.94) 45%, rgba(2, 11, 11, 0.98) 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.gov-head::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(
+        -26deg,
+        rgba(155, 224, 224, 0.03) 0,
+        rgba(155, 224, 224, 0.03) 10px,
+        transparent 10px,
+        transparent 20px
+    );
+    pointer-events: none;
+}
+
+.gov-preset-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.gov-preset {
+    display: inline-block;
+    padding: 6px 10px;
+    border: 1px solid #5ca6a6;
+    background: linear-gradient(180deg, rgba(20, 72, 72, 0.95) 0%, rgba(8, 33, 33, 0.94) 100%);
+    color: #e8ffff;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.gov-preset:hover {
+    background: linear-gradient(180deg, rgba(32, 104, 104, 0.95) 0%, rgba(12, 54, 54, 0.95) 100%);
+}
+
+.gov-kpi-grid {
+    margin-bottom: 10px;
+}
+
+.gov-kpi {
+    background: linear-gradient(180deg, rgba(7, 34, 34, 0.84) 0%, rgba(2, 13, 13, 0.9) 100%);
+    box-shadow: inset 0 0 0 1px rgba(88, 148, 148, 0.24);
+}
+
+.gov-settings-card {
+    margin-bottom: 10px;
+}
+
+.gov-settings-table td {
+    vertical-align: top;
+}
+
+.gov-option {
+    display: inline-block;
+    margin: 0 6px 6px 0;
+    padding: 4px 7px;
+    border: 1px solid #3e7575;
+    background: linear-gradient(180deg, rgba(14, 49, 49, 0.92) 0%, rgba(6, 23, 23, 0.92) 100%);
+    font-size: 11px;
+}
+
+.gov-option:hover {
+    background: linear-gradient(180deg, rgba(30, 94, 94, 0.93) 0%, rgba(11, 44, 44, 0.93) 100%);
+}
+
+.gov-matrix-card {
+    border-color: #2f6d6d;
+    background: radial-gradient(140% 180% at 50% -10%, rgba(45, 82, 82, 0.24) 0%, rgba(2, 15, 15, 0.95) 45%, rgba(1, 8, 8, 0.96) 100%);
+}
+
+.gov-track-head {
+    margin: 12px 0 8px 0;
+    padding: 7px 9px;
+    border: 1px solid #2f6565;
+    background: linear-gradient(90deg, rgba(16, 51, 51, 0.88) 0%, rgba(9, 30, 30, 0.9) 100%);
+    color: #d6ffff;
+    font-size: 11px;
+    font-weight: bold;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.gov-system-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(220px, 1fr));
+    gap: 10px;
+    margin-bottom: 6px;
+}
+
+.gov-system-card {
+    border: 1px solid #2f6161;
+    background: linear-gradient(180deg, rgba(10, 31, 31, 0.9) 0%, rgba(5, 19, 19, 0.92) 100%);
+    padding: 9px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 140ms ease, border-color 140ms ease, box-shadow 140ms ease;
+}
+
+.gov-system-card::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    height: 2px;
+    background: linear-gradient(90deg, rgba(126, 210, 210, 0.12) 0%, rgba(126, 210, 210, 0.82) 50%, rgba(126, 210, 210, 0.12) 100%);
+    opacity: 0.45;
+}
+
+.gov-system-card.enabled {
+    border-color: #4f9c8b;
+    box-shadow: inset 0 0 0 1px rgba(79, 156, 139, 0.35), 0 0 18px rgba(44, 118, 102, 0.26);
+}
+
+.gov-system-card.disabled {
+    opacity: 0.82;
+}
+
+.gov-system-card:hover {
+    transform: translateY(-2px);
+    border-color: #73a8a8;
+    box-shadow: 0 0 14px rgba(54, 113, 113, 0.25);
+}
+
+.gov-system-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.gov-system-name {
+    color: #ecffff;
+    font-size: 12px;
+    font-weight: bold;
+    letter-spacing: 0.03em;
+}
+
+.gov-system-key {
+    color: #95cbcb;
+    font-size: 10px;
+}
+
+.gov-system-stats {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    margin-top: 8px;
+    color: #d5f8f8;
+    font-size: 11px;
+}
+
+.gov-system-effect {
+    margin: 8px 0;
+    min-height: 36px;
+    color: #d8f4f4;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+.gov-cost-line {
+    margin-top: 6px;
+    color: #a9ded4;
+    font-size: 11px;
+}
+
+.gov-system-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.gov-system-actions a {
+    flex: 1;
+    text-align: center;
+    border: 1px solid #3f7979;
+    background: linear-gradient(180deg, rgba(14, 49, 49, 0.94) 0%, rgba(7, 28, 28, 0.94) 100%);
+    padding: 4px 6px;
+    font-size: 11px;
+}
+
+.gov-system-actions a:hover {
+    background: linear-gradient(180deg, rgba(28, 88, 88, 0.95) 0%, rgba(10, 42, 42, 0.95) 100%);
+}
+
+@keyframes govPulse {
+    0% {
+        box-shadow: 0 0 0 rgba(90, 186, 168, 0);
+    }
+    50% {
+        box-shadow: 0 0 16px rgba(90, 186, 168, 0.2);
+    }
+    100% {
+        box-shadow: 0 0 0 rgba(90, 186, 168, 0);
+    }
+}
+
+.gov-system-card.enabled {
+    animation: govPulse 5.5s ease-in-out infinite;
+}
+
 .wows-brief {
     background: linear-gradient(180deg, rgba(11, 35, 35, 0.88) 0%, rgba(6, 22, 22, 0.82) 100%);
 }
@@ -644,6 +898,10 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
 
     .wows-domain {
         text-align: center;
+    }
+
+    .gov-system-grid {
+        grid-template-columns: 1fr;
     }
 }
 

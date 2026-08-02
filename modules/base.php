@@ -7,7 +7,7 @@ $pagegen->start();
 
 $s = new Game();
 if (!$s->loggedIn || !$_GET['time']) {
-    header("Location: ../index.php"); exit;
+  header("Location: ../index.php");
     exit;
 }
 $s->updatePower($_SESSION['userid']);
@@ -20,6 +20,7 @@ $newsQ = $s->query("SELECT * FROM news ORDER BY id DESC");
 ?>
 <table align="center" border="0" cellpadding="10" cellspacing="0" width="90%">
 <?php
+if ($newsQ) {
 while ($news = $newsQ->fetch_array()) {
     $datenews = date('jS M y, G:i', ($news['news_time'] + 3600 ));
     echo "<tr>
@@ -30,6 +31,9 @@ while ($news = $newsQ->fetch_array()) {
     </tr>
     <tr><td></td></tr>";
 }
+  } else {
+    echo '<tr><td class="news1">No news available.</td></tr>';
+  }
 echo "</table>";
 ?>
 <table width="100%" border="0">

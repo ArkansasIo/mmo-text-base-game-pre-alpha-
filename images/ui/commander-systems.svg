@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Commander Systems">
+  <rect width="64" height="64" rx="10" fill="#0f1c2e"/>
+  <circle cx="32" cy="20" r="10" fill="#5fb9ff"/>
+  <path d="M16 52c2-10 9-16 16-16s14 6 16 16" fill="none" stroke="#9ad6ff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M12 14h10M42 14h10M8 32h8M48 32h8" stroke="#5b90c4" stroke-width="3" stroke-linecap="round"/>
+</svg>

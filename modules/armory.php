@@ -215,7 +215,7 @@ $inv = $s->getWeaponInventory($_SESSION['userid']);
 	  ?>
 	  <tr><td>&nbsp;</td></tr>
       <tr>
-        <td colspan="4" align="right" valign="bottom"><input type="submit" name="buyweaps" value="Submit" onclick="this.value='Buying Weapons...'; this.disabled=true; sendData('armory','post','<?php echo $s->uid;?>')"/></td>
+		<td colspan="4" align="right" valign="bottom"><input type="submit" name="buyweaps" value="Submit" onclick="this.value='Buying Weapons...'; this.disabled=true; sendData('armory','post','<?php echo (int)$_SESSION['userid'];?>')"/></td>
         </tr>
     </table
 

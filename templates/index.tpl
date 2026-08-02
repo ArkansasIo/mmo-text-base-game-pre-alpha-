@@ -127,6 +127,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','relations'); return false">Relations</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','messages'); return false">Messages</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','commander'); return false">Commander Chain</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','governance'); return false">Commander Governance</a>
       </details>
 
       <details>
@@ -143,6 +144,23 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','mechanics'); return false">Game Mechanics</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','glossary'); return false">Glossary</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','support'); return false">Support</a>
+      </details>
+
+      <div class="menu-section-title"><img src="images/ui/core-command.svg" alt="Direct Tools" /><span>Direct Tools</span></div>
+
+      <details>
+        <summary><span class="menu-summary"><img src="images/ui/diplomacy.svg" alt="Diplomacy Tools" /><span>Diplomacy Tools</span></span></summary>
+        <a href="javascript:void(0)" onclick="sendData('sendmessage','get','mainDisplay'); return false">Send Message</a>
+        <a href="javascript:void(0)" onclick="sendData('c_ally','get','mainDisplay'); return false">Create Alliance</a>
+        <a href="javascript:void(0)" onclick="sendData('ally_mlist','get','mainDisplay'); return false">Alliance Member List</a>
+        <a href="javascript:void(0)" onclick="sendData('recruit','get','mainDisplay'); return false">Recruit Commander</a>
+      </details>
+
+      <details>
+        <summary><span class="menu-summary"><img src="images/ui/community.svg" alt="Legacy Tools" /><span>Legacy Tools</span></span></summary>
+        <a href="javascript:void(0)" onclick="sendData('actionLogs','get','mainDisplay'); return false">Action Logs</a>
+        <a href="javascript:void(0)" onclick="sendData('progressinfo','get','mainDisplay'); return false">Progress Info</a>
+        <a href="javascript:void(0)" onclick="sendData('action','get','mainDisplay'); return false">Actions</a>
       </details>
     </aside>
 

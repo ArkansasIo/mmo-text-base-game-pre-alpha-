@@ -68,6 +68,12 @@ function sendData(page,type,id,atype,subject,message){
             // Continue even if back-button cache state is unavailable.
         }
     }
+    if (typeof id === "undefined" || id === null || id === "") {
+        id = "mainDisplay";
+    }
+    if (typeof atype === "undefined" || atype === null) {
+        atype = "";
+    }
 	date = new Date();
 	if (type =="post")
 	{
@@ -145,6 +151,21 @@ function stylizeDiv(bdyTxt,div){
     //reset DIV content
     div.innerHTML="";
     div.innerHTML = bdyTxt;
+
+    // Execute inline and external scripts from dynamically injected module HTML.
+    var scripts = div.querySelectorAll('script');
+    for (var i = 0; i < scripts.length; i++) {
+        var oldScript = scripts[i];
+        var newScript = document.createElement('script');
+        if (oldScript.src) {
+            newScript.src = oldScript.src;
+        }
+        if (oldScript.type) {
+            newScript.type = oldScript.type;
+        }
+        newScript.text = oldScript.text || oldScript.textContent || oldScript.innerHTML || '';
+        oldScript.parentNode.replaceChild(newScript, oldScript);
+    }
 }
 
 function setQueryString(){

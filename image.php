@@ -23,6 +23,17 @@ $rand_str=random_string(5);
 //We memorize the md5 sum of the string into a session variable
 $_SESSION['image_value'] = md5($rand_str);
 
+if (!function_exists('imagecreatetruecolor') || !function_exists('imagettftext')) {
+    header('Content-type: image/svg+xml; charset=UTF-8');
+    $safeText = htmlspecialchars($rand_str, ENT_QUOTES, 'UTF-8');
+    echo '<svg xmlns="http://www.w3.org/2000/svg" width="150" height="50" viewBox="0 0 150 50">';
+    echo '<rect width="150" height="50" fill="#111"/>';
+    echo '<rect x="2" y="2" width="146" height="46" fill="#1a1a1a" stroke="#4a4a4a"/>';
+    echo '<text x="75" y="33" text-anchor="middle" fill="#e6e6e6" font-size="22" font-family="monospace" letter-spacing="4">' . $safeText . '</text>';
+    echo '</svg>';
+    exit;
+}
+
 //Get each letter in one valiable, we will format all letters different
 $letter1=substr($rand_str,0,1);
 $letter2=substr($rand_str,1,1);

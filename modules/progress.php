@@ -30,11 +30,16 @@
  /*
   * only allow links from hosting server.
   */
- if(isset($_SERVER['HTTP_REFERER'])) {
-  $referer = parse_url($_SERVER['HTTP_REFERER']);
-  if($referer['host'] != $_SERVER['HTTP_HOST']) {
-   error('403 Forbidden', 'This script only allow links from ' . $_SERVER['HTTP_HOST']);
-  }
+if(isset($_SERVER['HTTP_REFERER']) && $_SERVER['HTTP_REFERER'] !== '') {
+    $referer = parse_url($_SERVER['HTTP_REFERER']);
+    if(isset($referer['host']) && isset($_SERVER['HTTP_HOST'])) {
+     $refHost = strtolower((string)$referer['host']);
+     $curHost = strtolower((string)$_SERVER['HTTP_HOST']);
+     $curHost = explode(':', $curHost)[0];
+     if($refHost !== $curHost && !($refHost === 'localhost' && $curHost === '127.0.0.1') && !($refHost === '127.0.0.1' && $curHost === 'localhost')) {
+        error('403 Forbidden', 'This script only allow links from ' . $_SERVER['HTTP_HOST']);
+     }
+    }
  }
 
  /*
@@ -43,7 +48,7 @@
   */
  $style = "solaris";
  $width = 480;
- $done = $_GET['prog'];
+ $done = isset($_GET['prog']) ? (int)$_GET['prog'] : 0;
  $total = 200;
 
  /*
@@ -58,6 +63,24 @@
   */
  if(!in_array($style, $styles)) {
   error('500 Internal Server Error', 'Invalid Style');
+ }
+
+ if (!function_exists('imagecreatefrompng') || !function_exists('imagecreatetruecolor')) {
+  $percent = (int)round(($done / $total) * 100);
+  if ($percent < 0) {
+   $percent = 0;
+  }
+  if ($percent > 100) {
+   $percent = 100;
+  }
+  $fillWidth = (int)round(($width * $percent) / 100);
+  header("Content-Type: image/svg+xml; charset=UTF-8");
+  echo '<svg xmlns="http://www.w3.org/2000/svg" width="' . $width . '" height="11" viewBox="0 0 ' . $width . ' 11">';
+  echo '<rect x="0" y="0" width="' . $width . '" height="11" fill="#3a3a3a"/>';
+  echo '<rect x="0" y="0" width="' . $fillWidth . '" height="11" fill="#7fef51"/>';
+  echo '<rect x="0.5" y="0.5" width="' . ($width - 1) . '" height="10" fill="none" stroke="#111"/>';
+  echo '</svg>';
+  exit;
  }
 
  /*

@@ -3,6 +3,9 @@
 
 class Game extends User
 {
+	private const TURN_TICK_MINUTES = 30;
+	private const TURNS_PER_MINUTE = 6;
+
 	/*Vars*/
 	public int $gameTime; 		//Time In Game
 	public int $isRank; 		//Players Rank out of all active users
@@ -17,7 +20,7 @@ class Game extends User
 
 	public function nextTurn(): int
 	{
-		$turnTime = 30;
+		$turnTime = self::TURN_TICK_MINUTES;
 		$timeIs = date("i");
 		$perHr = 60 / $turnTime;
 		for ($x = 1; $x <= $perHr; $x++)
@@ -84,13 +87,13 @@ class Game extends User
 		];
 
 		foreach ($playerRaces as $rid => $name) {
-			$safe = $this->real_escape_string($name);
+			$safe = $this->db_link ? $this->db_link->real_escape_string($name) : addslashes($name);
 			$this->query("INSERT INTO `race` (`rid`,`r_name`,`income_bonus`,`up_bonus`,`r_group`) VALUES (" . (int)$rid . ", '" . $safe . "', 0, 0, 'player')
 				ON DUPLICATE KEY UPDATE `r_name`=VALUES(`r_name`), `r_group`='player'");
 		}
 
 		foreach ($npcRaces as $rid => $name) {
-			$safe = $this->real_escape_string($name);
+			$safe = $this->db_link ? $this->db_link->real_escape_string($name) : addslashes($name);
 			$this->query("INSERT INTO `race` (`rid`,`r_name`,`income_bonus`,`up_bonus`,`r_group`) VALUES (" . (int)$rid . ", '" . $safe . "', 0, 0, 'npc')
 				ON DUPLICATE KEY UPDATE `r_name`=VALUES(`r_name`), `r_group`='npc'");
 		}
@@ -406,7 +409,7 @@ class Game extends User
 				  GROUP BY users.uid
 				  ORDER BY rank.overall ASC";
 		$stmt = $this->db_link->prepare($query);
-		$stmt->bind_param("ii", $_SESSION['userid'], $allyid);
+		$stmt->bind_param("i", $allyid);
 		$stmt->execute();
 		$q = $stmt->get_result();
 		while ($rank = $q->fetch_object())
@@ -465,31 +468,44 @@ class Game extends User
 		$stmt->bind_param("i", $_SESSION['userid']);
 		$stmt->execute();
 		$q = $stmt->get_result();
-		$myStats = $q->fetch_object();
+		$myStats = $q ? $q->fetch_object() : null;
+		$myCovAct = (float)($myStats->covact ?? 0);
 
 		$query = "SELECT
 			users.uname AS userName,
-			rank.overall as rank,
-			SUM(power.mil_cov+ power.mil_anti) as `covPro`,
+			IFNULL(rank.overall, 0) as rank,
+			IFNULL(SUM(power.mil_cov+ power.mil_anti), 0) as `covPro`,
 			(SELECT users.uname FROM users,userdata WHERE userdata.uid=? AND users.uid = userdata.cid) AS `cmdrName`,
-			userdata.cid as `cmdrID`,
+			IFNULL(userdata.cid, 0) as `cmdrID`,
 			(SELECT r_name FROM race WHERE rid=(SELECT rid FROM userdata WHERE uid=?)) AS race,
-			bank.onHand,
-			SUM( units.attack+ units.superAttack+ units.attackMercs+ units.defense+ units.superDefense+ units.defenseMercs+ units.untrained+ units.miners+ units.lifers+ units.covert+ units.superCovert+ units.anticovert+ units.superAnticovert ) as armySize
-			FROM users, units, bank, userdata, power,rank
+			IFNULL(bank.onHand, 0) AS onHand,
+			IFNULL(SUM(units.attack + units.superAttack + units.attackMercs + units.defense + units.superDefense + units.defenseMercs + units.untrained + units.miners + units.lifers + units.covert + units.superCovert + units.anticovert + units.superAnticovert), 0) AS armySize
+			FROM userdata
+			LEFT JOIN users ON users.uid = userdata.uid
+			LEFT JOIN units ON units.uid = userdata.uid
+			LEFT JOIN bank ON bank.uid = userdata.uid
+			LEFT JOIN power ON power.uid = userdata.uid
+			LEFT JOIN rank ON rank.uid = userdata.uid
 			WHERE userdata.uid=?
-			AND users.uid = userdata.uid
-			AND bank.uid = userdata.uid
-			AND units.uid = userdata.uid
-			AND power.uid = userdata.uid
-			AND rank.uid = userdata.uid
 			GROUP BY users.uid LIMIT 1";
 		$stmt = $this->db_link->prepare($query);
-		$stmt->bind_param("iii", $_SESSION['userid'], $uid, $uid);
+		$stmt->bind_param("iii", $uid, $uid, $uid);
 		$stmt->execute();
 		$q = $stmt->get_result();
-		$userStats = $q->fetch_object();
-		if ($myStats->covact < .2 * $userStats->covPro)
+		$userStats = $q ? $q->fetch_object() : null;
+		if (!$userStats) {
+			return (object)[
+				'userName' => 'Unknown',
+				'rank' => 0,
+				'covPro' => 0,
+				'cmdrName' => 'None',
+				'cmdrID' => 0,
+				'race' => 'Unknown',
+				'onHand' => '0',
+				'armySize' => '0',
+			];
+		}
+		if ($myCovAct < .2 * (float)$userStats->covPro)
 		{
 			$userStats->armySize = "??????";
 		}
@@ -498,7 +514,7 @@ class Game extends User
  			$userStats->armySize = number_format($userStats->armySize);
 		}
 		
-		if ($myStats->covact < .25 * $userStats->covPro)
+		if ($myCovAct < .25 * (float)$userStats->covPro)
 		{
 			$userStats->onHand = "??????";
 		}
@@ -510,6 +526,9 @@ class Game extends User
 		if($userStats->cmdrName == "")
 		{
 			$userStats->cmdrName = "None";
+		}
+		if (!$userStats->race) {
+			$userStats->race = "Unknown";
 		}
 		
 		return $userStats;
@@ -1281,19 +1300,19 @@ $atk = 0;$uberAtk=0;$def=0;$uberDef=0;$miners=0;$cov=0;$uberCov=0;$anti=0;$uberA
 			$this->query($query);
 			echo "Training Successful";
 		}elseif($unitsavail < $unitcost && $cashavail < $cashcost && 
-		        $uberavail["atk"] < $ubercost["atk"] &&
-				$uberavail["def"] < $ubercost["def"] && 
-				$uberavail["cov"] < $ubercost["cov"] && 
-				$uberavail["anti"] < $ubercost["anti"]){
+		        $trn->attackCount < $uberAtk &&
+				$trn->defenseCount < $uberDef && 
+				$trn->covertCount < $uberCov && 
+				$trn->anticovertCount < $uberAnti){
 			echo "Not Enough Naq or Units";
 		}elseif($cashavail < $cashcost){
 			echo "Not Enough Cash";
 		}elseif($unitsavail < $unitcost){
 			echo "Not Enough Units";
-		}elseif($uberavail["atk"] < $ubercost["atk"] ||
-				$uberavail["def"] < $ubercost["def"] || 
-				$uberavail["cov"] < $ubercost["cov"] || 
-				$uberavail["anti"] < $ubercost["anti"]){
+		}elseif($trn->attackCount < $uberAtk ||
+				$trn->defenseCount < $uberDef || 
+				$trn->covertCount < $uberCov || 
+				$trn->anticovertCount < $uberAnti){
 			echo "Not Enough Trained Units";
 			
 		}
@@ -2124,10 +2143,11 @@ INNER JOIN userdata ON technology.uid = userdata.uid
 			$stmt = $this->db_link->prepare($query);
 			$stmt->bind_param("ii", $data->Income, $data->user);
 			$stmt->execute();
-			/*Gives Turns*/
-			$query = "UPDATE `userdata` SET `actionTurns` = (`actionTurns` + 3) WHERE `uid` =? LIMIT 1";
+			/*Gives Turns based on configured turns-per-minute and tick window*/
+			$turnsPerTick = self::TURN_TICK_MINUTES * self::TURNS_PER_MINUTE;
+			$query = "UPDATE `userdata` SET `actionTurns` = (`actionTurns` + ?) WHERE `uid` =? LIMIT 1";
 			$stmt = $this->db_link->prepare($query);
-			$stmt->bind_param("i", $data->user);
+			$stmt->bind_param("ii", $turnsPerTick, $data->user);
 			$stmt->execute();
 			/*Gives UU*/
 			$query = "UPDATE `units` SET `untrained` = (`untrained` + ?) WHERE `uid` =? LIMIT 1";
@@ -2542,10 +2562,19 @@ INNER JOIN userdata ON technology.uid = userdata.uid
 							WHERE bank.uid =?
 							GROUP BY bank.uid";
 				$stmt = $this->db_link->prepare($query);
+				if (!$stmt) {
+					return null;
+				}
 				$stmt->bind_param("i", $_SESSION['userid']);
 				$stmt->execute();
 				$q = $stmt->get_result();
+				if (!$q || $q->num_rows === 0) {
+					return null;
+				}
 				$data = $q->fetch_object();
+				if (!$data) {
+					return null;
+				}
 				$data->left = abs($data->cap - $data->inBank);
 				return $data;
 				break;
@@ -2553,33 +2582,47 @@ INNER JOIN userdata ON technology.uid = userdata.uid
 				if (number_format($ammount,0,'','') > 0)
 				{
 					$data = $this->bank();
+					if (!$data) {
+						return null;
+					}
 					if(number_format($data->left,0,'','') < number_format($ammount,0,'',''))
 					{
 						$ammount = abs(number_format($data->left,0,'',''));
 					}					
 						$query = "UPDATE `bank` SET `inbank`=(`inbank`+(?*.95)) , `onHand`=(`onHand`-?) WHERE `uid`=? LIMIT 1";
 					$stmt = $this->db_link->prepare($query);
+					if (!$stmt) {
+						return null;
+					}
 					$stmt->bind_param("dii", $ammount, $ammount, $_SESSION['userid']);
 					if(!$stmt->execute())
 					{ echo $query; } else { echo "Deposited: ".number_format($ammount); }
 				}
-				break;
+				return null;
 			case "withdrawl":
 				if (number_format($ammount,0,'','') > 0)
 				{
 					$data = $this->bank();
+					if (!$data) {
+						return null;
+					}
 					if(number_format($data->inBank,0,'','') < number_format($ammount,0,'',''))
 					{
 						$ammount = number_format($data->inBank,0,'','');
 					}					
 					$query = "UPDATE `bank` SET `inbank`=(`inbank`-(?)) , `onHand`=(`onHand`+?) WHERE `uid`=? LIMIT 1";
 					$stmt = $this->db_link->prepare($query);
+					if (!$stmt) {
+						return null;
+					}
 					$stmt->bind_param("dii", $ammount, $ammount, $_SESSION['userid']);
 					if(!$stmt->execute())
 					{ echo $query; } else { echo "Withdrew: ".number_format($ammount); }
 					return null;
 				}
+				return null;
 		}
+		return null;
 	}
 	
 	public function spy(int $uid, int $turns=0): ?int

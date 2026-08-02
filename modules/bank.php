@@ -9,6 +9,10 @@ if ($_GET['id'] === "deposit" || $_GET['id'] === "withdrawl") {
     $s->bank($_GET['id'], (float)$_GET['atype']);
 }
 $data = $s->bank();
+if (!$data) {
+  echo "Bank data unavailable.";
+  exit;
+}
 ?>
 <form action="javascript:void(0)">
 Your Bank Account:<br /><br />
