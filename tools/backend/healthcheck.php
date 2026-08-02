@@ -3,6 +3,25 @@
 
 require_once dirname(__DIR__, 2) . '/config.php';
 
+if (!extension_loaded('mysqli') || !class_exists('mysqli')) {
+    fwrite(STDERR, "Healthcheck error: PHP mysqli extension is not available for this runtime." . PHP_EOL);
+    fwrite(STDERR, "Install/enable mysqli for CLI or run with a PHP binary that includes mysqli." . PHP_EOL);
+    exit(3);
+}
+
+if (!isset($conf) || !is_array($conf)) {
+    fwrite(STDERR, "Healthcheck error: missing or invalid database configuration." . PHP_EOL);
+    exit(3);
+}
+
+$requiredKeys = ['db_server', 'db_username', 'db_password', 'db_name'];
+foreach ($requiredKeys as $key) {
+    if (!array_key_exists($key, $conf)) {
+        fwrite(STDERR, "Healthcheck error: missing config key '" . $key . "'." . PHP_EOL);
+        exit(3);
+    }
+}
+
 $mysqli = @new mysqli($conf['db_server'], $conf['db_username'], $conf['db_password'], $conf['db_name']);
 if ($mysqli->connect_errno) {
     fwrite(STDERR, "DB connection failed: " . $mysqli->connect_error . PHP_EOL);
