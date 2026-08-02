@@ -1986,6 +1986,35 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
             }
         }
 
+        if ($cmd === 'mil_queue_retry') {
+            if ($troopQueueId <= 0) {
+                $pageActionStatus = 'Queue retry failed: invalid queue id.';
+            } else {
+                $rowQ = $s->query("SELECT status FROM military_troop_queue WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
+                $row = $rowQ ? $rowQ->fetch_object() : null;
+                if (!$row) {
+                    $pageActionStatus = 'Queue retry failed: queue batch not found.';
+                } else {
+                    $statusNow = (string)$row->status;
+                    if ($statusNow !== 'failed' && $statusNow !== 'cancelled') {
+                        $pageActionStatus = 'Queue retry skipped: only failed/cancelled batches can be retried.';
+                    } else {
+                        $prioQ = $s->query("SELECT COALESCE(MAX(priority_order), 0) AS p FROM military_troop_queue WHERE uid=" . $uid . "");
+                        $nextPrio = $prioQ ? ((int)($prioQ->fetch_object()->p ?? 0) + 1) : 1;
+                        $s->query("UPDATE military_troop_queue SET status='queued', created_at=NOW(), completed_at=NULL, priority_order=" . $nextPrio . " WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
+                        $pageActionStatus = 'Queue batch #' . fnum($troopQueueId) . ' moved back to queued status.';
+                    }
+                }
+            }
+        }
+
+        if ($cmd === 'mil_queue_clear_history') {
+            $countQ = $s->query("SELECT COUNT(*) AS c FROM military_troop_queue WHERE uid=" . $uid . " AND status<>'queued'");
+            $clearCount = $countQ ? (int)($countQ->fetch_object()->c ?? 0) : 0;
+            $s->query("DELETE FROM military_troop_queue WHERE uid=" . $uid . " AND status<>'queued'");
+            $pageActionStatus = 'Queue history cleared: removed ' . fnum($clearCount) . ' completed/cancelled/failed rows.';
+        }
+
         if ($cmd === 'mil_queue_up' || $cmd === 'mil_queue_down') {
             if ($troopQueueId <= 0) {
                 $pageActionStatus = 'Queue priority update failed: invalid queue id.';
@@ -2668,6 +2697,7 @@ if ($main === 'military') {
             . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_recruit&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Add To Queue</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_process\'); return false">Process Next Ready Queue Batch</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_process_all\'); return false">Process All Ready Queue Batches</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_clear_history\'); return false">Clear Completed/Cancelled/Failed History</a></p>';
         echo '</div>';
 
         $queueRows = [];
@@ -2706,6 +2736,8 @@ if ($main === 'military') {
                 echo '<td>' . h($statusName) . '</td>';
                 if ($statusName === 'queued') {
                     echo '<td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_up&tqid=' . (int)$qr['queue_id'] . '\'); return false">Up</a> | <a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_down&tqid=' . (int)$qr['queue_id'] . '\'); return false">Down</a> | <a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_cancel&tqid=' . (int)$qr['queue_id'] . '\'); return false">Cancel</a></td>';
+                } elseif ($statusName === 'failed' || $statusName === 'cancelled') {
+                    echo '<td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_retry&tqid=' . (int)$qr['queue_id'] . '\'); return false">Retry</a></td>';
                 } else {
                     echo '<td>-</td>';
                 }
