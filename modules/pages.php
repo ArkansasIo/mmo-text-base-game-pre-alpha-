@@ -1276,10 +1276,10 @@ function militaryRecruitApply(Game $s, int $uid, array $troopMeta, int $qty): st
 
 function militaryQueueProcessReady(Game $s, int $uid, array $troopById, int $limit = 25): array {
     $limit = max(1, min(100, $limit));
-    $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, UNIX_TIMESTAMP(created_at) AS created_ts
+    $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, priority_order, UNIX_TIMESTAMP(created_at) AS created_ts
         FROM military_troop_queue
         WHERE uid=" . $uid . " AND status='queued'
-        ORDER BY queue_id ASC LIMIT " . $limit);
+        ORDER BY priority_order ASC, queue_id ASC LIMIT " . $limit);
     $processed = 0;
     $failed = 0;
     $waiting = 0;
@@ -1728,11 +1728,17 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
         uid INT NOT NULL,
         troop_id INT NOT NULL,
         quantity INT NOT NULL DEFAULT 1,
+        priority_order INT NOT NULL DEFAULT 0,
         eta_seconds INT NOT NULL DEFAULT 300,
         status VARCHAR(20) NOT NULL DEFAULT 'queued',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         completed_at TIMESTAMP NULL DEFAULT NULL
     )");
+    $prioColQ = $s->query("SHOW COLUMNS FROM military_troop_queue LIKE 'priority_order'");
+    $hasPriority = $prioColQ ? (int)$prioColQ->num_rows : 0;
+    if ($hasPriority === 0) {
+        $s->query("ALTER TABLE military_troop_queue ADD COLUMN priority_order INT NOT NULL DEFAULT 0 AFTER quantity");
+    }
     $troopCatalog = militaryTroopCatalog();
     $s->query("CREATE TABLE IF NOT EXISTS military_troop_catalog (
         troop_id INT NOT NULL PRIMARY KEY,
@@ -1919,16 +1925,18 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
                 $pageActionStatus = 'Recruitment queue failed: troop profile not found.';
             } else {
                 $eta = max(120, (int)(120 + ($qty * 8) + ((int)$troopMeta['tier'] * 18)));
-                $s->query("INSERT INTO military_troop_queue (uid, troop_id, quantity, eta_seconds, status) VALUES (" . $uid . ", " . (int)$troopPickId . ", " . $qty . ", " . $eta . ", 'queued')");
+                $prioQ = $s->query("SELECT COALESCE(MAX(priority_order), 0) AS p FROM military_troop_queue WHERE uid=" . $uid . "");
+                $nextPrio = $prioQ ? ((int)($prioQ->fetch_object()->p ?? 0) + 1) : 1;
+                $s->query("INSERT INTO military_troop_queue (uid, troop_id, quantity, priority_order, eta_seconds, status) VALUES (" . $uid . ", " . (int)$troopPickId . ", " . $qty . ", " . $nextPrio . ", " . $eta . ", 'queued')");
                 $pageActionStatus = 'Recruitment queued: ' . fnum($qty) . 'x ' . (string)$troopMeta['troop_name'] . ' (ETA ' . fnum($eta) . 's).';
             }
         }
 
         if ($cmd === 'mil_queue_process') {
-            $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, UNIX_TIMESTAMP(created_at) AS created_ts
+            $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, priority_order, UNIX_TIMESTAMP(created_at) AS created_ts
                 FROM military_troop_queue
                 WHERE uid=" . $uid . " AND status='queued'
-                ORDER BY queue_id ASC LIMIT 1");
+                ORDER BY priority_order ASC, queue_id ASC LIMIT 1");
             $qItem = $queueQ ? $queueQ->fetch_object() : null;
             if (!$qItem) {
                 $pageActionStatus = 'Queue process: no queued troop batches found.';
@@ -1974,6 +1982,36 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
                 } else {
                     $s->query("UPDATE military_troop_queue SET status='cancelled', completed_at=NOW() WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
                     $pageActionStatus = 'Queue batch #' . fnum($troopQueueId) . ' cancelled.';
+                }
+            }
+        }
+
+        if ($cmd === 'mil_queue_up' || $cmd === 'mil_queue_down') {
+            if ($troopQueueId <= 0) {
+                $pageActionStatus = 'Queue priority update failed: invalid queue id.';
+            } else {
+                $selfQ = $s->query("SELECT queue_id, priority_order, status FROM military_troop_queue WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
+                $self = $selfQ ? $selfQ->fetch_object() : null;
+                if (!$self) {
+                    $pageActionStatus = 'Queue priority update failed: queue batch not found.';
+                } elseif ((string)$self->status !== 'queued') {
+                    $pageActionStatus = 'Queue priority update skipped: batch is already ' . h((string)$self->status) . '.';
+                } else {
+                    $cmp = ($cmd === 'mil_queue_up') ? '<' : '>';
+                    $dir = ($cmd === 'mil_queue_up') ? 'DESC' : 'ASC';
+                    $adjQ = $s->query("SELECT queue_id, priority_order FROM military_troop_queue
+                        WHERE uid=" . $uid . " AND status='queued' AND priority_order " . $cmp . " " . (int)$self->priority_order . "
+                        ORDER BY priority_order " . $dir . ", queue_id " . $dir . " LIMIT 1");
+                    $adj = $adjQ ? $adjQ->fetch_object() : null;
+                    if (!$adj) {
+                        $pageActionStatus = ($cmd === 'mil_queue_up') ? 'Queue batch is already highest priority.' : 'Queue batch is already lowest priority.';
+                    } else {
+                        $selfPrio = (int)$self->priority_order;
+                        $adjPrio = (int)$adj->priority_order;
+                        $s->query("UPDATE military_troop_queue SET priority_order=" . $adjPrio . " WHERE queue_id=" . (int)$self->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                        $s->query("UPDATE military_troop_queue SET priority_order=" . $selfPrio . " WHERE queue_id=" . (int)$adj->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                        $pageActionStatus = 'Queue priority updated for batch #' . fnum((int)$self->queue_id) . '.';
+                    }
                 }
             }
         }
@@ -2633,10 +2671,10 @@ if ($main === 'military') {
         echo '</div>';
 
         $queueRows = [];
-        $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, status, UNIX_TIMESTAMP(created_at) AS created_ts
+        $queueQ = $s->query("SELECT queue_id, troop_id, quantity, priority_order, eta_seconds, status, UNIX_TIMESTAMP(created_at) AS created_ts
             FROM military_troop_queue
             WHERE uid=" . $uid . "
-            ORDER BY queue_id DESC LIMIT 12");
+            ORDER BY status='queued' DESC, priority_order ASC, queue_id ASC LIMIT 12");
         if ($queueQ) {
             while ($qr = $queueQ->fetch_assoc()) {
                 $queueRows[] = $qr;
@@ -2648,10 +2686,11 @@ if ($main === 'military') {
             echo '<p>No queued troop batches yet.</p>';
         } else {
             echo '<table class="mini-table" border="0" width="100%">';
-            echo '<tr><th align="left">Queue ID</th><th align="left">Troop</th><th align="left">Qty</th><th align="left">ETA</th><th align="left">Status</th><th align="left">Action</th></tr>';
+            echo '<tr><th align="left">Queue ID</th><th align="left">Priority</th><th align="left">Troop</th><th align="left">Qty</th><th align="left">ETA</th><th align="left">Status</th><th align="left">Action</th></tr>';
             foreach ($queueRows as $qr) {
                 $tId = (int)($qr['troop_id'] ?? 0);
                 $tName = isset($troopById[$tId]) ? (string)$troopById[$tId]['troop_name'] : ('Troop #' . $tId);
+                $prioNum = (int)($qr['priority_order'] ?? 0);
                 $etaSec = (int)($qr['eta_seconds'] ?? 0);
                 $createdTs = (int)($qr['created_ts'] ?? time());
                 $elapsed = max(0, time() - $createdTs);
@@ -2660,12 +2699,13 @@ if ($main === 'military') {
                 $etaText = ($statusName === 'queued') ? (fnum($remaining) . 's') : '0s';
                 echo '<tr>';
                 echo '<td>#' . fnum((int)$qr['queue_id']) . '</td>';
+                echo '<td>' . fnum($prioNum) . '</td>';
                 echo '<td>' . h($tName) . '</td>';
                 echo '<td>' . fnum((int)($qr['quantity'] ?? 0)) . '</td>';
                 echo '<td>' . h($etaText) . '</td>';
                 echo '<td>' . h($statusName) . '</td>';
                 if ($statusName === 'queued') {
-                    echo '<td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_cancel&tqid=' . (int)$qr['queue_id'] . '\'); return false">Cancel</a></td>';
+                    echo '<td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_up&tqid=' . (int)$qr['queue_id'] . '\'); return false">Up</a> | <a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_down&tqid=' . (int)$qr['queue_id'] . '\'); return false">Down</a> | <a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_cancel&tqid=' . (int)$qr['queue_id'] . '\'); return false">Cancel</a></td>';
                 } else {
                     echo '<td>-</td>';
                 }
