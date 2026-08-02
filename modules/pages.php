@@ -1208,6 +1208,72 @@ function militaryTroopCatalog(): array {
     return $rows;
 }
 
+function militaryTroopRoleField(array $troopMeta): string {
+    $unitField = 'attack';
+    $className = strtolower((string)$troopMeta['class_name']);
+    $typeName = strtolower((string)$troopMeta['troop_type']);
+    if ($className === 'covert') {
+        $unitField = 'covert';
+    }
+    if ($className === 'security' || $typeName === 'counter-covert') {
+        $unitField = 'anticovert';
+    }
+    if ($className === 'heavy' || $typeName === 'defense' || $typeName === 'bulwark') {
+        $unitField = 'defense';
+    }
+    return $unitField;
+}
+
+function militaryRecruitCosts(array $troopMeta, int $qty): array {
+    $qty = max(1, $qty);
+    return [
+        'turns' => max(1, (int)ceil($qty / 20)),
+        'units' => $qty,
+        'naq' => (int)round(((int)$troopMeta['power_stat'] * 120) * $qty),
+        'food' => (int)round(((int)$troopMeta['morale_stat'] * 2) * $qty),
+        'water' => (int)round(((int)$troopMeta['logistics_stat'] * 2) * $qty),
+        'deuterium' => (int)round(((int)$troopMeta['mobility_stat'] * 4) * $qty),
+    ];
+}
+
+function militaryRecruitApply(Game $s, int $uid, array $troopMeta, int $qty): string {
+    $qty = max(1, min(500, $qty));
+    $turnQ = $s->query("SELECT actionTurns FROM userdata WHERE uid=" . $uid . " LIMIT 1");
+    $turns = $turnQ ? (int)($turnQ->fetch_object()->actionTurns ?? 0) : 0;
+    $resQ = $s->query("SELECT metal,crystal,deuterium,food,water,population FROM player_resources WHERE uid=" . $uid . " LIMIT 1");
+    $res = $resQ ? $resQ->fetch_object() : (object)['metal' => 0, 'crystal' => 0, 'deuterium' => 0, 'food' => 0, 'water' => 0, 'population' => 0];
+    $unitQ = $s->query("SELECT untrained,attack,defense,covert,anticovert FROM units WHERE uid=" . $uid . " LIMIT 1");
+    $unitsObj = $unitQ ? $unitQ->fetch_object() : (object)['untrained' => 0, 'attack' => 0, 'defense' => 0, 'covert' => 0, 'anticovert' => 0];
+    $bankQ = $s->query("SELECT onHand FROM bank WHERE uid=" . $uid . " LIMIT 1");
+    $bankObj = $bankQ ? $bankQ->fetch_object() : (object)['onHand' => 0];
+
+    $cost = militaryRecruitCosts($troopMeta, $qty);
+    if ($turns < (int)$cost['turns']) {
+        return 'Troop recruitment failed: insufficient action turns.';
+    }
+    if ((int)$unitsObj->untrained < (int)$cost['units']) {
+        return 'Troop recruitment failed: insufficient untrained units.';
+    }
+    if ((int)$bankObj->onHand < (int)$cost['naq']) {
+        return 'Troop recruitment failed: insufficient Naquadah.';
+    }
+    if ((int)$res->food < (int)$cost['food'] || (int)$res->water < (int)$cost['water'] || (int)$res->deuterium < (int)$cost['deuterium']) {
+        return 'Troop recruitment failed: insufficient food/water/deuterium reserves.';
+    }
+
+    $unitField = militaryTroopRoleField($troopMeta);
+    $xpGain = max(2, (int)ceil($qty / 10));
+    $readinessGain = max(1, (int)ceil($qty / 80));
+
+    $s->query("UPDATE bank SET onHand=onHand-" . (int)$cost['naq'] . " WHERE uid=" . $uid . " LIMIT 1");
+    $s->query("UPDATE player_resources SET food=food-" . (int)$cost['food'] . ", water=water-" . (int)$cost['water'] . ", deuterium=deuterium-" . (int)$cost['deuterium'] . " WHERE uid=" . $uid . " LIMIT 1");
+    $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . (int)$cost['turns'] . ") WHERE uid=" . $uid . " LIMIT 1");
+    $s->query("UPDATE units SET untrained=untrained-" . (int)$cost['units'] . ", " . $unitField . "=" . $unitField . "+" . $qty . " WHERE uid=" . $uid . " LIMIT 1");
+    $s->query("UPDATE military_command_state SET drill_xp=drill_xp+" . $xpGain . ", readiness_index=LEAST(100, readiness_index+" . $readinessGain . ") WHERE uid=" . $uid . " LIMIT 1");
+
+    return 'Troop recruitment complete: ' . fnum($qty) . 'x ' . (string)$troopMeta['troop_name'] . ' assigned to ' . strtoupper($unitField) . ' corps.';
+}
+
 $main = isset($_GET['id']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['id'])) : 'empire';
 $sub = isset($_GET['atype']) ? preg_replace('/[^a-z]/', '', strtolower((string)$_GET['atype'])) : '';
 
@@ -1577,6 +1643,7 @@ $troopLegionFilter = isset($_GET['tclegion']) ? preg_replace('/[^a-z]/', '', str
 $troopPage = isset($_GET['tp']) ? (int)$_GET['tp'] : 1;
 $troopPickId = isset($_GET['tpid']) ? (int)$_GET['tpid'] : 0;
 $troopPickQty = isset($_GET['tqty']) ? (int)$_GET['tqty'] : 1;
+$troopQueueId = isset($_GET['tqid']) ? (int)$_GET['tqid'] : 0;
 $targetWorld = isset($_GET['target']) ? (int)$_GET['target'] : 0;
 $bpId = isset($_GET['bp']) ? (int)$_GET['bp'] : 0;
 $bpQty = isset($_GET['qty']) ? (int)$_GET['qty'] : 1;
@@ -1619,6 +1686,16 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
     )");
     $s->query("INSERT IGNORE INTO military_command_state (uid) VALUES (" . $uid . ")");
+    $s->query("CREATE TABLE IF NOT EXISTS military_troop_queue (
+        queue_id INT NOT NULL AUTO_INCREMENT PRIMARY KEY,
+        uid INT NOT NULL,
+        troop_id INT NOT NULL,
+        quantity INT NOT NULL DEFAULT 1,
+        eta_seconds INT NOT NULL DEFAULT 300,
+        status VARCHAR(20) NOT NULL DEFAULT 'queued',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        completed_at TIMESTAMP NULL DEFAULT NULL
+    )");
     $troopCatalog = militaryTroopCatalog();
     $s->query("CREATE TABLE IF NOT EXISTS military_troop_catalog (
         troop_id INT NOT NULL PRIMARY KEY,
@@ -1794,45 +1871,50 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
             if ($troopMeta === null) {
                 $pageActionStatus = 'Troop recruitment failed: troop profile not found.';
             } else {
-                $turnCost = max(1, (int)ceil($qty / 20));
-                $unitNeed = $qty;
-                $naqCost = (int)round(((int)$troopMeta['power_stat'] * 120) * $qty);
-                $foodCost = (int)round(((int)$troopMeta['morale_stat'] * 2) * $qty);
-                $waterCost = (int)round(((int)$troopMeta['logistics_stat'] * 2) * $qty);
-                $deutCost = (int)round(((int)$troopMeta['mobility_stat'] * 4) * $qty);
+                $pageActionStatus = militaryRecruitApply($s, $uid, $troopMeta, $qty);
+            }
+        }
 
-                if ($turns < $turnCost) {
-                    $pageActionStatus = 'Troop recruitment failed: insufficient action turns.';
-                } elseif ((int)$unitsObj->untrained < $unitNeed) {
-                    $pageActionStatus = 'Troop recruitment failed: insufficient untrained units.';
-                } elseif ((int)$bankObj->onHand < $naqCost) {
-                    $pageActionStatus = 'Troop recruitment failed: insufficient Naquadah.';
-                } elseif ((int)$res->food < $foodCost || (int)$res->water < $waterCost || (int)$res->deuterium < $deutCost) {
-                    $pageActionStatus = 'Troop recruitment failed: insufficient food/water/deuterium reserves.';
+        if ($cmd === 'mil_queue_recruit') {
+            $qty = max(1, min(500, $troopPickQty));
+            $troopMeta = $troopById[$troopPickId] ?? null;
+            if ($troopMeta === null) {
+                $pageActionStatus = 'Recruitment queue failed: troop profile not found.';
+            } else {
+                $eta = max(120, (int)(120 + ($qty * 8) + ((int)$troopMeta['tier'] * 18)));
+                $s->query("INSERT INTO military_troop_queue (uid, troop_id, quantity, eta_seconds, status) VALUES (" . $uid . ", " . (int)$troopPickId . ", " . $qty . ", " . $eta . ", 'queued')");
+                $pageActionStatus = 'Recruitment queued: ' . fnum($qty) . 'x ' . (string)$troopMeta['troop_name'] . ' (ETA ' . fnum($eta) . 's).';
+            }
+        }
+
+        if ($cmd === 'mil_queue_process') {
+            $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, UNIX_TIMESTAMP(created_at) AS created_ts
+                FROM military_troop_queue
+                WHERE uid=" . $uid . " AND status='queued'
+                ORDER BY queue_id ASC LIMIT 1");
+            $qItem = $queueQ ? $queueQ->fetch_object() : null;
+            if (!$qItem) {
+                $pageActionStatus = 'Queue process: no queued troop batches found.';
+            } else {
+                $elapsed = max(0, time() - (int)$qItem->created_ts);
+                if ($elapsed < (int)$qItem->eta_seconds) {
+                    $remain = (int)$qItem->eta_seconds - $elapsed;
+                    $pageActionStatus = 'Queue process: batch still in training (' . fnum($remain) . 's remaining).';
                 } else {
-                    $unitField = 'attack';
-                    $className = strtolower((string)$troopMeta['class_name']);
-                    $typeName = strtolower((string)$troopMeta['troop_type']);
-                    if ($className === 'covert') {
-                        $unitField = 'covert';
+                    $troopMeta = $troopById[(int)$qItem->troop_id] ?? null;
+                    if ($troopMeta === null) {
+                        $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                        $pageActionStatus = 'Queue process failed: troop profile missing.';
+                    } else {
+                        $applyResult = militaryRecruitApply($s, $uid, $troopMeta, (int)$qItem->quantity);
+                        if (strpos($applyResult, 'Troop recruitment complete:') === 0) {
+                            $s->query("UPDATE military_troop_queue SET status='done', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                            $pageActionStatus = 'Queue process complete: ' . $applyResult;
+                        } else {
+                            $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                            $pageActionStatus = 'Queue process failed: ' . $applyResult;
+                        }
                     }
-                    if ($className === 'security' || $typeName === 'counter-covert') {
-                        $unitField = 'anticovert';
-                    }
-                    if ($className === 'heavy' || $typeName === 'defense' || $typeName === 'bulwark') {
-                        $unitField = 'defense';
-                    }
-
-                    $xpGain = max(2, (int)ceil($qty / 10));
-                    $readinessGain = max(1, (int)ceil($qty / 80));
-
-                    $s->query("UPDATE bank SET onHand=onHand-" . $naqCost . " WHERE uid=" . $uid . " LIMIT 1");
-                    $s->query("UPDATE player_resources SET food=food-" . $foodCost . ", water=water-" . $waterCost . ", deuterium=deuterium-" . $deutCost . " WHERE uid=" . $uid . " LIMIT 1");
-                    $s->query("UPDATE userdata SET actionTurns=GREATEST(0,actionTurns-" . $turnCost . ") WHERE uid=" . $uid . " LIMIT 1");
-                    $s->query("UPDATE units SET untrained=untrained-" . $unitNeed . ", " . $unitField . "=" . $unitField . "+" . $qty . " WHERE uid=" . $uid . " LIMIT 1");
-                    $s->query("UPDATE military_command_state SET drill_xp=drill_xp+" . $xpGain . ", readiness_index=LEAST(100, readiness_index+" . $readinessGain . ") WHERE uid=" . $uid . " LIMIT 1");
-
-                    $pageActionStatus = 'Troop recruitment complete: ' . fnum($qty) . 'x ' . (string)$troopMeta['troop_name'] . ' assigned to ' . strtoupper($unitField) . ' corps.';
                 }
             }
         }
@@ -2478,7 +2560,46 @@ if ($main === 'military') {
         }
         echo '</select></label> '
             . '<label>Quantity <input id="troopRecruitQty" type="number" min="1" max="500" value="25" style="width:80px;" /></label> '
-            . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_recruit_troop&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Recruit Troop</a></p>';
+            . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_recruit_troop&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Recruit Instantly</a> | '
+            . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_recruit&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Add To Queue</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_process\'); return false">Process Next Ready Queue Batch</a></p>';
+        echo '</div>';
+
+        $queueRows = [];
+        $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, status, UNIX_TIMESTAMP(created_at) AS created_ts
+            FROM military_troop_queue
+            WHERE uid=" . $uid . "
+            ORDER BY queue_id DESC LIMIT 12");
+        if ($queueQ) {
+            while ($qr = $queueQ->fetch_assoc()) {
+                $queueRows[] = $qr;
+            }
+        }
+
+        echo '<div class="card full"><h4>Recruitment Queue</h4>';
+        if (count($queueRows) === 0) {
+            echo '<p>No queued troop batches yet.</p>';
+        } else {
+            echo '<table class="mini-table" border="0" width="100%">';
+            echo '<tr><th align="left">Queue ID</th><th align="left">Troop</th><th align="left">Qty</th><th align="left">ETA</th><th align="left">Status</th></tr>';
+            foreach ($queueRows as $qr) {
+                $tId = (int)($qr['troop_id'] ?? 0);
+                $tName = isset($troopById[$tId]) ? (string)$troopById[$tId]['troop_name'] : ('Troop #' . $tId);
+                $etaSec = (int)($qr['eta_seconds'] ?? 0);
+                $createdTs = (int)($qr['created_ts'] ?? time());
+                $elapsed = max(0, time() - $createdTs);
+                $remaining = max(0, $etaSec - $elapsed);
+                $etaText = ($qr['status'] === 'queued') ? (fnum($remaining) . 's') : '0s';
+                echo '<tr>';
+                echo '<td>#' . fnum((int)$qr['queue_id']) . '</td>';
+                echo '<td>' . h($tName) . '</td>';
+                echo '<td>' . fnum((int)($qr['quantity'] ?? 0)) . '</td>';
+                echo '<td>' . h($etaText) . '</td>';
+                echo '<td>' . h((string)($qr['status'] ?? 'queued')) . '</td>';
+                echo '</tr>';
+            }
+            echo '</table>';
+        }
         echo '</div>';
 
         echo '<div class="card full"><h4>Troop Matrix</h4>';
