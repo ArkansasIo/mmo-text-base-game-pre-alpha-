@@ -1919,6 +1919,57 @@ if ($main === 'military' || strpos($cmd, 'mil_') === 0) {
             }
         }
 
+        if ($cmd === 'mil_queue_process_all') {
+            $queueQ = $s->query("SELECT queue_id, troop_id, quantity, eta_seconds, UNIX_TIMESTAMP(created_at) AS created_ts
+                FROM military_troop_queue
+                WHERE uid=" . $uid . " AND status='queued'
+                ORDER BY queue_id ASC LIMIT 25");
+            $processed = 0;
+            $failed = 0;
+            $waiting = 0;
+            if ($queueQ) {
+                while ($qItem = $queueQ->fetch_object()) {
+                    $elapsed = max(0, time() - (int)$qItem->created_ts);
+                    if ($elapsed < (int)$qItem->eta_seconds) {
+                        $waiting++;
+                        continue;
+                    }
+                    $troopMeta = $troopById[(int)$qItem->troop_id] ?? null;
+                    if ($troopMeta === null) {
+                        $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                        $failed++;
+                        continue;
+                    }
+                    $applyResult = militaryRecruitApply($s, $uid, $troopMeta, (int)$qItem->quantity);
+                    if (strpos($applyResult, 'Troop recruitment complete:') === 0) {
+                        $s->query("UPDATE military_troop_queue SET status='done', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                        $processed++;
+                    } else {
+                        $s->query("UPDATE military_troop_queue SET status='failed', completed_at=NOW() WHERE queue_id=" . (int)$qItem->queue_id . " AND uid=" . $uid . " LIMIT 1");
+                        $failed++;
+                    }
+                }
+            }
+            $pageActionStatus = 'Queue process all: processed ' . fnum($processed) . ', waiting ' . fnum($waiting) . ', failed ' . fnum($failed) . '.';
+        }
+
+        if ($cmd === 'mil_queue_cancel') {
+            if ($troopQueueId <= 0) {
+                $pageActionStatus = 'Queue cancel failed: invalid queue id.';
+            } else {
+                $rowQ = $s->query("SELECT status FROM military_troop_queue WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
+                $row = $rowQ ? $rowQ->fetch_object() : null;
+                if (!$row) {
+                    $pageActionStatus = 'Queue cancel failed: queue batch not found.';
+                } elseif ((string)$row->status !== 'queued') {
+                    $pageActionStatus = 'Queue cancel skipped: batch is already ' . h((string)$row->status) . '.';
+                } else {
+                    $s->query("UPDATE military_troop_queue SET status='cancelled', completed_at=NOW() WHERE queue_id=" . $troopQueueId . " AND uid=" . $uid . " LIMIT 1");
+                    $pageActionStatus = 'Queue batch #' . fnum($troopQueueId) . ' cancelled.';
+                }
+            }
+        }
+
         if ($cmd === 'mil_defense_harden') {
             $needTurns = 2;
             $needMetal = 16000;
@@ -2563,6 +2614,7 @@ if ($main === 'military') {
             . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_recruit_troop&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Recruit Instantly</a> | '
             . '<a href="javascript:void(0)" onclick="(function(){var p=document.getElementById(\'troopRecruitSelect\');var q=document.getElementById(\'troopRecruitQty\');if(p&&q){var qv=parseInt(q.value,10);if(!qv||qv<1){qv=1;}if(qv>500){qv=500;}sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_recruit&tpid=\'+p.value+\'&tqty=\'+qv);}return false;})(); return false">Add To Queue</a></p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_process\'); return false">Process Next Ready Queue Batch</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_process_all\'); return false">Process All Ready Queue Batches</a></p>';
         echo '</div>';
 
         $queueRows = [];
@@ -2581,7 +2633,7 @@ if ($main === 'military') {
             echo '<p>No queued troop batches yet.</p>';
         } else {
             echo '<table class="mini-table" border="0" width="100%">';
-            echo '<tr><th align="left">Queue ID</th><th align="left">Troop</th><th align="left">Qty</th><th align="left">ETA</th><th align="left">Status</th></tr>';
+            echo '<tr><th align="left">Queue ID</th><th align="left">Troop</th><th align="left">Qty</th><th align="left">ETA</th><th align="left">Status</th><th align="left">Action</th></tr>';
             foreach ($queueRows as $qr) {
                 $tId = (int)($qr['troop_id'] ?? 0);
                 $tName = isset($troopById[$tId]) ? (string)$troopById[$tId]['troop_name'] : ('Troop #' . $tId);
@@ -2589,13 +2641,19 @@ if ($main === 'military') {
                 $createdTs = (int)($qr['created_ts'] ?? time());
                 $elapsed = max(0, time() - $createdTs);
                 $remaining = max(0, $etaSec - $elapsed);
-                $etaText = ($qr['status'] === 'queued') ? (fnum($remaining) . 's') : '0s';
+                $statusName = (string)($qr['status'] ?? 'queued');
+                $etaText = ($statusName === 'queued') ? (fnum($remaining) . 's') : '0s';
                 echo '<tr>';
                 echo '<td>#' . fnum((int)$qr['queue_id']) . '</td>';
                 echo '<td>' . h($tName) . '</td>';
                 echo '<td>' . fnum((int)($qr['quantity'] ?? 0)) . '</td>';
                 echo '<td>' . h($etaText) . '</td>';
-                echo '<td>' . h((string)($qr['status'] ?? 'queued')) . '</td>';
+                echo '<td>' . h($statusName) . '</td>';
+                if ($statusName === 'queued') {
+                    echo '<td><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'military\',\'troops&tcclass=' . h($troopClassFilter) . '&tclegion=' . h($troopLegionFilter) . '&tp=' . $troopPage . '&cmd=mil_queue_cancel&tqid=' . (int)$qr['queue_id'] . '\'); return false">Cancel</a></td>';
+                } else {
+                    echo '<td>-</td>';
+                }
                 echo '</tr>';
             }
             echo '</table>';
