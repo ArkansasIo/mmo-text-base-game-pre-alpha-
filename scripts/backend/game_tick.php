@@ -16,6 +16,7 @@ require_once $root . "/config.php";
 require_once $root . "/base/TerritoryEconomy.class.php";
 require_once $root . "/base/GuildResearchPolicy.class.php";
 require_once $root . "/base/GuildWarfarePolicy.class.php";
+require_once $root . "/base/GuildEventPolicy.class.php";
 
 $uidFilter = null;
 $dryRun = false;
@@ -182,6 +183,8 @@ q($db, "CREATE TABLE IF NOT EXISTS hyperspace_transits (
 function completeGuildResearch(mysqli $db, bool $dryRun): int { if ($dryRun) return 0; $res=$db->query("SELECT guild_id,tech_key FROM guild_technology_levels WHERE research_completed_at IS NOT NULL AND research_completed_at<=NOW() AND level<".GuildResearchPolicy::MAX_LEVEL); $count=0; if($res)while($row=$res->fetch_assoc()){ $g=(int)$row['guild_id']; $k=$db->real_escape_string((string)$row['tech_key']); if($db->query("UPDATE guild_technology_levels SET level=level+1,research_started_at=NULL,research_completed_at=NULL WHERE guild_id=$g AND tech_key='$k' AND level<".GuildResearchPolicy::MAX_LEVEL." AND research_completed_at IS NOT NULL AND research_completed_at<=NOW() LIMIT 1"))$count++; } return $count; }
 function guildResearchModifiers(mysqli $db, int $guildId): array { $levels=[]; $res=$db->query("SELECT tech_key,level FROM guild_technology_levels WHERE guild_id=$guildId"); if($res)while($row=$res->fetch_assoc())$levels[(string)$row['tech_key']] = (int)$row['level']; return GuildResearchPolicy::modifiers($levels); }
 
+function processTerritoryEvents(mysqli $db, bool $dryRun): int { $table=$db->query("SHOW TABLES LIKE 'guild_territory_events'"); if(!$table||$table->num_rows===0)return 0; $resolved=0; if(!$dryRun){$db->query("UPDATE guild_territory_events SET status='resolved',resolved_at=NOW() WHERE status='active' AND ends_at<=NOW()");$db->query("UPDATE guild_territories t LEFT JOIN guild_territory_events e ON e.territory_id=t.territory_id AND e.status='active' SET t.event_production_penalty=0,t.event_defense_bonus=0 WHERE e.event_id IS NULL");}$rows=$db->query("SELECT t.territory_id,t.guild_id,t.control_points,(SELECT COUNT(*) FROM guild_wars w WHERE w.status='active' AND (w.attacker_guild_id=t.guild_id OR w.defender_guild_id=t.guild_id)) war_count FROM guild_territories t WHERE t.status='claimed' AND NOT EXISTS (SELECT 1 FROM guild_territory_events e WHERE e.territory_id=t.territory_id AND e.status='active')");if(!$rows)return 0;while($row=$rows->fetch_assoc()){if(random_int(1,100)>GuildEventPolicy::eventChance((int)$row['control_points'],(int)$row['war_count']))continue;$type=random_int(0,1)===0?'celestial_anomaly':'pirate_invasion';$severity=random_int(1,GuildEventPolicy::MAX_SEVERITY);$profile=GuildEventPolicy::profile($type,$severity);$ends=date('Y-m-d H:i:s',time()+($profile['duration']*60));if(!$dryRun){$g=(int)$row['guild_id'];$t=(int)$row['territory_id'];$pen=(int)$profile['production_penalty'];$def=(int)$profile['defense_bonus'];$attack=(int)$profile['attack_power'];$st=$db->prepare("INSERT INTO guild_territory_events (guild_id,territory_id,event_type,severity,effect_percent,attack_power,ends_at) VALUES (?,?,?,?,?,?,?)");$st->bind_param('iiiiiis',$g,$t,$type,$severity,$pen,$attack,$ends);if($st->execute())$db->query("UPDATE guild_territories SET event_production_penalty=$pen,event_defense_bonus=$def WHERE territory_id=$t LIMIT 1");}$resolved++;} $rows->free(); return $resolved; }
+
 function settleTerritoryEconomy(mysqli $db, bool $dryRun): int {
     $table = $db->query("SHOW TABLES LIKE 'guild_territories'");
     if (!$table || $table->num_rows === 0) return 0;
@@ -192,6 +195,8 @@ function settleTerritoryEconomy(mysqli $db, bool $dryRun): int {
         $lastTs = strtotime((string)$territory['last_accrued_at']);
         if ($lastTs === false) $lastTs = time();
         $accrual = TerritoryEconomy::accrue($territory, (int)$territory['guild_level'], time(), $lastTs);
+        $eventMultiplier = max(0.50, 1 - ((int)($territory['event_production_penalty'] ?? 0) / 100));
+        foreach (['metal','crystal','energy','credits'] as $resource) $accrual[$resource] = (int)floor($accrual[$resource] * $eventMultiplier);
         $research = guildResearchModifiers($db, (int)$territory['guild_id']);
         $productionMultiplier = 1 + ((int)$research['production_percent'] / 100);
         foreach (['metal','crystal','energy'] as $resource) $accrual[$resource] = (int)floor($accrual[$resource] * $productionMultiplier);
@@ -210,6 +215,7 @@ function settleTerritoryEconomy(mysqli $db, bool $dryRun): int {
 }
 
 $researchCompleted = completeGuildResearch($db, $dryRun);
+$dynamicEventsProcessed = processTerritoryEvents($db, $dryRun);
 $territoryTicks = settleTerritoryEconomy($db, $dryRun);
 
 function settleTradeRoutes(mysqli $db, bool $dryRun): int {
@@ -237,7 +243,7 @@ function settleTradeRoutes(mysqli $db, bool $dryRun): int {
 
 $tradeRoutesDelivered = settleTradeRoutes($db, $dryRun);
 
-function resolveGuildRaids(mysqli $db, bool $dryRun): int { $table=$db->query("SHOW TABLES LIKE 'guild_raids'"); if(!$table||$table->num_rows===0)return 0; $res=$db->query("SELECT r.*,t.control_points,t.defense_level,t.stock_metal,t.stock_crystal FROM guild_raids r INNER JOIN guild_territories t ON t.territory_id=r.target_territory_id WHERE r.status='enroute' AND r.resolves_at<=NOW()");$count=0;if(!$res)return 0;while($raid=$res->fetch_assoc()){ $count++; if($dryRun)continue; $attack=(int)$raid['attack_power'];$defense=GuildWarfarePolicy::defensePower((int)$raid['control_points'],(int)$raid['defense_level'],0);$victory=$attack>$defense;$metal=$victory?GuildWarfarePolicy::loot((int)$raid['stock_metal'],$attack,$defense):0;$crystal=$victory?GuildWarfarePolicy::loot((int)$raid['stock_crystal'],$attack,$defense):0;$id=(int)$raid['raid_id'];$db->begin_transaction();$ok=true;if($victory){$ok=$db->query("UPDATE guild_territories SET stock_metal=stock_metal-$metal,stock_crystal=stock_crystal-$crystal,control_points=GREATEST(0,control_points-10),status=IF(control_points<=10,'contested',status) WHERE territory_id=".(int)$raid['target_territory_id']." AND status='claimed' LIMIT 1");$ok=$ok&&$db->query("UPDATE guilds SET shared_metal=shared_metal+$metal,shared_crystal=shared_crystal+$crystal WHERE guild_id=".(int)$raid['attacker_guild_id']." LIMIT 1");}$newStatus=$victory?'resolved':'repelled';$ok=$ok&&$db->query("UPDATE guild_raids SET status='$newStatus',loot_metal=$metal,loot_crystal=$crystal,resolved_at=NOW() WHERE raid_id=$id AND status='enroute' LIMIT 1");if($ok){if($victory&&$metal>0)$db->query("INSERT INTO guild_resource_ledger (guild_id,uid,action_type,resource_type,amount,reason) VALUES (".(int)$raid['attacker_guild_id'].",".(int)$raid['launched_by'].",'bonus','metal',$metal,'Successful territory raid loot')");$db->commit();}else{$db->rollback();$count--;}}$res->free();return $count; }
+function resolveGuildRaids(mysqli $db, bool $dryRun): int { $table=$db->query("SHOW TABLES LIKE 'guild_raids'"); if(!$table||$table->num_rows===0)return 0; $res=$db->query("SELECT r.*,t.control_points,t.defense_level,t.event_defense_bonus,t.stock_metal,t.stock_crystal FROM guild_raids r INNER JOIN guild_territories t ON t.territory_id=r.target_territory_id WHERE r.status='enroute' AND r.resolves_at<=NOW()");$count=0;if(!$res)return 0;while($raid=$res->fetch_assoc()){ $count++; if($dryRun)continue; $attack=(int)$raid['attack_power'];$defense=GuildWarfarePolicy::defensePower((int)$raid['control_points'],(int)$raid['defense_level']+(int)($raid['event_defense_bonus']??0),0);$victory=$attack>$defense;$metal=$victory?GuildWarfarePolicy::loot((int)$raid['stock_metal'],$attack,$defense):0;$crystal=$victory?GuildWarfarePolicy::loot((int)$raid['stock_crystal'],$attack,$defense):0;$id=(int)$raid['raid_id'];$db->begin_transaction();$ok=true;if($victory){$ok=$db->query("UPDATE guild_territories SET stock_metal=stock_metal-$metal,stock_crystal=stock_crystal-$crystal,control_points=GREATEST(0,control_points-10),status=IF(control_points<=10,'contested',status) WHERE territory_id=".(int)$raid['target_territory_id']." AND status='claimed' LIMIT 1");$ok=$ok&&$db->query("UPDATE guilds SET shared_metal=shared_metal+$metal,shared_crystal=shared_crystal+$crystal WHERE guild_id=".(int)$raid['attacker_guild_id']." LIMIT 1");}$newStatus=$victory?'resolved':'repelled';$ok=$ok&&$db->query("UPDATE guild_raids SET status='$newStatus',loot_metal=$metal,loot_crystal=$crystal,resolved_at=NOW() WHERE raid_id=$id AND status='enroute' LIMIT 1");if($ok){if($victory&&$metal>0)$db->query("INSERT INTO guild_resource_ledger (guild_id,uid,action_type,resource_type,amount,reason) VALUES (".(int)$raid['attacker_guild_id'].",".(int)$raid['launched_by'].",'bonus','metal',$metal,'Successful territory raid loot')");$db->commit();}else{$db->rollback();$count--;}}$res->free();return $count; }
 
 $raidsResolved = resolveGuildRaids($db, $dryRun);
 
@@ -398,6 +404,7 @@ echo "Game tick complete" . ($dryRun ? " (dry-run)" : "") . "\n";
 echo "Users processed: " . $processedUsers . "\n";
 echo "Resource updates: " . $resourceUpdates . "\n";
 echo "Research projects completed: " . $researchCompleted . "\n";
+echo "Dynamic events processed: " . $dynamicEventsProcessed . "\n";
 echo "Territory production ticks settled: " . $territoryTicks . "\n";
 echo "Trade routes delivered: " . $tradeRoutesDelivered . "\n";
 echo "Guild raids resolved: " . $raidsResolved . "\n";
