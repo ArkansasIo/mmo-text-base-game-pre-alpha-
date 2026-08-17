@@ -1,38 +1,14 @@
-# test game
+# Universe Civilization: Empire at Wars
 
-Open-source PHP/MySQL browser strategy game inspired by classic turn-based empire games and the Stargate universe.
+The canonical project introduction and setup guide is maintained in [`README`](README).
 
-## Project Guide
+For detailed documentation, see:
 
-This repository now includes a full folder-level documentation layout.
+- [Player Guide](docs/PLAYER_GUIDE.md)
+- [Systems Reference](docs/SYSTEMS_REFERENCE.md)
+- [Administrator Operations](docs/ADMIN_OPERATIONS.md)
+- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Contributing Guide](docs/CONTRIBUTING.md)
+- [Game Design Document](GAME_DESIGN_DOCUMENT.md)
 
-- Start here: [docs/README.md](docs/README.md)
-- Full layout map: [docs/PROJECT_STRUCTURE.md](docs/PROJECT_STRUCTURE.md)
-- Backend setup: [BACKEND_SETUP.md](BACKEND_SETUP.md)
-- Legacy readme retained: [README](README)
-
-## Quick Start
-
-1. Initialize database:
-
-```bash
-mysql -u root -p < database/sql/01_create_database.sql
-mysql -u sgw -psgwpass sgw < game.sql
-./scripts/backend/db_migrate.sh
-```
-
-2. Validate backend:
-
-```bash
-./scripts/backend/healthcheck.sh
-```
-
-3. Run locally:
-
-```bash
-/usr/bin/php -S 0.0.0.0:8080
-```
-
-4. Open:
-
-- http://127.0.0.1:8080/index.php
+This file is retained as a conventional `.md` entry point for repository viewers and tooling.
