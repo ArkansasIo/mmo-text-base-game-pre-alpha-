@@ -60,3 +60,15 @@ The legacy `messages` table supports player-to-player private mail and remains a
 ## Request contract
 
 The shared shell uses AJAX-style module requests containing a module name, request type, target display area, and time value. Direct module testing should include the same query parameters used by `sendData`, including `id`, `atype`, and `time`. Missing authentication or required routing values should produce the expected redirect rather than a fatal error.
+
+## Guild command system
+
+Guilds support a maximum of **150 members**. Membership is stored in `guild_members`, while `users.allyid` remains synchronized for compatibility with the legacy alliance roster. Guild ranks are Founder, Marshal, Officer, and Member. Officers can invite players; senior officers can later be extended with promotion, removal, treasury, and governance workflows.
+
+Guild contributions increase the shared treasury and contribution score. The server calculates bounded guild bonuses from member count, guild level, and contribution activity. The current bonus families are production, defense, research, and fleet recovery. All membership and contribution mutations require an authenticated session, a valid CSRF token, server-side numeric limits, and current membership state.
+
+## Population and army rules
+
+New accounts begin with **2,500,000 untrained units**. This is the recruitable population reserve and is separate from the trained army. New home planets receive a server-generated population count. Colonized planets receive a new random population count, and persistent moon records receive their own random population count when initialized. Planet populations are bounded from 100,000 to 10,000,000 by the model, while moon populations are bounded from 10,000 to 2,000,000.
+
+The base trained-army size is **250,000 units**. Recruitment consumes untrained units, but a recruitment operation is rejected when the combined attack, defense, covert, and anti-covert corps would exceed the trained-army capacity. The limit is enforced in PHP through `ArmyPolicy`, so browser-supplied quantities cannot bypass it.

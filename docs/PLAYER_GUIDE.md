@@ -41,3 +41,13 @@ The current recommended caps are infrastructure 30, core research 30, Stargate a
 ## Good operational habits
 
 Keep power reserve available before launching a mission, use reconnaissance before committing a wave, assign defensive orders to damaged units, protect logistics, and communicate battle plans through guild channels. Treat detected sabotage as an intelligence event: raising counterintelligence can be as valuable as adding another weapon system.
+
+## Population and army readiness
+
+Every new commander receives **2,500,000 untrained units** in the reserve. Training converts reserve population into attack, defense, covert, and anti-covert corps. The combined trained army begins with a **250,000-unit base capacity**; once that capacity is full, expand the applicable army-capacity systems before recruiting more trained units.
+
+Planet and moon populations are generated independently within bounded ranges, so each world has a distinct demographic profile. Higher-habitability and larger worlds generally provide stronger population potential. Keep food, water, and power reserves stable because population and military sustainment are linked to the wider resource economy.
+
+## Guild operations
+
+A guild can contain up to **150 commanders**. Found a guild from the Guild Command console or accept an invitation from an officer. Guild contributions increase the shared treasury and strengthen production, defense, research, and fleet-recovery bonuses. Officers should keep the roster active, use guild channels for coordination, and avoid exhausting the treasury on a single campaign.

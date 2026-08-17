@@ -8,7 +8,7 @@ DB_NAME="${SGW_DB_NAME:-sgw}"
 DB_USER="${SGW_DB_USER:-sgw}"
 DB_PASS="${SGW_DB_PASS:-sgwpass}"
 
-for sql_file in database/sql/03_backend_tables.sql database/sql/04_reporting_views.sql database/sql/05_seed_backend_defaults.sql database/sql/07_admin_control_plane.sql database/sql/07_unit_catalog_seed.sql database/sql/08_legacy_training_defaults.sql database/sql/09_remove_nexus_empire.sql database/sql/10_power_grid.sql database/sql/11_universe_seed.sql database/sql/12_universe_taxonomy.sql database/sql/13_universe_intelligence.sql; do
+for sql_file in database/sql/03_backend_tables.sql database/sql/04_reporting_views.sql database/sql/05_seed_backend_defaults.sql database/sql/07_admin_control_plane.sql database/sql/07_unit_catalog_seed.sql database/sql/08_legacy_training_defaults.sql database/sql/09_remove_nexus_empire.sql database/sql/10_power_grid.sql database/sql/11_universe_seed.sql database/sql/12_universe_taxonomy.sql database/sql/13_universe_intelligence.sql database/sql/19_player_accounts.sql database/sql/20_communications.sql database/sql/21_guild_system.sql database/sql/22_population_model.sql; do
   echo "[db_migrate] Applying $sql_file"
   mysql -u "$DB_USER" -p"$DB_PASS" "$DB_NAME" < "$sql_file"
 done

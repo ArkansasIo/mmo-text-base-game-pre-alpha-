@@ -1,5 +1,6 @@
 <?php
 // Base::User.class.php
+require_once __DIR__ . '/PopulationModel.class.php';
 
 class User extends Chive
 {
@@ -250,10 +251,11 @@ class User extends Chive
 			$stmt->bind_param("i", $uid);
 			$stmt->execute();
 
+			$startingUntrained = PopulationModel::STARTING_UNTRAINED_UNITS;
 			$query = "
 				INSERT INTO ".$this->db_prefix."units
 				(uid, attack, superAttack, attackMercs, defense, superDefense, defenseMercs, untrained, miners, lifers, covert, superCovert, anticovert, superAnticovert)
-				VALUES (?, 0, 0, 0, 0, 0, 0, 250, 0, 0, 0, 0, 0, 0)
+				VALUES (?, 0, 0, 0, 0, 0, 0, ".$startingUntrained.", 0, 0, 0, 0, 0, 0)
 			";
 			$stmt = $this->db_link->prepare($query);
 			$stmt->bind_param("i", $uid);
@@ -278,7 +280,8 @@ class User extends Chive
 			$stmt->bind_param("i", $uid);
 			$stmt->execute();
 
-			$query = "INSERT INTO ".$this->db_prefix."planets (uid, text, plnt_name, income_bonus, up_bonus, isHome, pid, plnt_size) VALUES (?, '', ?, 0, 0, 1, 0, 0)";
+			$homePopulation = PopulationModel::randomPlanet(5, 70);
+			$query = "INSERT INTO ".$this->db_prefix."planets (uid, text, plnt_name, income_bonus, up_bonus, isHome, pid, plnt_size, population, pop_cap) VALUES (?, '', ?, 0, 0, 1, 0, 0, ".$homePopulation.", 5000000)";
 			$stmt = $this->db_link->prepare($query);
 			$stmt->bind_param("is", $uid, $hpname);
 			$stmt->execute();

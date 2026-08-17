@@ -1,5 +1,7 @@
 <?php
 include_once("../config.php");
+require_once __DIR__ . '/../base/PopulationModel.class.php';
+require_once __DIR__ . '/../base/ArmyPolicy.class.php';
 
 $pagegen = new page_gen();
 $pagegen->round_to = 4;
@@ -342,10 +344,11 @@ function universeColonizeWorld(Game $s, int $uid, array $cfg, array $ownedPlanet
     $safeText = preg_replace('/[^A-Za-z0-9 _:\[\]-]/', '', (string)($world['coord'] . ' ' . $world['type']));
     $incomeBonus = max(20, (int)floor((int)$world['metal'] / 20));
     $upBonus = max(8, (int)floor((int)$world['habitability'] / 6));
-    $sizeCode = max(0, min(9, (int)$world['slots'] - 2));
+    $sizeCode = max(1, min(9, (int)$world['slots'] - 2));
+    $planetPopulation = PopulationModel::randomPlanet($sizeCode, (int)($world['habitability'] ?? 50));
 
-    $insert = "INSERT INTO planets (uid, text, plnt_name, income_bonus, up_bonus, isHome, pid, plnt_size) VALUES ("
-        . (int)$uid . ", '" . $safeText . "', '" . $safeName . "', " . $incomeBonus . ", " . $upBonus . ", 0, " . $nextPid . ", " . $sizeCode . ")";
+    $insert = "INSERT INTO planets (uid, text, plnt_name, income_bonus, up_bonus, isHome, pid, plnt_size, population, pop_cap) VALUES ("
+        . (int)$uid . ", '" . $safeText . "', '" . $safeName . "', " . $incomeBonus . ", " . $upBonus . ", 0, " . $nextPid . ", " . $sizeCode . ", " . $planetPopulation . ", 5000000)";
     if (!$s->query($insert)) {
         return 'Colonization failed: could not create colony record.';
     }
@@ -1253,6 +1256,15 @@ function militaryRecruitApply(Game $s, int $uid, array $troopMeta, int $qty): st
     }
     if ((int)$unitsObj->untrained < (int)$cost['units']) {
         return 'Troop recruitment failed: insufficient untrained units.';
+    }
+    $trainedUnits = [
+        'attack' => (int)$unitsObj->attack,
+        'defense' => (int)$unitsObj->defense,
+        'covert' => (int)$unitsObj->covert,
+        'anticovert' => (int)$unitsObj->anticovert,
+    ];
+    if (!ArmyPolicy::canTrain($trainedUnits, (int)$qty)) {
+        return 'Troop recruitment failed: base army capacity reached. Remaining trained capacity: ' . fnum(ArmyPolicy::remaining($trainedUnits)) . '.';
     }
     if ((int)$bankObj->onHand < (int)$cost['naq']) {
         return 'Troop recruitment failed: insufficient Naquadah.';
