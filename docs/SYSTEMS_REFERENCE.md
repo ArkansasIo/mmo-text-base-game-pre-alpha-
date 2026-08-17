@@ -78,3 +78,9 @@ The base trained-army size is **250,000 units**. Recruitment consumes untrained 
 Each claimed territory produces metal, crystal, energy, and tax credits every 30-minute game tick. Output scales with control points and guild level. The territory tax rate is server-clamped from 0% through 25%; tax credits are calculated from the territory tax base, while metal, crystal, and energy are produced as strategic guild resources.
 
 Accrual is processed by `scripts/backend/game_tick.php`. The settlement is idempotent under concurrent workers through an optimistic timestamp check, records each positive resource payment in `guild_resource_ledger`, and caps offline catch-up at 48 ticks. Territory production is deposited into the guild treasury rather than directly into a player account.
+
+## Guild market and trade routes
+
+Claimed territories can hold tradable metal, crystal, and energy stock. Guild members may post internal market orders with a bounded unit price and reserved cargo, then fulfill open orders into another claimed territory using guild treasury credits. Orders expire after seven days and are filled incrementally.
+
+Trade routes move cargo between two claimed territories belonging to the same guild. The origin stock is reserved at dispatch, route time is deterministically calculated from the two sector codes, and delivery is finalized by the game tick. Routes are limited to supported resource types and a maximum cargo quantity; ownership, status, and stock checks are enforced server-side. Route delivery and market fulfillment create resource-ledger audit entries.

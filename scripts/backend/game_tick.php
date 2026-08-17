@@ -192,7 +192,7 @@ function settleTerritoryEconomy(mysqli $db, bool $dryRun): int {
         if ($dryRun) { $settled += (int)$accrual['ticks']; continue; }
         $db->begin_transaction();
         $id = (int)$territory['territory_id']; $guildId = (int)$territory['guild_id']; $oldLast = $db->real_escape_string((string)$territory['last_accrued_at']);
-        $updated = $db->query("UPDATE guild_territories SET production_metal=production_metal+".(int)$accrual['metal'].", production_crystal=production_crystal+".(int)$accrual['crystal'].", production_energy=production_energy+".(int)$accrual['energy'].", tax_credits=tax_credits+".(int)$accrual['credits'].", last_accrued_at='".$newLast."' WHERE territory_id=$id AND last_accrued_at='$oldLast' LIMIT 1");
+        $updated = $db->query("UPDATE guild_territories SET production_metal=production_metal+".(int)$accrual['metal'].", production_crystal=production_crystal+".(int)$accrual['crystal'].", production_energy=production_energy+".(int)$accrual['energy'].", stock_metal=stock_metal+".(int)$accrual['metal'].", stock_crystal=stock_crystal+".(int)$accrual['crystal'].", stock_energy=stock_energy+".(int)$accrual['energy'].", tax_credits=tax_credits+".(int)$accrual['credits'].", last_accrued_at='".$newLast."' WHERE territory_id=$id AND last_accrued_at='$oldLast' LIMIT 1");
         if (!$updated || $db->affected_rows !== 1) { $db->rollback(); continue; }
         $db->query("UPDATE guilds SET shared_metal=shared_metal+" . (int)$accrual['metal'] . ", shared_crystal=shared_crystal+" . (int)$accrual['crystal'] . ", shared_energy=shared_energy+" . (int)$accrual['energy'] . ", shared_credits=shared_credits+" . (int)$accrual['credits'] . " WHERE guild_id=" . $guildId . " LIMIT 1");
         foreach (['metal'=>(int)$accrual['metal'],'crystal'=>(int)$accrual['crystal'],'energy'=>(int)$accrual['energy'],'credits'=>(int)$accrual['credits']] as $resource=>$amount) if ($amount > 0) $db->query("INSERT INTO guild_resource_ledger (guild_id,uid,action_type,resource_type,amount,reason) VALUES ($guildId,".(int)$territory['claimed_by'].",'bonus','$resource',$amount,'Claimed territory production and tax settlement')");
@@ -202,6 +202,31 @@ function settleTerritoryEconomy(mysqli $db, bool $dryRun): int {
 }
 
 $territoryTicks = settleTerritoryEconomy($db, $dryRun);
+
+function settleTradeRoutes(mysqli $db, bool $dryRun): int {
+    $table = $db->query("SHOW TABLES LIKE 'guild_trade_routes'");
+    if (!$table || $table->num_rows === 0) return 0;
+    $routes = $db->query("SELECT route_id,guild_id,destination_territory_id,created_by,resource_type,quantity FROM guild_trade_routes WHERE status='enroute' AND arrive_at<=NOW() ORDER BY route_id ASC");
+    if (!$routes) return 0;
+    $delivered = 0;
+    while ($route = $routes->fetch_assoc()) {
+        $resource = (string)$route['resource_type'];
+        if (!in_array($resource, ['metal','crystal','energy'], true)) continue;
+        $routeId=(int)$route['route_id']; $guildId=(int)$route['guild_id']; $destination=(int)$route['destination_territory_id']; $quantity=(int)$route['quantity'];
+        if ($dryRun) { $delivered++; continue; }
+        $db->begin_transaction();
+        $stockColumn = 'stock_'.$resource;
+        $ok = $db->query("UPDATE guild_territories SET $stockColumn=$stockColumn+$quantity WHERE territory_id=$destination AND guild_id=$guildId AND status='claimed' LIMIT 1");
+        if (!$ok || $db->affected_rows !== 1) { $db->rollback(); continue; }
+        $ok = $db->query("UPDATE guild_trade_routes SET status='delivered',delivered_at=NOW() WHERE route_id=$routeId AND status='enroute' LIMIT 1");
+        if (!$ok || $db->affected_rows !== 1) { $db->rollback(); continue; }
+        $db->query("INSERT INTO guild_resource_ledger (guild_id,uid,action_type,resource_type,amount,reason) VALUES ($guildId,".(int)$route['created_by'].",'bonus','$resource',$quantity,'Trade route delivered to destination territory')");
+        $db->commit(); $delivered++;
+    }
+    $routes->free(); return $delivered;
+}
+
+$tradeRoutesDelivered = settleTradeRoutes($db, $dryRun);
 
 $uidSql = "SELECT uid FROM bank";
 if ($uidFilter !== null && $uidFilter > 0) {
@@ -360,6 +385,7 @@ echo "Game tick complete" . ($dryRun ? " (dry-run)" : "") . "\n";
 echo "Users processed: " . $processedUsers . "\n";
 echo "Resource updates: " . $resourceUpdates . "\n";
 echo "Territory production ticks settled: " . $territoryTicks . "\n";
+echo "Trade routes delivered: " . $tradeRoutesDelivered . "\n";
 echo "Transits arrived: " . $arrivedTransits . "\n";
 echo "Transits completed: " . $completedTransits . "\n";
 
