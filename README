@@ -1,138 +1,94 @@
-# Stargate Wars
+# Universe Civilization: Empire at Wars
 
-Open-source PHP/MySQL browser strategy game engine inspired by classic turn-based war games and the Stargate universe.
+> A browser-based civilization, exploration, diplomacy, and turn-based RTS war engine built for persistent worlds.
 
-## Project Status
+**Universe Civilization: Empire at Wars** is an open-source PHP and MariaDB strategy game project. Players develop worlds, manage infrastructure and power, command fleets, defend planets and stations, conduct covert operations, communicate with other players, and fight multi-wave battles across a procedural universe.
 
-This codebase is actively being modernized while preserving legacy gameplay flow.
+The project combines a preserved legacy gameplay foundation with a modern blue/cyan industrial command interface. Its architecture is intentionally modular: the PHP game shell loads feature modules through the existing AJAX contract, while database migrations provide persistent systems that can be enabled progressively.
 
-- Core login, registration, and main game shell are functional.
-- Database schema is included and importable.
-- Backend operations tooling (migrations, health checks, report exports) is included.
-- Many gameplay systems are present; some modules are still legacy or partial.
+## Current build
 
-## Tech Stack
+The current preview build includes the following playable areas:
 
-- PHP (recommended runtime: system PHP with mysqli support)
-- MariaDB/MySQL
-- HTML/CSS/JavaScript (AJAX module loading pattern)
+| Area | Included systems |
+|---|---|
+| Civilization | Player accounts, login gate, profiles, preferences, home worlds, resources, ranks, and administration |
+| Universe | Deterministic A–Z world taxonomy, planet and moon classes, biomes, sizes 1–9, intelligence profiles, and exploration data |
+| Infrastructure | Construction and upgrade systems for world, moon, station, and command infrastructure |
+| Power | World and orbital power nodes, production, consumption, reserve management, transfer, and recalculation operations |
+| Military | Fleet catalogs, weapons, shields, armor, targeting, initiative, morale, logistics, and tactical orders |
+| Battles | Turn-based RTS combat, orbital and planetary theaters, attack and defense waves, missions, events, reports, salvage, and retreat |
+| Covert operations | Sabotage missions, infiltration, detection, temporary effects, counterintelligence, cooldowns, and recovery |
+| Communications | Private messages, guild channels, unread tracking, safe composition, and guild membership checks |
+| Operations | Administrator control plane, game tuning, maintenance jobs, audit records, and security controls |
+| Presentation | Redesigned galaxy panels, logo, title-page audio, UI effects, release information, Terms of Service, and privacy pages |
 
-## Quick Start (Local)
+## Quick start
 
-1. Start MariaDB.
-2. Create database and user.
-3. Import schema.
-4. Configure runtime settings.
-5. Start PHP built-in server.
-
-Example workflow from repository root:
+The project requires PHP 8.3 or later with `mysqli`, MariaDB/MySQL, and a web browser. From the repository root:
 
 ```bash
-# 1) database bootstrap (if needed)
+# Initialize the core database when required
 mysql -u root -p < database/sql/01_create_database.sql
 
-# 2) import legacy core schema
+# Import the legacy core schema
 mysql -u sgw -psgwpass sgw < game.sql
 
-# 3) apply backend tables/views/defaults
+# Apply migrations and feature tables
 ./scripts/backend/db_migrate.sh
 
-# 4) run health check
+# Run health checks
 ./scripts/backend/healthcheck.sh
 
-# 5) start web server
+# Start the local game server
 /usr/bin/php -S 0.0.0.0:8080
 ```
 
-Then open:
+Open `http://127.0.0.1:8080/index.php`. The public title page is the entry point for player login and account creation. The administrator console is available at `/admin/` and is protected separately from player authentication.
 
-- http://127.0.0.1:8080/index.php
+## Account access
 
-## Configuration
+Player login is enabled by default. New players use **Found Your Civilization** on the title page, while returning players use **Civilization Login**. Account settings are available from the authenticated command shell.
 
-Primary config file:
+Administrator credentials are deployment-specific and must not be committed to the repository. Configure an administrator account through the local database or deployment process, then change any development password before exposing the game publicly. See [`LOGIN_README.md`](LOGIN_README.md) for the complete access guide.
 
-- config.php
+## Documentation map
 
-Optional local override (recommended for machine-specific settings):
+| Document | Purpose |
+|---|---|
+| [`LOGIN_README.md`](LOGIN_README.md) | Player and administrator login, registration, settings, and access troubleshooting |
+| [`GAME_DESIGN_DOCUMENT.md`](GAME_DESIGN_DOCUMENT.md) | Comprehensive game design, progression, systems, content, limits, and roadmap |
+| [`docs/PLAYER_GUIDE.md`](docs/PLAYER_GUIDE.md) | Player-facing guide to worlds, economy, power, fleets, combat, sabotage, and communications |
+| [`docs/SYSTEMS_REFERENCE.md`](docs/SYSTEMS_REFERENCE.md) | Technical reference for modules, database systems, game rules, and current limits |
+| [`docs/ADMIN_OPERATIONS.md`](docs/ADMIN_OPERATIONS.md) | Administrator control-plane procedures, roles, safeguards, and operational jobs |
+| [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) | Local and production deployment, migrations, backups, security, and health checks |
+| [`docs/BALANCE_PATCH_CAPS_PROPOSAL.md`](docs/BALANCE_PATCH_CAPS_PROPOSAL.md) | Recommended progression caps and balance rollout plan |
+| [`docs/DEVELOPMENT_WORKFLOW.md`](docs/DEVELOPMENT_WORKFLOW.md) | Existing development and maintenance workflow |
+| [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) | Contribution standards and verification checklist |
 
-- copy config.local.php.example -> config.local.php
+## Architecture
 
-Environment template:
+The application uses PHP classes in `base/`, AJAX-loaded gameplay modules in `modules/`, HTML templates in `templates/`, browser helpers in `js/`, and ordered SQL migrations in `database/sql/`. The legacy `Game` class remains the central compatibility layer for player state, resources, technology, and turn calculations. New systems add focused modules and defensive runtime bootstraps while retaining the existing session and navigation contracts.
 
-- .env.example
+The server is authoritative for authentication, permissions, resources, upgrades, battle actions, sabotage, and messages. Browser controls are presentation only and must never be trusted for game-state validation.
 
-Supported environment variables:
+## Quality and safety
 
-- SGW_TITLE
-- SGW_SUBTITLE
-- SGW_ADMIN_EMAIL
-- SGW_DB_HOST
-- SGW_DB_NAME
-- SGW_DB_USER
-- SGW_DB_PASS
-
-## Backend Operations
-
-See full guide:
-
-- BACKEND_SETUP.md
-
-Main backend scripts:
-
-- scripts/backend/db_init.sh
-- scripts/backend/db_migrate.sh
-- scripts/backend/db_backup.sh
-- scripts/backend/healthcheck.sh
-- scripts/backend/export_reports.sh
-
-## Reporting and Excel Exports
-
-Generated outputs:
-
-- exports/sql/*.sql.txt
-- exports/excel/*.csv
-
-CSV exports are Excel-compatible.
-
-Templates:
-
-- database/excel_templates/player_economy_template.csv
-- database/excel_templates/player_military_template.csv
-
-## Repository Layout
-
-- base/: core PHP classes (DB/user/game logic)
-- modules/: AJAX-loaded gameplay modules
-- templates/: page templates and shell
-- database/: SQL and backend data docs
-- scripts/backend/: DB and ops automation
-- tools/backend/: server-side backend utilities
-
-## Development Notes
-
-- Legacy modules may still contain old patterns and require incremental cleanup.
-- Prefer full PHP tags (<?php ... ?>) over short tags.
-- Use /usr/bin/php for tooling in environments where the default php binary lacks mysqli.
-
-## Contributing
-
-Contributions are welcome.
-
-Recommended process:
-
-1. Create a branch.
-2. Make focused changes.
-3. Run syntax checks and backend healthcheck.
-4. Open a pull request with a clear summary.
-
-Useful checks:
+Before submitting changes, run PHP syntax checks, the backend health check, migration validation, and any relevant test scripts:
 
 ```bash
 find . -type f -name '*.php' -print0 | xargs -0 -n1 php -l
 ./scripts/backend/healthcheck.sh
+php tests/progression_caps_test.php
+ git diff --check
 ```
 
-## Credits
+Do not commit passwords, API keys, database dumps containing personal information, session files, or production exports. Use local configuration overrides and environment variables. Public deployments should use HTTPS, restrict `/admin/`, rotate development credentials, back up MariaDB, and review audit logs.
 
-Original project by Advocaite.
+## Project status
+
+This is an active pre-alpha modernization project. The account, title-page, infrastructure, power, procedural universe, combat, wave, sabotage, communications, and administrator foundations are present, but some legacy modules remain partial and require continued regression testing. New features should preserve compatibility with existing data and should add migration coverage, server-side validation, and a browser smoke test.
+
+## Credits and project link
+
+Graphics and systems are maintained through [github.com/ArkansasIo](https://github.com/ArkansasIo). The repository is intended for collaborative development and experimentation in persistent browser strategy systems.

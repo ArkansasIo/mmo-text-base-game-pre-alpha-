@@ -131,6 +131,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','raid'); return false">Raid Missions</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','spy'); return false">Spy Network</a>
         <a href="javascript:void(0)" onclick="sendData('sabotage','get','mainDisplay'); return false">Sabotage Operations</a>
+        <a href="javascript:void(0)" onclick="sendData('communications','get','mainDisplay','inbox'); return false">Communications</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Combat Logs</a>
         <details>
           <summary><span class="menu-summary"><span>Operations Suites</span></span></summary>
@@ -254,6 +255,7 @@
 
       <details>
         <summary><span class="menu-summary"><img src="images/ui/diplomacy.svg" alt="Diplomacy Tools" /><span>Diplomacy Tools</span></span></summary>
+        <a href="javascript:void(0)" onclick="sendData('communications','get','mainDisplay','compose'); return false">Communications</a>
         <a href="javascript:void(0)" onclick="sendData('sendmessage','get','mainDisplay'); return false">Send Message</a>
         <a href="javascript:void(0)" onclick="sendData('c_ally','get','mainDisplay'); return false">Create Alliance</a>
         <a href="javascript:void(0)" onclick="sendData('ally_mlist','get','mainDisplay'); return false">Alliance Member List</a>

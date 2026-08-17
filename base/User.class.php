@@ -17,7 +17,7 @@ class User extends Chive
 	 * @param string $password Password of user
 	 *
 	 */
-	public function __construct(string $userName = "", string $password = "DoodleCakes and Rofl Sundae4278vsid")
+	public function __construct(string $userName = "", string $password = "")
 	{
 		parent::__construct();
 		$this->connectToDB(); // Ensure the database connection is established

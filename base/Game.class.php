@@ -1,5 +1,6 @@
 <?php
 // Base::Game.class.php
+require_once __DIR__ . '/ProgressionCaps.class.php';
 
 class Game extends User
 {
@@ -2390,7 +2391,9 @@ INNER JOIN userdata ON technology.uid = userdata.uid
 				$max = $data["x"];
 				break;
 		}
-		$selectQ = "SELECT `$type` FROM `technology` WHERE `uid`=? LIMIT 1";
+			$selectQ = "SELECT `$type` FROM `technology` WHERE `uid`=? LIMIT 1";
+			$capFamily = ProgressionCaps::familyForTechnology($type);
+			$max = min($max, ProgressionCaps::max($capFamily));
 		$stmt = $this->db_link->prepare($selectQ);
 		$stmt->bind_param("i", $_SESSION['userid']);
 		$stmt->execute();
