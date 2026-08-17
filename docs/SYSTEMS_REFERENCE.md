@@ -84,3 +84,11 @@ Accrual is processed by `scripts/backend/game_tick.php`. The settlement is idemp
 Claimed territories can hold tradable metal, crystal, and energy stock. Guild members may post internal market orders with a bounded unit price and reserved cargo, then fulfill open orders into another claimed territory using guild treasury credits. Orders expire after seven days and are filled incrementally.
 
 Trade routes move cargo between two claimed territories belonging to the same guild. The origin stock is reserved at dispatch, route time is deterministically calculated from the two sector codes, and delivery is finalized by the game tick. Routes are limited to supported resource types and a maximum cargo quantity; ownership, status, and stock checks are enforced server-side. Route delivery and market fulfillment create resource-ledger audit entries.
+
+## Guild hierarchy, research, diplomacy, and warfare
+
+Guild permissions are rank-based and server-enforced. Members can view the console, contribute, use the market, and dispatch trade. Officers can invite members, propose diplomacy, and start research. Marshals can manage officers, territories, diplomacy, warfare declarations, and treasury operations. The Founder retains the highest control tier.
+
+The guild research tree contains Industrial Logistics, Military Doctrine, Fortress Networks, and Diplomatic Protocols. Each technology has a maximum level of 10, a credit cost that increases by level, a research duration, and prerequisite rules. Industrial Logistics increases territory production, Military Doctrine increases raid power, Fortress Networks increases territory defense, and Diplomatic Protocols expands diplomacy capability.
+
+Guilds can establish alliances through normalized diplomacy pairs and declare seven-day wars against rival guilds. Active wars permit scheduled raids against enemy claimed territories. Raid resolution compares attacker power with territory defense, transfers a capped portion of metal and crystal on victory, reduces control points, and may mark a territory contested. Weaker raids are repelled. Research, rank, guild ownership, claimed status, CSRF, and authentication checks are evaluated on the server.
