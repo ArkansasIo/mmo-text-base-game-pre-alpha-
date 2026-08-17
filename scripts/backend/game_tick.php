@@ -13,6 +13,7 @@ if (PHP_SAPI !== 'cli') {
 
 $root = dirname(__DIR__, 2);
 require_once $root . "/config.php";
+require_once $root . "/base/TerritoryEconomy.class.php";
 
 $uidFilter = null;
 $dryRun = false;
@@ -176,6 +177,32 @@ q($db, "CREATE TABLE IF NOT EXISTS hyperspace_transits (
     INDEX idx_uid_eta (uid, eta_at)
 )");
 
+function settleTerritoryEconomy(mysqli $db, bool $dryRun): int {
+    $table = $db->query("SHOW TABLES LIKE 'guild_territories'");
+    if (!$table || $table->num_rows === 0) return 0;
+    $rows = $db->query("SELECT gt.*, g.guild_level FROM guild_territories gt INNER JOIN guilds g ON g.guild_id=gt.guild_id WHERE gt.status='claimed'");
+    $settled = 0;
+    if (!$rows) return 0;
+    while ($territory = $rows->fetch_assoc()) {
+        $lastTs = strtotime((string)$territory['last_accrued_at']);
+        if ($lastTs === false) $lastTs = time();
+        $accrual = TerritoryEconomy::accrue($territory, (int)$territory['guild_level'], time(), $lastTs);
+        if ((int)$accrual['ticks'] <= 0) continue;
+        $newLast = date('Y-m-d H:i:s', $lastTs + ((int)$accrual['ticks'] * TerritoryEconomy::TICK_MINUTES * 60));
+        if ($dryRun) { $settled += (int)$accrual['ticks']; continue; }
+        $db->begin_transaction();
+        $id = (int)$territory['territory_id']; $guildId = (int)$territory['guild_id']; $oldLast = $db->real_escape_string((string)$territory['last_accrued_at']);
+        $updated = $db->query("UPDATE guild_territories SET production_metal=production_metal+".(int)$accrual['metal'].", production_crystal=production_crystal+".(int)$accrual['crystal'].", production_energy=production_energy+".(int)$accrual['energy'].", tax_credits=tax_credits+".(int)$accrual['credits'].", last_accrued_at='".$newLast."' WHERE territory_id=$id AND last_accrued_at='$oldLast' LIMIT 1");
+        if (!$updated || $db->affected_rows !== 1) { $db->rollback(); continue; }
+        $db->query("UPDATE guilds SET shared_metal=shared_metal+" . (int)$accrual['metal'] . ", shared_crystal=shared_crystal+" . (int)$accrual['crystal'] . ", shared_energy=shared_energy+" . (int)$accrual['energy'] . ", shared_credits=shared_credits+" . (int)$accrual['credits'] . " WHERE guild_id=" . $guildId . " LIMIT 1");
+        foreach (['metal'=>(int)$accrual['metal'],'crystal'=>(int)$accrual['crystal'],'energy'=>(int)$accrual['energy'],'credits'=>(int)$accrual['credits']] as $resource=>$amount) if ($amount > 0) $db->query("INSERT INTO guild_resource_ledger (guild_id,uid,action_type,resource_type,amount,reason) VALUES ($guildId,".(int)$territory['claimed_by'].",'bonus','$resource',$amount,'Claimed territory production and tax settlement')");
+        $db->commit(); $settled += (int)$accrual['ticks'];
+    }
+    $rows->free(); return $settled;
+}
+
+$territoryTicks = settleTerritoryEconomy($db, $dryRun);
+
 $uidSql = "SELECT uid FROM bank";
 if ($uidFilter !== null && $uidFilter > 0) {
     $uidSql .= " WHERE uid=" . $uidFilter;
@@ -332,6 +359,7 @@ $uidsRes->free();
 echo "Game tick complete" . ($dryRun ? " (dry-run)" : "") . "\n";
 echo "Users processed: " . $processedUsers . "\n";
 echo "Resource updates: " . $resourceUpdates . "\n";
+echo "Territory production ticks settled: " . $territoryTicks . "\n";
 echo "Transits arrived: " . $arrivedTransits . "\n";
 echo "Transits completed: " . $completedTransits . "\n";
 

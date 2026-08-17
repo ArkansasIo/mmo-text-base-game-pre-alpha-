@@ -72,3 +72,9 @@ Guild contributions increase the shared treasury and contribution score. The ser
 New accounts begin with **2,500,000 untrained units**. This is the recruitable population reserve and is separate from the trained army. New home planets receive a server-generated population count. Colonized planets receive a new random population count, and persistent moon records receive their own random population count when initialized. Planet populations are bounded from 100,000 to 10,000,000 by the model, while moon populations are bounded from 10,000 to 2,000,000.
 
 The base trained-army size is **250,000 units**. Recruitment consumes untrained units, but a recruitment operation is rejected when the combined attack, defense, covert, and anti-covert corps would exceed the trained-army capacity. The limit is enforced in PHP through `ArmyPolicy`, so browser-supplied quantities cannot bypass it.
+
+## Territory production and taxation
+
+Each claimed territory produces metal, crystal, energy, and tax credits every 30-minute game tick. Output scales with control points and guild level. The territory tax rate is server-clamped from 0% through 25%; tax credits are calculated from the territory tax base, while metal, crystal, and energy are produced as strategic guild resources.
+
+Accrual is processed by `scripts/backend/game_tick.php`. The settlement is idempotent under concurrent workers through an optimistic timestamp check, records each positive resource payment in `guild_resource_ledger`, and caps offline catch-up at 48 ticks. Territory production is deposited into the guild treasury rather than directly into a player account.
