@@ -6,7 +6,7 @@ $pagegen->round_to = 4;
 $pagegen->start();
 
 $s = new Game();
-if (!$s->loggedIn || !$_GET['time']){ header("Location: ../index.php"); exit; }
+if (!$s->loggedIn || empty($_GET['time'])){ header("Location: ../index.php"); exit; }
 $s->updatePower($_SESSION['userid']);
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 if ($page <= 0) {

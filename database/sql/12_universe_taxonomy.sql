@@ -1,0 +1,8 @@
+ALTER TABLE universe_bodies
+  ADD COLUMN IF NOT EXISTS class_code CHAR(1) NOT NULL DEFAULT 'A' AFTER body_type,
+  ADD COLUMN IF NOT EXISTS class_name VARCHAR(80) NOT NULL DEFAULT 'Asterian' AFTER class_code,
+  ADD COLUMN IF NOT EXISTS subclass_code CHAR(2) NOT NULL DEFAULT 'A1' AFTER class_name,
+  ADD COLUMN IF NOT EXISTS subclass_name VARCHAR(100) NOT NULL DEFAULT 'Temperate World' AFTER subclass_code,
+  ADD COLUMN IF NOT EXISTS biome_family VARCHAR(80) NOT NULL DEFAULT 'Terran' AFTER biome,
+  ADD COLUMN IF NOT EXISTS sub_biome VARCHAR(100) NOT NULL DEFAULT 'Open Terrain' AFTER biome_family,
+  ADD COLUMN IF NOT EXISTS size_rating TINYINT NOT NULL DEFAULT 5 AFTER habitability;

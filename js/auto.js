@@ -1,71 +1,78 @@
-var auto;
-var autoString;   //will hold the POSTed data
+var auto = null;
+var autoString = null;
+var autoTimer = null;
+var autoBusy = false;
 
 function autoLoad(){
-    var url="stats.php"; 
-    autoRequest("GET",url,true);
-    setTimeout(autoLoad,15000);
+    if (autoBusy) return;
+    autoBusy = true;
+    autoRequest("GET", "stats.php?time=" + Date.now(), true);
 }
 
-//event handler for XMLHttpRequest
+function autoSchedule(){
+    if (autoTimer) window.clearTimeout(autoTimer);
+    autoTimer = window.setTimeout(autoLoad, 15000);
+}
+
+function autoPut(id, value){
+    var el = document.getElementById(id);
+    if (el && typeof value !== "undefined" && value !== null) {
+        if (typeof stylizeDiv === "function") stylizeDiv(String(value), el);
+        else el.innerHTML = String(value);
+    }
+}
+
 function autoHandle(){
-    if(auto.readyState == 4){
-        if(auto.status == 200){
-            var resp = auto.responseText;
-            var obj = eval(resp);
-			stylizeDiv(obj[6],document.getElementById("next"));
-			stylizeDiv(obj[5],document.getElementById("messages"));
-			stylizeDiv(obj[4],document.getElementById("time"));
-            if (document.getElementById("serverTime")) { stylizeDiv(obj[4],document.getElementById("serverTime")); }
-			stylizeDiv(obj[3],document.getElementById("turns"));
-			stylizeDiv(obj[2],document.getElementById("isRank"));
-			stylizeDiv(obj[1],document.getElementById("inBank"));
-            stylizeDiv(obj[0],document.getElementById("inHand"));
+    if (!auto || auto.readyState !== 4) return;
+    autoBusy = false;
+    autoSchedule();
+    if (auto.status < 200 || auto.status >= 300) return;
 
-            if (document.getElementById("metal")) { stylizeDiv(obj[7],document.getElementById("metal")); }
-            if (document.getElementById("crystal")) { stylizeDiv(obj[8],document.getElementById("crystal")); }
-            if (document.getElementById("deuterium")) { stylizeDiv(obj[9],document.getElementById("deuterium")); }
-            if (document.getElementById("food")) { stylizeDiv(obj[10],document.getElementById("food")); }
-            if (document.getElementById("water")) { stylizeDiv(obj[11],document.getElementById("water")); }
-            if (document.getElementById("population")) { stylizeDiv(obj[12],document.getElementById("population")); }
-            if (document.getElementById("energy")) { stylizeDiv(obj[13],document.getElementById("energy")); }
-        } else {
-            alert("A problem occurred with communicating between the XMLHttpRequest object and the server program .//Auto Problem");
-        }
-    }//end outer if
+    var obj;
+    try { obj = JSON.parse(auto.responseText || "[]"); } catch (e) { return; }
+    if (!Array.isArray(obj)) return;
+
+    autoPut("next", obj[6]);
+    autoPut("messages", obj[5]);
+    autoPut("time", obj[4]);
+    autoPut("serverTime", obj[4]);
+    autoPut("turns", obj[3]);
+    autoPut("isRank", obj[2]);
+    autoPut("inBank", obj[1]);
+    autoPut("inHand", obj[0]);
+    autoPut("metal", obj[7]);
+    autoPut("crystal", obj[8]);
+    autoPut("deuterium", obj[9]);
+    autoPut("food", obj[10]);
+    autoPut("water", obj[11]);
+    autoPut("population", obj[12]);
+    autoPut("energy", obj[13]);
 }
 
-/* Initialize a Request object that is already constructed */
-function autoReq(reqType,url,bool){
-    /* Specify the function that will handle the HTTP response */
-    auto.onreadystatechange=autoHandle;
-    auto.open(reqType,url,bool);
-    auto.setRequestHeader("Content-Type",
-            "application/x-www-form-urlencoded; charset=UTF-8");
-    auto.send(autoString);
+function autoReq(reqType, url, bool){
+    if (!auto) return;
+    auto.onreadystatechange = autoHandle;
+    auto.open(reqType, url, bool);
+    if (reqType.toUpperCase() === "POST") {
+        auto.setRequestHeader("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
+    }
+    auto.send(autoString || null);
 }
 
-/* Wrapper function for constructing a Request object.
- Parameters:
-  reqType: The HTTP auto type such as GET or POST.
-  url: The URL of the server program.
-  asynch: Whether to send the auto asynchronously or not. */
-function autoRequest(reqType,url,asynch){
-    //Mozilla-based browsers
-    if(window.XMLHttpRequest){
+function autoRequest(reqType, url, asynch){
+    if (window.XMLHttpRequest) {
         auto = new XMLHttpRequest();
-    } else if (window.ActiveXObject){
-        auto=new ActiveXObject("Msxml2.XMLHTTP");
-        if (! auto){
-            auto=new ActiveXObject("Microsoft.XMLHTTP");
+    } else if (window.ActiveXObject) {
+        try { auto = new ActiveXObject("Msxml2.XMLHTTP"); } catch (e) {
+            try { auto = new ActiveXObject("Microsoft.XMLHTTP"); } catch (ignored) { auto = null; }
         }
-     }
-    //the auto could still be null if neither ActiveXObject
-    //initializations succeeded
-    if(auto){
-       autoReq(reqType,url,asynch);
-    }  else {
-        alert("Your browser does not permit the use of all "+
-        "of this application's features!");}
+    }
+    if (auto) autoReq(reqType, url, asynch);
+    else { autoBusy = false; autoSchedule(); }
 }
 
+if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", autoLoad);
+} else {
+    autoLoad();
+}

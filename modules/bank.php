@@ -5,7 +5,7 @@ $pagegen->round_to = 4;
 $pagegen->start();
 $s = new Game();
 
-if ($_GET['id'] === "deposit" || $_GET['id'] === "withdrawl") {
+if (in_array((string)($_GET['id'] ?? ''), ['deposit', 'withdrawl'], true)) {
     $s->bank($_GET['id'], (float)$_GET['atype']);
 }
 $data = $s->bank();

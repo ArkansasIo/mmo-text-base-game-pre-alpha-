@@ -6,7 +6,7 @@ $pagegen->round_to = 4;
 $pagegen->start();
 
 $s = new Game();
-if (!$s->loggedIn || !$_GET['time']) {
+if (!$s->loggedIn || empty($_GET['time'])) {
     header("Location: ../index.php"); exit;
     exit;
 }
@@ -665,7 +665,7 @@ $bayUpgradeCost = 250000 * ((int)$yard->mothership_bay + 1);
 <div class="page-hub">
     <div class="page-hub-head">
         <h3>Fleet Dock and Shipyard</h3>
-                <p>Build starships, unlock mothership production, and manage a 90-title OGame-style ship catalog with full class and stat systems.</p>
+                <p>Build starships, unlock mothership production, and manage a 90-title strategic ship catalog with full class and stat systems.</p>
     </div>
 
     <?php if ($status !== '') { ?>
@@ -864,7 +864,7 @@ $bayUpgradeCost = 250000 * ((int)$yard->mothership_bay + 1);
 
                 <?php if ($dockView === 'catalog') { ?>
                 <div class="card full">
-                        <h4>90 Starship OGame Catalog</h4>
+                        <h4>90 Starship Catalog</h4>
                         <table class="mini-table" border="0" width="100%">
                                 <tr>
                                         <th align="left">Code</th>

@@ -6,7 +6,8 @@ $pagegen->round_to = 4;
 $pagegen->start();
 
 $s = new Game();
-if (!$s->loggedIn || !$_GET['time']){ header("Location: index.php?"); }
+if (!$s->loggedIn || empty($_SESSION['userid'])) { header("Location: /index.php"); exit; }
+if (!$s->loggedIn || empty($_GET['time'])){ header("Location: index.php?"); }
 if (!$_POST) { $s->updatePower($_SESSION['userid']); }
 $weapons = $s->getWeapons($_SESSION['userid']);
 if($_REQUEST['atype'] == "repair")

@@ -192,7 +192,11 @@ class User extends Chive
 			echo "Registration failed: missing required fields.";
 			return false;
 		}
-		if(!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+		if(strlen($password) < 8) {
+				echo "Registration failed: password must contain at least 8 characters.";
+				return false;
+			}
+			if(!filter_var($email, FILTER_VALIDATE_EMAIL)){
 			echo "Registration failed: invalid email address.";
 			return false;
 		}

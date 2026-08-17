@@ -1,5 +1,6 @@
 
 <div class="app-shell">
+  <div class="window-bar window-bar-global"><span class="window-lights"><i></i><i></i><i></i></span><strong>STARGATE WARS // COMMAND CONSOLE</strong><span class="window-status">ONLINE</span></div>
   <div class="top-header">
     <div class="top-brand">
       <img src="images/logo.gif" alt="Universe: Empires at War" />
@@ -43,8 +44,32 @@
     </div>
   </div>
 
+  <div class="quick-access-header">
+    <div class="window-bar window-bar-compact"><span class="window-lights"><i></i><i></i><i></i></span><strong>QUICK ACCESS</strong><span class="window-status">READY</span></div>
+    <div class="quick-access-links">
+      <a href="javascript:void(0)" onclick="sendData('pages','get','empire','home'); return false"><span class="footer-icon-link"><img src="images/ui/empire.svg" alt="Home" /><span>Home</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('pages','get','universe','galaxies'); return false"><span class="footer-icon-link"><img src="images/ui/universe.svg" alt="Universe" /><span>Universe</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/military.svg" alt="Stations" /><span>Stations</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('rtscombat','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/military.svg" alt="Combat" /><span>RTS Combat</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('powergrid','get','mainDisplay'); return false">Power Grid</a>
+      <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/universe.svg" alt="Hyperspace" /><span>Hyperspace</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('universe_seed','get','mainDisplay'); return false">Universe Seed</a>
+      <a href="javascript:void(0)" onclick="sendData('pages','get','research','tree'); return false"><span class="footer-icon-link"><img src="images/ui/research.svg" alt="Research" /><span>Research</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('pages','get','research','stargate'); return false">Stargate</a>
+      <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Forge</a>
+      <a href="javascript:void(0)" onclick="sendData('resourcehq','get','mainDisplay'); return false">Resource HQ</a>
+      <a href="javascript:void(0)" onclick="sendData('pages','get','economy','banking'); return false"><span class="footer-icon-link"><img src="images/ui/economy.svg" alt="Bank" /><span>Bank</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('stargatetech','get','mainDisplay'); return false">Stargate Tech</a>
+      <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','messages'); return false"><span class="footer-icon-link"><img src="images/ui/diplomacy.svg" alt="Messages" /><span>Messages</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Logs</a>
+      <a href="javascript:void(0)" onclick="sendData('pages','get','help','newplayer'); return false"><span class="footer-icon-link"><img src="images/ui/help.svg" alt="Help" /><span>Help</span></span></a>
+      <a href="forums/" target="_blank">Forums</a>
+    </div>
+  </div>
+
   <div class="main-layout">
-    <aside class="left-menu">
+    <aside class="left-menu window-panel">
+      <div class="window-bar"><span class="window-lights"><i></i><i></i><i></i></span><strong>COMMAND MODULES</strong><span class="window-status">NAV</span></div>
       <h3>Main Navigation</h3>
 
       <div class="menu-section-title"><img src="images/ui/core-command.svg" alt="Core" /><span>Core Command</span></div>
@@ -54,6 +79,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','empire','overview'); return false">Operations Overview</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','empire','planets'); return false">Planet Management</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','empire','command'); return false">Command Structure</a>
+        <a href="javascript:void(0)" onclick="sendData('account','get','mainDisplay'); return false">Account Settings</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','empire','progress'); return false">Empire Progress</a>
         <details>
           <summary><span class="menu-summary"><span>Empire Suites</span></span></summary>
@@ -86,8 +112,11 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','armory'); return false">Armory</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','training'); return false">Training</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','military','fleet'); return false">Fleet</a>
+        <a href="javascript:void(0)" onclick="sendData('rtscombat','get','mainDisplay'); return false">RTS Combat Engine</a>
         <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations Command</a>
+        <a href="javascript:void(0)" onclick="sendData('powergrid','get','mainDisplay'); return false">Power Grid Control</a>
         <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false">Hyperspace Command</a>
+        <a href="javascript:void(0)" onclick="sendData('universe_seed','get','mainDisplay'); return false">Procedural Universe Explorer</a>
         <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Mega Forge 90/90/90</a>
         <details>
           <summary><span class="menu-summary"><span>Military Suites</span></span></summary>
@@ -101,6 +130,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','attack'); return false">Attack Missions</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','raid'); return false">Raid Missions</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','spy'); return false">Spy Network</a>
+        <a href="javascript:void(0)" onclick="sendData('sabotage','get','mainDisplay'); return false">Sabotage Operations</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Combat Logs</a>
         <details>
           <summary><span class="menu-summary"><span>Operations Suites</span></span></summary>
@@ -132,8 +162,8 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','production'); return false">Production</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','resources'); return false">Resource Hub</a>
         <a href="javascript:void(0)" onclick="sendData('resourcehq','get','mainDisplay'); return false">Resource HQ Command</a>
-        <a href="javascript:void(0)" onclick="sendData('pages','get','economy','buildings'); return false">OGame Buildings</a>
-        <a href="javascript:void(0)" onclick="sendData('ogamebuildings','get','mainDisplay'); return false">OGame Buildings Command</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','economy','buildings'); return false">Infrastructure Systems</a>
+        <a href="javascript:void(0)" onclick="sendData('infrastructure','get','mainDisplay'); return false">Infrastructure Command</a>
         <details>
           <summary><span class="menu-summary"><span>Economy Suites</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','economy','logistics'); return false">Supply Logistics</a>
@@ -238,31 +268,16 @@
       </details>
     </aside>
 
-    <section class="content-panel">
+    <section class="content-panel window-panel">
+      <div class="window-bar"><span class="window-lights"><i></i><i></i><i></i></span><strong>TACTICAL DISPLAY</strong><span class="window-status">LIVE</span></div>
       <div class="content-header">
         <h2>Command Feed</h2>
         <p>Select a page or submenu on the left to load a section and sub page.</p>
       </div>
-      <div id="mainDisplay"></div>
+      <div class="window-surface"><div id="mainDisplay"></div></div>
     </section>
   </div>
 
-  <div class="bottom-header">
-    <a href="javascript:void(0)" onclick="sendData('pages','get','empire','home'); return false"><span class="footer-icon-link"><img src="images/ui/empire.svg" alt="Home" /><span>Home</span></span></a>
-    <a href="javascript:void(0)" onclick="sendData('pages','get','universe','galaxies'); return false"><span class="footer-icon-link"><img src="images/ui/universe.svg" alt="Universe" /><span>Universe</span></span></a>
-    <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/military.svg" alt="Stations" /><span>Stations</span></span></a>
-    <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/universe.svg" alt="Hyperspace" /><span>Hyperspace</span></span></a>
-    <a href="javascript:void(0)" onclick="sendData('pages','get','research','tree'); return false"><span class="footer-icon-link"><img src="images/ui/research.svg" alt="Research" /><span>Research</span></span></a>
-    <a href="javascript:void(0)" onclick="sendData('pages','get','research','stargate'); return false">Stargate</a>
-    <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Forge</a>
-    <a href="javascript:void(0)" onclick="sendData('resourcehq','get','mainDisplay'); return false">Resource HQ</a>
-    <a href="javascript:void(0)" onclick="sendData('pages','get','economy','banking'); return false"><span class="footer-icon-link"><img src="images/ui/economy.svg" alt="Bank" /><span>Bank</span></span></a>
-    <a href="javascript:void(0)" onclick="sendData('stargatetech','get','mainDisplay'); return false">Stargate Tech</a>
-    <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','messages'); return false"><span class="footer-icon-link"><img src="images/ui/diplomacy.svg" alt="Messages" /><span>Messages</span></span></a>
-    <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Logs</a>
-    <a href="javascript:void(0)" onclick="sendData('pages','get','help','newplayer'); return false"><span class="footer-icon-link"><img src="images/ui/help.svg" alt="Help" /><span>Help</span></span></a>
-    <a href="forums/" target="_blank">Forums</a>
-  </div>
 
   <footer class="site-footer">
     <div>

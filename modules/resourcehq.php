@@ -305,7 +305,7 @@ $defs = [
 <div class="page-hub">
     <div class="page-hub-head">
         <h3>Resource HQ</h3>
-        <p>OGame-style resource control with mines, sustainment lines, and live trade routing.</p>
+        <p>strategic resource control with mines, sustainment lines, and live trade routing.</p>
     </div>
 
     <?php if ($status !== '') { ?>

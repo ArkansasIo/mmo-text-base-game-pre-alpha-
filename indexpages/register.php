@@ -7,8 +7,8 @@ if (!$s->loggedIn)
 ?>
 <form method="post" action="/index.php">
 <div class="auth-card" id="register-form">
-  <h3>Register New Pilot</h3>
-  <p>Create your realm and begin expansion across the galaxy.</p>
+  <h3>Found Your Civilization</h3>
+  <p>Establish your civilization and begin expansion across the galaxy.</p>
 
   <label for="username">Username</label>
   <input type="text" name="user" id="username" required />
@@ -44,6 +44,6 @@ if (!$s->loggedIn)
 }
 else
 {
-	echo "You are Logged in, You cannot register another account as it's against the rules.";
+	echo "You are already logged in and cannot register another account from this session.";
 }
 ?>

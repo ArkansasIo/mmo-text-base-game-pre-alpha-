@@ -1,13 +1,29 @@
 <?php
 include_once("config.php");
 $s = new Game();
+$loginRequired = true;
+$loginSetting = $s->query("SELECT setting_value FROM app_settings WHERE setting_key='game_login_required' LIMIT 1");
+if ($loginSetting && ($settingRow = $loginSetting->fetch_assoc())) {
+    $loginRequired = (string)$settingRow['setting_value'] !== '0';
+}
+if (!$loginRequired && $s->connected()) {
+    $demoQuery = $s->query("SELECT u.uid,u.uname,u.password,u.alevel,ud.rid,ud.progress FROM users u LEFT JOIN userdata ud ON ud.uid=u.uid WHERE u.uid=1 LIMIT 1");
+    $demo = $demoQuery ? $demoQuery->fetch_assoc() : null;
+    if ($demo) {
+        $_SESSION['username']=$demo['uname']; $_SESSION['password']=$demo['password']; $_SESSION['access']=(int)$demo['alevel'];
+        $_SESSION['userid']=(int)$demo['uid']; $_SESSION['raceID']=(int)($demo['rid'] ?? 1); $_SESSION['progress']=(int)($demo['progress'] ?? 0);
+        $s->loggedIn = true; $s->userName=$demo['uname']; $s->password=$demo['password']; $s->access=(int)$demo['alevel'];
+        $s->userid=(int)$demo['uid']; $s->raceID=(int)($demo['rid'] ?? 1); $s->progress=(int)($demo['progress'] ?? 0);
+    }
+}
+
 if (isset($_GET['logout']) && $_GET['logout']) { User::logOut();} 
 if (isset($_POST['submit']) && $_POST['submit'] == "Login")
 {
         $s = new User($_POST['user'], $_POST['pass']);
 }
 
-if(!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout']))
+if($loginRequired && (!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout'])))
 {
 
 ?>
@@ -19,11 +35,11 @@ if(!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout']))
 		<script type="text/javascript" src="js/train.js"></script>
 		<script type="text/javascript" src="js/images.js"></script>
 		<script type="text/javascript" src="js/bbfix.js"></script>
-		<link rel="meta" href="http://codenamelantea.com/labels.rdf" type="application/rdf+xml" title="ICRA labels" />
-<meta http-equiv="pics-Label" content='(pics-1.1 "http://www.icra.org/pics/vocabularyv03/" l gen true for "http://codenamelantea.com" r (n 0 s 0 v 0 l 2 oa 0 ob 0 oc 0 od 0 oe 0 of 0 og 0 oh 0 c 3) gen true for "http://www.codenamelantea.com" r (n 0 s 0 v 0 l 2 oa 0 ob 0 oc 0 od 0 oe 0 of 0 og 0 oh 0 c 3))' />
-    <title>Universe: Empires at War</title>
+		<script type="text/javascript" src="js/title-audio.js"></script>
+    <title>Universe Civilization: Empire at Wars // Command Network</title>
 		<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
 <LINK REL=STYLESHEET TYPE='text/css' HREF='main.css' />
+<link rel="icon" href="favicon.svg" type="image/svg+xml" />
 </head>
 
 <body background="images/stars.jpg" onLoad="mainUpdate('login','Login'); MM_preloadImages('images/galaxy1-2.jpg','images/galaxy2-2.jpg','images/galaxy3-2.jpg'); autoclear(); bb_init('divBody', false);">
@@ -33,12 +49,15 @@ if(!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout']))
 <div class="public-shell">
   <header class="public-top">
     <div class="public-brand">
-      <h1>Universe: Empires at War</h1>
-      <p>Turn-based Stargate strategy command network</p>
+      <span class="public-eyebrow">UNIVERSE CIVILIZATION // EMPIRE AT WARS</span>
+      <h1>Universe Civilization: Empire at Wars</h1>
+      <p>Build your civilization, command fleets, master interstellar gateways, and shape the fate of the galaxy.</p>
     </div>
     <div class="public-actions">
-      <a class="public-btn" href="javascript:void(0)" onClick="mainUpdate('login','Login'); return false" onMouseOver="rollUpDate('Login'); return false" onMouseOut="autoclear(); return false">Pilot Login</a>
-      <a class="public-btn secondary" href="javascript:void(0)" onClick="mainUpdate('register','Register To Play'); return false" onMouseOver="rollUpDate('Register To Play'); return false" onMouseOut="autoclear(); return false">Create Account</a>
+      <button type="button" class="public-btn audio-toggle" id="audio-toggle" aria-pressed="false">Audio On</button>
+      <a class="public-btn" href="javascript:void(0)" onClick="mainUpdate('login','Login'); return false" onMouseOver="rollUpDate('Login'); return false" onMouseOut="autoclear(); return false">Civilization Login</a>
+      <a class="public-btn secondary" href="javascript:void(0)" onClick="mainUpdate('register','Register To Play'); return false" onMouseOver="rollUpDate('Register To Play'); return false" onMouseOut="autoclear(); return false">Found Your Civilization</a>
+      <a class="public-btn admin-btn" href="/admin/">Administrator Console</a>
     </div>
   </header>
 
@@ -60,10 +79,11 @@ if(!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout']))
 
   <section class="public-content-grid">
     <aside class="public-panel public-news">
-      <h3>Command Feed</h3>
+      <span class="public-eyebrow">COMMAND NETWORK ONLINE</span>
+      <h3>Enter the frontier</h3>
       <div id="up2date"></div>
-      <h4>Status</h4>
-      <div id="rollover">Login</div>
+      <h4>Player access</h4>
+      <div id="rollover">Secure login required</div>
     </aside>
     <main class="public-panel public-main">
 	  <?php
@@ -82,8 +102,7 @@ if(!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout']))
 ?>
       <div id="mainDisplay"></div>
       <div class="public-footnote">
-        <span>Graphics by Fraehr</span>
-        <a href="http://www.icra.org/sitelabel/" target="_blank"><img src="images/icra.gif" alt="ICRA" /></a>
+        <span>Graphics and systems by <a href="https://github.com/ArkansasIo" target="_blank" rel="noopener noreferrer">github.com/ArkansasIo</a></span>
       </div>
     </main>
   </section>

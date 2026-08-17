@@ -60,7 +60,7 @@ $allowedSettings = [
     'commander_mode' => ['strategist', 'warlord', 'architect', 'shadow'],
     'governance_style' => ['balanced', 'technocracy', 'militarist', 'mercantile'],
     'policy_cycle' => ['adaptive', 'fixed', 'rapid', 'conservative'],
-    'visual_pack' => ['ogame_classic', 'stargate_naval', 'strategic_grid'],
+    'visual_pack' => ['classic_command', 'stargate_naval', 'strategic_grid'],
     'alert_level' => ['standard', 'high', 'war_only'],
     'auto_delegate' => ['0', '1'],
 ];
@@ -94,7 +94,7 @@ $s->query("CREATE TABLE IF NOT EXISTS commander_settings (
     commander_mode VARCHAR(24) NOT NULL DEFAULT 'strategist',
     governance_style VARCHAR(24) NOT NULL DEFAULT 'balanced',
     policy_cycle VARCHAR(24) NOT NULL DEFAULT 'adaptive',
-    visual_pack VARCHAR(24) NOT NULL DEFAULT 'ogame_classic',
+    visual_pack VARCHAR(24) NOT NULL DEFAULT 'classic_command',
     alert_level VARCHAR(24) NOT NULL DEFAULT 'standard',
     auto_delegate TINYINT(1) NOT NULL DEFAULT 0,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -168,7 +168,7 @@ if (isset($_GET['id']) && $_GET['id'] === 'preset') {
         $s->query("UPDATE commander_settings SET commander_mode='warlord', governance_style='militarist', policy_cycle='rapid', visual_pack='stargate_naval', alert_level='war_only', auto_delegate=1 WHERE uid=" . $uid . " LIMIT 1");
         $status = 'Preset applied: War Command Doctrine.';
     } elseif ($preset === 'economy') {
-        $s->query("UPDATE commander_settings SET commander_mode='architect', governance_style='mercantile', policy_cycle='fixed', visual_pack='ogame_classic', alert_level='standard', auto_delegate=0 WHERE uid=" . $uid . " LIMIT 1");
+        $s->query("UPDATE commander_settings SET commander_mode='architect', governance_style='mercantile', policy_cycle='fixed', visual_pack='classic_command', alert_level='standard', auto_delegate=0 WHERE uid=" . $uid . " LIMIT 1");
         $status = 'Preset applied: Economic Directorate Doctrine.';
     } elseif ($preset === 'shadow') {
         $s->query("UPDATE commander_settings SET commander_mode='shadow', governance_style='technocracy', policy_cycle='adaptive', visual_pack='strategic_grid', alert_level='high', auto_delegate=1 WHERE uid=" . $uid . " LIMIT 1");
@@ -194,7 +194,7 @@ $settings = $qSettings ? $qSettings->fetch_object() : (object)[
     'commander_mode' => 'strategist',
     'governance_style' => 'balanced',
     'policy_cycle' => 'adaptive',
-    'visual_pack' => 'ogame_classic',
+    'visual_pack' => 'classic_command',
     'alert_level' => 'standard',
     'auto_delegate' => 0,
 ];
@@ -232,7 +232,7 @@ foreach ($catalog as $gov) {
 <div class="page-hub">
     <div class="page-hub-head gov-head">
         <h3>Commander Governance Directorate</h3>
-        <p>Redesigned OGame-style governance interface with 18 systems, doctrine presets, and command-grade setting controls.</p>
+        <p>Redesigned strategic governance interface with 18 systems, doctrine presets, and command-grade setting controls.</p>
         <div class="gov-preset-row">
             <a href="javascript:void(0)" class="gov-preset" onclick="sendData('commandergov','get','preset','war'); return false">War Preset</a>
             <a href="javascript:void(0)" class="gov-preset" onclick="sendData('commandergov','get','preset','economy'); return false">Economy Preset</a>
@@ -302,7 +302,7 @@ foreach ($catalog as $gov) {
                     <td>Visual Pack</td>
                     <td><?= cg_h((string)$settings->visual_pack); ?></td>
                     <td>
-                        <a href="javascript:void(0)" class="gov-option" onclick="sendData('commandergov','get','set','visual_pack:ogame_classic'); return false">OGame Classic</a>
+                        <a href="javascript:void(0)" class="gov-option" onclick="sendData('commandergov','get','set','visual_pack:classic_command'); return false">Classic Command</a>
                         <a href="javascript:void(0)" class="gov-option" onclick="sendData('commandergov','get','set','visual_pack:stargate_naval'); return false">Stargate Naval</a>
                         <a href="javascript:void(0)" class="gov-option" onclick="sendData('commandergov','get','set','visual_pack:strategic_grid'); return false">Strategic Grid</a>
                     </td>

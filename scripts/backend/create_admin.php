@@ -1,0 +1,18 @@
+<?php
+require_once __DIR__ . '/../../config.php';
+$username = trim((string)(getenv('SGW_ADMIN_USERNAME') ?: 'admin'));
+$email = trim((string)(getenv('SGW_ADMIN_EMAIL') ?: 'admin@localhost'));
+$password = (string)(getenv('SGW_ADMIN_PASSWORD') ?: '');
+$role = (string)(getenv('SGW_ADMIN_ROLE') ?: 'superadmin');
+if ($username === '' || strlen($password) < 12 || !in_array($role, ['superadmin','operator','moderator'], true)) {
+    fwrite(STDERR, "Usage: SGW_ADMIN_USERNAME=admin SGW_ADMIN_EMAIL=admin@example.com SGW_ADMIN_PASSWORD='12+ chars' SGW_ADMIN_ROLE=superadmin php scripts/backend/create_admin.php\n");
+    exit(1);
+}
+$db = new mysqli($conf['db_server'], $conf['db_username'], $conf['db_password'], $conf['db_name']);
+if ($db->connect_error) { fwrite(STDERR, "Database connection failed.\n"); exit(1); }
+$hash = password_hash($password, PASSWORD_DEFAULT);
+$stmt = $db->prepare("INSERT INTO admin_users (username,email,password_hash,role) VALUES (?,?,?,?) ON DUPLICATE KEY UPDATE email=VALUES(email), password_hash=VALUES(password_hash), role=VALUES(role), is_active=1");
+$stmt->bind_param('ssss', $username, $email, $hash, $role);
+if (!$stmt->execute()) { fwrite(STDERR, "Administrator provisioning failed.\n"); exit(1); }
+echo "Administrator '$username' provisioned with role '$role'.\n";
+?>

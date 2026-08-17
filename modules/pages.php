@@ -770,9 +770,9 @@ function renderMechanicsMatrix(string $main, string $sub): void {
             'Effective macro play balances production growth, intel quality, and turn efficiency.',
         ],
         'universe:galaxies' => [
-            'Universe is divided into OGame-style galaxies, systems, and orbital positions for expansion routing.',
+            'Universe is divided into strategic galaxies, systems, and orbital positions for expansion routing.',
             'Each world has a biome profile, habitability score, and distinct resource distribution.',
-            'OGame-style growth favors staggered colonies across multiple galaxy lanes to reduce bottlenecks.',
+            'strategic growth favors staggered colonies across multiple galaxy lanes to reduce bottlenecks.',
         ],
         'universe:planets' => [
             'Moon presence improves surveillance coverage and tactical deployment windows.',
@@ -1356,7 +1356,7 @@ $subLabels = [
     'empire' => ['home' => 'Home', 'overview' => 'Overview', 'planets' => 'Planets', 'command' => 'Command', 'progress' => 'Progression', 'logistics' => 'Logistics Hub', 'doctrine' => 'Doctrine Board'],
     'military' => ['personnel' => 'Personnel', 'troops' => 'Troop Catalog', 'armory' => 'Armory', 'training' => 'Training', 'fleet' => 'Fleet', 'navy' => 'Navy Ops', 'defensegrid' => 'Defense Grid'],
     'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs', 'commandqueue' => 'Command Queue', 'diplomacyops' => 'Diplomatic Ops'],
-    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'OGame Buildings', 'logistics' => 'Supply Logistics', 'treasury' => 'Treasury Policy'],
+    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'technology' => 'Technology', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'Infrastructure Systems', 'logistics' => 'Supply Logistics', 'treasury' => 'Treasury Policy'],
     'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Commander Chain', 'governance' => 'Commander Governance', 'treaties' => 'Treaties', 'councils' => 'Councils'],
     'intel' => ['rankings' => 'Rankings', 'reports' => 'Battle Reports', 'threats' => 'Threat Matrix', 'map' => 'Sector Map', 'signals' => 'Signal Watch', 'dossiers' => 'Target Dossiers'],
     'community' => ['forums' => 'Forums', 'updates' => 'Updates', 'contact' => 'Contact', 'faq' => 'FAQ', 'events' => 'Events', 'academy' => 'Academy'],
@@ -1482,13 +1482,13 @@ $systemDetails = [
             'logic' => ['UP directly affects unit generation', 'Over-militarization can stall growth', 'Defensive coverage preserves production gains'],
         ],
         'resources' => [
-            'brief' => 'OGame-style resource economy command for mining, sustainment, and population growth.',
+            'brief' => 'strategic resource economy command for mining, sustainment, and population growth.',
             'functions' => ['Track 5 strategic resources', 'Upgrade production structures', 'Trade resources for tactical needs'],
             'features' => ['Resource stockpile view', 'Production rates by line', 'Structure level overview and controls'],
             'logic' => ['Resources tick on 30-minute cadence', 'Structure levels amplify resource rates', 'Food and water shortages reduce population'],
         ],
         'buildings' => [
-            'brief' => 'Central OGame-style construction control for economy, facilities, lunar structures, and defense lines.',
+            'brief' => 'Central strategic construction control for economy, facilities, lunar structures, and defense lines.',
             'functions' => ['Upgrade building catalog entries', 'Allocate strategic resources to infrastructure', 'Coordinate economy and military construction timing'],
             'features' => ['Category-based building matrix', 'Live level tracking and next-cost preview', 'Direct integration with Resource HQ, Fleet, and Hyperspace systems'],
             'logic' => ['Each building scales with tiered cost formulas', 'Energy supports advanced construction programs', 'Balanced building progression improves empire efficiency and survivability'],
@@ -1520,7 +1520,7 @@ $systemDetails = [
             'logic' => ['Command chain affects organizational flow', 'Support transfers should match hierarchy goals', 'Leadership stability improves campaign execution'],
         ],
         'governance' => [
-            'brief' => 'OGame-style commander governance systems and policy options center.',
+            'brief' => 'strategic commander governance systems and policy options center.',
             'functions' => ['Manage 18 governance systems', 'Tune commander options/settings', 'Balance doctrine by campaign phase'],
             'features' => ['Governance module entry point', 'Settings and option profiles', 'Per-system visual icon matrix'],
             'logic' => ['Each governance system scales through level upgrades', 'Enabled/disabled systems alter effective strategic posture', 'Commander settings influence policy response cadence'],
@@ -1624,7 +1624,7 @@ $systemDetails = [
             'logic' => ['Debris-heavy zones raise recovery value', 'Nebulae increase uncertainty in movement timing', 'Wormhole lanes can alter strike projection windows'],
         ],
         'expedition' => [
-            'brief' => 'OGame-style expedition and colonization planner with mission control actions.',
+            'brief' => 'strategic expedition and colonization planner with mission control actions.',
             'functions' => ['Stage expeditions', 'Run attack/spy/raid target dispatch', 'Balance colony growth versus military readiness'],
             'features' => ['Mission matrix', 'Target dispatch controls', 'Expansion doctrine checklist'],
             'logic' => ['Expedition risk scales with mission cadence', 'Colonization should preserve reserve economy', 'Multi-front dispatch requires covert and combat redundancy'],
@@ -2285,7 +2285,7 @@ $featureButtons = [
         ['label' => 'Bank', 'js' => "sendData('bank','get','mainDisplay'); return false"],
         ['label' => 'Market', 'js' => "sendData('market','get','mainDisplay'); return false"],
         ['label' => 'Resource HQ', 'js' => "sendData('resourcehq','get','mainDisplay'); return false"],
-        ['label' => 'OGame Buildings', 'js' => "sendData('ogamebuildings','get','mainDisplay'); return false"],
+        ['label' => 'Infrastructure Systems', 'js' => "sendData('infrastructure','get','mainDisplay'); return false"],
         ['label' => 'Supply Logistics', 'js' => "sendData('pages','get','economy','logistics'); return false"],
         ['label' => 'Technology', 'js' => "sendData('technology','get','mainDisplay'); return false"],
         ['label' => 'Stargate Tech', 'js' => "sendData('stargatetech','get','mainDisplay'); return false"],
@@ -2887,9 +2887,9 @@ if ($main === 'economy') {
     if ($sub === 'production') {
         echo '<div class="card"><h4>Production Planning</h4><p>Focus on unit production and mining throughput to scale your empire.</p><ul><li>Upgrade UP first for faster growth</li><li>Balance miners vs combat readiness</li><li>Protect income assets with defense</li></ul></div>';
         echo '<div class="card"><h4>Resource Command</h4><p><a href="javascript:void(0)" onclick="sendData(\'resourcehq\',\'get\',\'mainDisplay\'); return false">Open Resource HQ</a></p></div>';
-        echo '<div class="card"><h4>Infrastructure Build Grid</h4><p><a href="javascript:void(0)" onclick="sendData(\'ogamebuildings\',\'get\',\'mainDisplay\'); return false">Open OGame Buildings Command</a></p></div>';
+        echo '<div class="card"><h4>Infrastructure Build Grid</h4><p><a href="javascript:void(0)" onclick="sendData(\'infrastructure\',\'get\',\'mainDisplay\'); return false">Open Infrastructure Command</a></p></div>';
 
-        echo '<div class="card full"><h4>OGame-Style Resource Output Grid</h4>';
+        echo '<div class="card full"><h4>Strategic Resource Output Grid</h4>';
         echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Line</th><th align="left">Per Turn</th><th align="left">Notes</th></tr>';
         echo '<tr><td>Metal Mines</td><td>' . fnum($resourceHub['rates']['metal']) . '</td><td>Primary build material for warships and infrastructure.</td></tr>';
         echo '<tr><td>Crystal Plants</td><td>' . fnum($resourceHub['rates']['crystal']) . '</td><td>Advanced systems and tech fabrication material.</td></tr>';
@@ -2903,7 +2903,7 @@ if ($main === 'economy') {
 
     if ($sub === 'resources') {
         echo '<div class="card"><h4>Resource Headquarters</h4>';
-        echo '<p>Manage OGame-style resource mining, food and water sustainment, and population growth.</p>';
+        echo '<p>Manage strategic resource mining, food and water sustainment, and population growth.</p>';
         echo '<p><a href="javascript:void(0)" onclick="sendData(\'resourcehq\',\'get\',\'mainDisplay\'); return false">Open Resource HQ Module</a></p>';
         echo '</div>';
 
@@ -2924,9 +2924,9 @@ if ($main === 'economy') {
     }
 
     if ($sub === 'buildings') {
-        echo '<div class="card"><h4>OGame Building Matrix</h4>';
+        echo '<div class="card"><h4>Infrastructure Matrix</h4>';
         echo '<p>Build and upgrade classic structures across resources, facilities, lunar systems, and defenses.</p>';
-        echo '<p><a href="javascript:void(0)" onclick="sendData(\'ogamebuildings\',\'get\',\'mainDisplay\'); return false">Open OGame Buildings Command</a></p>';
+        echo '<p><a href="javascript:void(0)" onclick="sendData(\'infrastructure\',\'get\',\'mainDisplay\'); return false">Open Infrastructure Command</a></p>';
         echo '</div>';
 
         echo '<div class="card"><h4>Build Strategy</h4>';
@@ -2968,7 +2968,7 @@ if ($main === 'diplomacy') {
         echo '<div class="card"><h4>Commander Chain</h4><p>Assign commanders and issue support transfers from player profile pages.</p><p><a href="javascript:void(0)" onclick="sendData(\'user\',\'get\',\'' . $uid . '\'); return false">Open Commander Tools</a></p></div>';
     }
     if ($sub === 'governance') {
-        echo '<div class="card"><h4>Commander Governance Systems</h4><p>Activate OGame-style commander governance with 18 policy systems, option profiles, and strategic settings.</p><p><a href="javascript:void(0)" onclick="sendData(\'commandergov\',\'get\',\'mainDisplay\'); return false">Open Commander Governance Console</a></p></div>';
+        echo '<div class="card"><h4>Commander Governance Systems</h4><p>Activate strategic commander governance with 18 policy systems, option profiles, and strategic settings.</p><p><a href="javascript:void(0)" onclick="sendData(\'commandergov\',\'get\',\'mainDisplay\'); return false">Open Commander Governance Console</a></p></div>';
         echo '<div class="card"><h4>Command Links</h4><p><a href="javascript:void(0)" onclick="sendData(\'user\',\'get\',\'' . $uid . '\'); return false">Commander Chain Actions</a></p><p><a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'operations\',\'logs\'); return false">Operation Logs</a></p><p><a href="javascript:void(0)" onclick="sendData(\'stargatetech\',\'get\',\'mainDisplay\'); return false">Stargate Technology</a></p></div>';
         echo '<div class="card full"><h4>Governance Doctrine Overview</h4>';
         echo '<table class="mini-table" border="0" width="100%">';
@@ -3038,7 +3038,7 @@ if ($main === 'universe') {
         }
         echo '</table></div>';
 
-        echo '<div class="card full"><h4>OGame Coordinate Systems</h4>';
+        echo '<div class="card full"><h4>Strategic Coordinate Systems</h4>';
         echo '<table class="mini-table" border="0" width="100%"><tr><th align="left">Layer</th><th align="left">Range</th><th align="left">Role</th></tr>';
         echo '<tr><td>Galaxy</td><td>1-' . fnum((int)$uCfg['galaxies']) . '</td><td>Macro strategic region</td></tr>';
         echo '<tr><td>System</td><td>1-' . fnum((int)($uCfg['systemsPerGalaxy'] ?? $uCfg['sectorsPerGalaxy'])) . '</td><td>Primary travel and targeting lane</td></tr>';

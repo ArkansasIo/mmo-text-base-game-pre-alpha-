@@ -5,21 +5,23 @@ $pagegen = new page_gen();
 $pagegen->round_to = 4;
 $pagegen->start();
 $s = new Game();
-$s->updatePower($_SESSION['userid']); 
+$targetId = (int)($_GET['id'] ?? 0);
+$id = $targetId;
+$s->updatePower((int)($_SESSION['userid'] ?? 0));
 
-if ($_GET['id'] && $_GET['atype'] != "Send") {
+if ($targetId > 0 && (string)($_GET['atype'] ?? '') != 'Send') {
     $query = "SELECT `uname` FROM `users` WHERE uid = ? LIMIT 1";
     $stmt = $s->prepare($query);
-    $stmt->bind_param("i", $_GET['id']);
+        $stmt->bind_param("i", $targetId);
     $stmt->execute();
     $q = $stmt->get_result();
     $data = $q->fetch_object();
     $name = $data->uname;
-    $id = $_GET['id'];
+    $id = $targetId;
 }
 
-if ($_REQUEST['atype'] == "Send") {
-    if ($s->create_allliance($_GET['id'], $_REQUEST['subject'], $_REQUEST['message'], $_REQUEST['url'], $_REQUEST['allow'])) {
+if ((string)($_REQUEST['atype'] ?? '') == "Send") {
+    if ($s->create_allliance($targetId, (string)($_REQUEST['subject'] ?? ''), (string)($_REQUEST['message'] ?? ''), (string)($_REQUEST['url'] ?? ''), (string)($_REQUEST['allow'] ?? ''))) {
         echo ",Thank you";
     } else {
         echo ",If problem persists, contact Admin";

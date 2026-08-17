@@ -1,6 +1,7 @@
 <?php
 include_once("../config.php");
 $s = new Game();
+if (!$s->loggedIn || empty($_SESSION['userid'])) { header("Location: /index.php"); exit; }
 $personnel = $s->getPersonnel($_SESSION['userid']);
 ?>
 <table width="100%" border="0">

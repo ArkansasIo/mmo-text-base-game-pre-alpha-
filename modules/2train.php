@@ -1,6 +1,7 @@
 <?php
 include_once("../config.php");
 $s = new Game();
+if (!$s->loggedIn || empty($_SESSION['userid'])) { header("Location: /index.php"); exit; }
 $train = $s->getPersonnel($_SESSION['userid']);
 
 ?><form action="javascript:void(0)" name="2train">

@@ -14,7 +14,7 @@ if (( ev.keyCode >= 48 && ev.keyCode <= 57 )
             httpreq=new ActiveXObject("Microsoft.XMLHTTP");
         }
      }
-    var url = "userlist.php?val="+sent;
+    var url = "userlist.php?val=" + encodeURIComponent(sent);
     httpreq.open("GET", url, true);
 
     var original_text = sender.value;
@@ -22,8 +22,11 @@ if (( ev.keyCode >= 48 && ev.keyCode <= 57 )
     // Response function:
     httpreq.onreadystatechange = function () {
       if (httpreq.readyState == 4) {
-		var resp = httpreq.responseText;
-	  	var obj = eval(resp);
+        if (httpreq.status < 200 || httpreq.status >= 300) return;
+        var resp = httpreq.responseText || "[]";
+        var obj;
+        try { obj = JSON.parse(resp); } catch (e) { return; }
+        if (!Array.isArray(obj)) return;
         var suggestion = obj[0];
 		var userID = document.getElementById ('userID2');         
 		userID.value = obj[1];
@@ -74,22 +77,22 @@ function sendData(page,type,id,atype,subject,message){
     if (typeof atype === "undefined" || atype === null) {
         atype = "";
     }
-	date = new Date();
+	var date = new Date();
 	if (type =="post")
 	{
 	setQueryString();
-    var url = "modules/"+page+".php?id="+id+"&time="+date.getTime()+"&atype="+atype;
+    var url = "modules/" + encodeURIComponent(page) + ".php?id=" + encodeURIComponent(id) + "&time=" + date.getTime() + "&atype=" + encodeURIComponent(atype);
     httpRequest("POST",url,true);
 	}else{
-    var url = "modules/"+page+".php?id="+id+"&time="+date.getTime()+"&atype="+atype;
+    var url = "modules/" + encodeURIComponent(page) + ".php?id=" + encodeURIComponent(id) + "&time=" + date.getTime() + "&atype=" + encodeURIComponent(atype);
     httpRequest("GET",url,true);
 	}
 }
 
 function mainUpdate(page,text)
 {
-	date = new Date();
-    var url = "indexpages/"+page+".php?time="+date.getTime();
+	var date = new Date();
+    var url = "indexpages/" + encodeURIComponent(page) + ".php?time=" + date.getTime();
     httpRequest("GET",url,true);
 	a = text;
 }
@@ -107,12 +110,14 @@ function autoclear()
 //event handler for XMLHttpRequest
 function handleResponse(){
     if(request.readyState == 4){
-        if(request.status == 200){
-           var doc = request.responseText;
-            stylizeDiv(doc,document.getElementById("mainDisplay"));
-			 queryString="";
+        if(request.status >= 200 && request.status < 300){
+            var target = document.getElementById("mainDisplay");
+            if (!target) return;
+            stylizeDiv(request.responseText || "", target);
+            queryString = "";
         } else {
-            alert("A problem occurred with communicating between the XMLHttpRequest object and the server program.");
+            var target = document.getElementById("mainDisplay");
+            if (target) stylizeDiv('<div class="ajax-error">Command request failed (HTTP ' + request.status + '). Please retry.</div>', target);
         }
     }//end outer if
 	
@@ -171,13 +176,15 @@ function stylizeDiv(bdyTxt,div){
 function setQueryString(){
     queryString="";
     var frm = document.forms[1];
-    var numberElements =  frm.elements.length;
+    if (!frm) return;
+    var numberElements = frm.elements.length;
     for(var i = 0; i < numberElements; i++)  {
+            if (!frm.elements[i].name) continue;
             if(i < numberElements-1)  {
-                queryString += frm.elements[i].name+"="+
+                queryString += encodeURIComponent(frm.elements[i].name)+"="+
                                encodeURIComponent(frm.elements[i].value)+"&";
             } else {
-                queryString += frm.elements[i].name+"="+
+                queryString += encodeURIComponent(frm.elements[i].name)+"="+
                                encodeURIComponent(frm.elements[i].value);
             }
 

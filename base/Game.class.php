@@ -103,7 +103,7 @@ class Game extends User
 	{
 		if (!isset($_SESSION['userid']) || (int)$_SESSION['userid'] <= 0) {
 			$gameTime = date("F jS H:i:s");
-			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
+            return json_encode(["0", "0", "0", "0", $gameTime, "0", "0 minutes", "0", "0", "0", "0", "0", "0", "0"], JSON_UNESCAPED_UNICODE);
 		}
 
 		$query = "SELECT rank.overall AS isRank,
@@ -128,7 +128,7 @@ class Game extends User
 		$auto = $q->fetch_object();
 		if (!$auto) {
 			$gameTime = date("F jS H:i:s");
-			return "new Array(\"0\",\"0\",\"0\",\"0\",\"" . $gameTime . "\",\"0\",\"0 minutes\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\",\"0\")";
+            return json_encode(["0", "0", "0", "0", $gameTime, "0", "0 minutes", "0", "0", "0", "0", "0", "0", "0"], JSON_UNESCAPED_UNICODE);
 		}
 
 		$metal = 0;
@@ -158,13 +158,15 @@ class Game extends User
 			}
 		}
 		$gameTime 	= date("F jS H:i:s");
-		$str = "new Array(\"".number_format($auto->onHand)."\",\"".number_format($auto->inBank)."\",\""
-		       .number_format($auto->isRank)."\",\"".number_format($auto->actionTurns)."\",\""
-			   .$gameTime."\",\"".number_format($auto->messageCount)."\",\"".$this->nextTurn()." minutes\",\""
-			   .number_format($metal)."\",\"".number_format($crystal)."\",\"".number_format($deuterium)."\",\""
-			   .number_format($food)."\",\"".number_format($water)."\",\"".number_format($population)."\",\"".number_format($energy)."\")";
-		$_SESSION['money'] = $auto->onHand;
-		return $str;
+            $payload = [
+                number_format($auto->onHand), number_format($auto->inBank), number_format($auto->isRank),
+                number_format($auto->actionTurns), $gameTime, number_format($auto->messageCount),
+                $this->nextTurn() . " minutes", number_format($metal), number_format($crystal),
+                number_format($deuterium), number_format($food), number_format($water),
+                number_format($population), number_format($energy)
+            ];
+            $_SESSION['money'] = $auto->onHand;
+            return json_encode($payload, JSON_UNESCAPED_UNICODE);
 	}	
 	
 	public function messageCount(): string
@@ -814,16 +816,22 @@ class Game extends User
 		return $weapons;
 	}
 	
-	public function updatePower(int $uid): void
-	{
-		Debug::printMsg(__CLASS__, __FUNCTION__, "Updating User Power Totals");		
-		$query = "SELECT rid FROM userdata WHERE uid=? LIMIT 1";
+		public function updatePower(int $uid): void
+		{
+			Debug::printMsg(__CLASS__, __FUNCTION__, "Updating User Power Totals");
+			if ($uid <= 0 || !$this->connected()) {
+				return;
+			}
+			$query = "SELECT rid FROM userdata WHERE uid=? LIMIT 1";
 		$stmt = $this->db_link->prepare($query);
 		$stmt->bind_param("i", $uid);
 		$stmt->execute();
 		$q = $stmt->get_result();
-		$fetched = $q->fetch_object();
-		$rid = $fetched->rid;
+			$fetched = $q ? $q->fetch_object() : null;
+			if (!$fetched) {
+				return;
+			}
+			$rid = (int)$fetched->rid;
 	
 		$weaponQuery = "SELECT weapons.quanity, weapons.strength, armory.weaponPower, armory.isDefense, armory.requireTrained
 						FROM `weapons`,`armory`
@@ -855,9 +863,12 @@ class Game extends User
 		$combo	= $stmt->get_result();
 	
 		/*Object Declarations from MYSQL*/
-		$comboObj = $combo->fetch_object();
+			$comboObj = $combo ? $combo->fetch_object() : null;
+			if (!$comboObj) {
+				return;
+			}
 			
-		/*Covert and Anticovert Calulations*/
+			/*Covert and Anticovert Calulations*/
 		$cSpys 		= (5*$comboObj->covert) + ( 10 * $comboObj->superCovert );
 		$aSpys 		= (5*$comboObj->anticovert) + ( 10 * $comboObj->superAnticovert );
 		$c_tBonus 	= $comboObj->cov_lvl ?? 0;

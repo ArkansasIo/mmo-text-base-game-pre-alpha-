@@ -247,7 +247,7 @@ foreach ($levels as $lv) {
             <p><strong>Tech Cost Reduction:</strong> <?= sg_num((float)$infra['cost_discount'] * 100); ?>%</p>
             <p><a href="javascript:void(0)" onclick="sendData('technology','get','mainDisplay'); return false">Legacy Technology Module</a></p>
             <p><a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false">Hyperspace Command</a></p>
-            <p><a href="javascript:void(0)" onclick="sendData('ogamebuildings','get','mainDisplay'); return false">OGame Buildings</a></p>
+            <p><a href="javascript:void(0)" onclick="sendData('infrastructure','get','mainDisplay'); return false">Infrastructure Systems</a></p>
             <p><a href="javascript:void(0)" onclick="sendData('techlib','get','mainDisplay'); return false">Tech Library Buildings</a></p>
         </div>
 

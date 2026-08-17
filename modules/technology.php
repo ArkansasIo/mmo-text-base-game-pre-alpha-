@@ -10,7 +10,7 @@ if (!$s->loggedIn) {
     header("Location: ../index.php"); exit;
 }
 $s->updatePower($_SESSION['userid']);
-if ($_GET['id'] != "mainDisplay") {
+if ((string)($_GET['id'] ?? '') != 'mainDisplay') {
     $s->buyTech($_GET['id'], $_GET['atype']);
 }
 $buy = $s->fieldtocrypt();

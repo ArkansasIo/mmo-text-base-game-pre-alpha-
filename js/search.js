@@ -52,11 +52,12 @@ function Suggest(inObjectName, inQueryField, inAutoCompleteDivName, inQueryUrl) 
             latestServerQuery = null;
             selected=0;
         }
-        setTimeout(objectName + '.requestLoop();', THROTTLE_PERIOD);
+        window.setTimeout(requestLoop, THROTTLE_PERIOD);
     }
     
     function query() {
         var textbox = queryField;
+        var N = 0;
         if(textbox.createTextRange){
             var fa=document.selection.createRange().duplicate();
             N=fa.text.length;
@@ -70,7 +71,7 @@ function Suggest(inObjectName, inQueryField, inAutoCompleteDivName, inQueryUrl) 
     function sendQuery(key)
     {
         initialize();
-        var url = queryUrl + key;
+        var url = queryUrl + encodeURIComponent(key);
         
         if(req!=null) {
             req.onreadystatechange = process;
@@ -104,24 +105,25 @@ function Suggest(inObjectName, inQueryField, inAutoCompleteDivName, inQueryUrl) 
     {
         if (req.readyState == 4) {
             // only if "OK"
-            if (req.status == 200) {
-                if(req.responseText=="")
-                hideAutocompleteDiv();
-                else {
+            if (req.status >= 200 && req.status < 300) {
+                if (!req.responseText) {
+                    hideAutocompleteDiv();
+                    return;
+                }
+                try {
+                    resultsObj = JSON.parse(req.responseText);
+                    if (!resultsObj || !Array.isArray(resultsObj.result)) {
+                        hideAutocompleteDiv();
+                        return;
+                    }
                     showAutocompleteDiv();
-                    try {
-                        resultsObj = eval('(' + req.responseText + ')');
-                        htmlFormat();
-                    }
-                    catch(e) {
-                        var msg = (typeof e == "string") ? e : ((e.message) ? e.message : "Unknown Error");
-                        alert(msg);
-                    }
+                    htmlFormat();
+                } catch (e) {
+                    hideAutocompleteDiv();
                 }
             }
             else {
-                document.getElementById(autocompleteDivName).innerHTML=
-                "There was a problem retrieving data:<br>"+req.statusText;
+                hideAutocompleteDiv();
             }
         }
     }

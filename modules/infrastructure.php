@@ -157,8 +157,8 @@ foreach ($catalog as $entry) {
 ?>
 <div class="page-hub">
     <div class="page-hub-head">
-        <h3>OGame Buildings Command</h3>
-        <p>Manage the full OGame-style building grid: resources, facilities, lunar systems, defenses, and orbital support.</p>
+        <h3>Infrastructure Command</h3>
+        <p>Manage the full strategic building grid: resources, facilities, lunar systems, defenses, and orbital support.</p>
     </div>
 
     <?php if ($status !== '') { ?>
@@ -209,7 +209,7 @@ foreach ($catalog as $entry) {
                     <td><?= ob_num($curr); ?></td>
                     <td><?= ob_num($needM); ?>/<?= ob_num($needC); ?>/<?= ob_num($needD); ?>/<?= ob_num($needE); ?></td>
                     <td><?= ob_h($entry['desc']); ?></td>
-                    <td><a href="javascript:void(0)" onclick="sendData('ogamebuildings','get','upgrade','<?= ob_h($entry['key']); ?>'); return false">Upgrade</a></td>
+                    <td><a href="javascript:void(0)" onclick="sendData('infrastructure','get','upgrade','<?= ob_h($entry['key']); ?>'); return false">Upgrade</a></td>
                 </tr>
                 <?php } ?>
             </table>
