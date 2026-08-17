@@ -1,4 +1,4 @@
-# Stargate Wars
+# test game
 
 Open-source PHP/MySQL browser strategy game inspired by classic turn-based empire games and the Stargate universe.
 
