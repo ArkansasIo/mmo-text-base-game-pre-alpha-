@@ -8,8 +8,6 @@
 >
 </iframe>
 <br />
-<a href="http://www.icra.org/sitelabel/" target="_blank"><img src="images/icra.gif"></a>
-
 
 </center>
 	</body>
