@@ -120,3 +120,13 @@ Player registration now offers five renamed races: **Astraeans**, **Noxari**, **
 Registration also requires a government selection from **1–9**. The available governments are Parliamentary Republic, Imperial Directorate, Federated Commonwealth, Technocratic Compact, Merchant League, Militarized Protectorate, Theocratic Dominion, Hive Council, and Frontier Confederacy. Government bonuses combine with race bonuses and are persisted as `userdata.government_id`.
 
 The server clamps invalid government IDs to the default government and rejects unsupported race selections by falling back to a valid player race. Client-side selectors are presentation only; account creation validates the values before writing the account.
+
+## Local beta-data seeding
+
+After migrations 28–30 are applied and the `beta_tester` account exists, a complete local beta profile can be seeded with:
+
+```bash
+APP_ENV=local php scripts/backend/seed_beta_data.php
+```
+
+The seed is idempotent and local-only by default. It provisions a minimum wallet of 5,000,000 metal, 3,000,000 crystal, and 1,500,000 energy; fleet inventory of 40 Scout Corvettes, 12 Frontier Frigates, 4 Siege Destroyers, and 1 Fleet Carrier; four equipment modules; two shipyard jobs; and one sample fleet deployment. Set `SGW_BETA_USERNAME` to seed another local player account. The script refuses to run when required fleet and crafting tables are missing.
