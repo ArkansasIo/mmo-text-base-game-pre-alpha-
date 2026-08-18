@@ -68,7 +68,7 @@ if ($recruitLink !== '') {
 }
 ?>
 <html>
-<head><title>Recruit - <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe: Empires at War') ?></title></head>
+<head><title>Recruit - <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe Civilization: Empire At Wars') ?></title></head>
 <body>
 <center>
 <table width="60%" cellspacing="1" cellpadding="8">
@@ -78,12 +78,12 @@ if ($recruitLink !== '') {
   <?php endif; ?>
 
   <?php if ($error || $recruitLink === ''): ?>
-    <strong>Welcome to <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe: Empires at War') ?>!</strong>
+    <strong>Welcome to <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe Civilization: Empire At Wars') ?>!</strong>
     <p>We are sorry, but your IP has already used this enlistment link, or the link is invalid.<br>
     Why not join and get others to click your own link?<br>
     <a href="../index.php">Join Now</a></p>
   <?php else: ?>
-    <strong>Welcome to <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe: Empires at War') ?>!</strong>
+    <strong>Welcome to <?= htmlspecialchars($subs['{TITLE}'] ?? 'Universe Civilization: Empire At Wars') ?>!</strong>
     <p>By clicking this enlistment link you have recruited 4 troops into the armies of
     <strong><?= htmlspecialchars($recruiterName) ?></strong>.<br>
     Join up and build your own empire!<br>

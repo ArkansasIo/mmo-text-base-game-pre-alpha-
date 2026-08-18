@@ -3,9 +3,9 @@
   <div class="window-bar window-bar-global"><span class="window-lights"><i></i><i></i><i></i></span><strong>UNIVERSE CIVILIZATION // v0.9.0 · BUILD 2026.08.17</strong><span class="window-status">ONLINE</span></div>
   <div class="top-header">
     <div class="top-brand">
-      <img src="images/logo.gif" alt="Universe: Empires at War" />
+      <img src="images/logo.gif" alt="Universe Civilization: Empire At Wars" />
       <div>
-        <h1>Universe: Empires at War</h1>
+        <h1>Universe Civilization: Empire At Wars</h1>
         <p>Strategic war console and empire operations</p>
       </div>
     </div>
@@ -288,7 +288,7 @@
 
   <footer class="site-footer">
     <div>
-      <strong>Universe: Empires at War</strong> tactical operations network
+      <strong>Universe Civilization: Empire At Wars</strong> tactical operations network
     </div>
     <div>
       &quot;Because it is so clear it takes a long time to realise it.&quot;
