@@ -9,7 +9,7 @@ function cfg_env($key, $default) {
 }
 
 // General Information
-$subs['{TITLE}'] = cfg_env('SGW_TITLE', "Universe: Empires at War");					# Name of site(header)
+$subs['{TITLE}'] = cfg_env('SGW_TITLE', "Universe Civilization: Empire At Wars");					# Name of site(header)
 $subs['{SUBTITLE}'] = cfg_env('SGW_SUBTITLE', "The place to get your war on!");	# Second header(subhead)
 $subs['{ADMIN_EMAIL}'] = cfg_env('SGW_ADMIN_EMAIL', "test.com");			# Person to email if something goes wrong
 $subs['{HEAD_STUFF}'] = "";								# Stuff to put in <head>(left blank intentionally)
