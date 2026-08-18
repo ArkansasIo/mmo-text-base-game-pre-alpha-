@@ -58,8 +58,11 @@ TEXTAREA{font-family:cursive; font-size:small; color:#FFFFFF; background-color:#
 }
 
 .top-brand img {
-    width: 120px;
+    width: 240px;
+    max-width: 42vw;
     height: auto;
+    display: block;
+    object-fit: contain;
 }
 
 .top-brand h1 {
@@ -1141,7 +1144,7 @@ body{background:radial-gradient(circle at 50% -15%,#123d68 0%,var(--blue-950) 48
 .bottom-header{border-color:#185b88;background:#061b31;box-shadow:inset 0 1px rgba(98,205,255,.08)}.bottom-header>a{color:#bfeaff;border-color:#17517c;padding:6px 8px;background:#092946;border-radius:4px}.bottom-header>a:hover{background:#12609a;color:#fff}.site-footer{background:#031120;color:#98c9e4;border-color:#185b88}
 input,select,textarea{background:#031426!important;border-color:#2477aa!important;color:#eaf9ff!important;box-shadow:inset 0 0 10px rgba(0,77,130,.18)}input:focus,select:focus,textarea:focus{outline:1px solid #42c8ff;box-shadow:0 0 0 2px rgba(56,189,248,.15)}button,input[type=button],input[type=submit]{border-color:#43bdf2!important;background:linear-gradient(180deg,#1b83be,#0b4d7e)!important;color:#ecfaff!important;box-shadow:0 0 12px rgba(25,119,184,.2)}button:hover,input[type=button]:hover,input[type=submit]:hover{background:linear-gradient(180deg,#28a1e0,#11679e)!important}
 @media(max-width:900px){.window-bar-global{position:sticky;top:0;z-index:5}.window-status{font-size:8px}.window-bar{letter-spacing:.08em}.window-surface #mainDisplay{min-height:420px}}
-@media(max-width:520px){.window-bar-global strong{font-size:9px}.window-bar{min-height:28px}.window-lights i{width:7px;height:7px}.top-brand h1{font-size:22px}.bottom-header>a{padding:5px 6px}}
+@media(max-width:520px){.window-bar-global strong{font-size:9px}.window-bar{min-height:28px}.window-lights i{width:7px;height:7px}.top-brand img{width:190px;max-width:58vw}.top-brand h1{font-size:22px}.bottom-header>a{padding:5px 6px}}
 
 /* Blue-only accent override: replace legacy green/teal highlights */
 .top-brand p,.stat-pill span,.left-menu a,.footer-icon-link{color:#b9e7ff}
