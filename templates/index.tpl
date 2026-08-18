@@ -1,6 +1,6 @@
 
 <div class="app-shell">
-  <div class="window-bar window-bar-global"><span class="window-lights"><i></i><i></i><i></i></span><strong>STARGATE WARS // COMMAND CONSOLE</strong><span class="window-status">ONLINE</span></div>
+  <div class="window-bar window-bar-global"><span class="window-lights"><i></i><i></i><i></i></span><strong>UNIVERSE CIVILIZATION // v0.9.0 · BUILD 2026.08.17</strong><span class="window-status">ONLINE</span></div>
   <div class="top-header">
     <div class="top-brand">
       <img src="images/logo.gif" alt="Universe: Empires at War" />
