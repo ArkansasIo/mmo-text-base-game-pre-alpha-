@@ -122,6 +122,12 @@ function calcRates(array $ctx, array $levels, array $sgBonus): array {
         'water' => (int)round(((($incomeBase * 0.12) + ($planetCount * 240) + ($techIncome * 8)) * (1 + ($levels['water_plant'] * 0.10))) * $prodMul),
         'population' => max(25, (int)round(((($planetCount * 30) + ($upBase * 0.35)) * (1 + ($levels['habitat_dome'] * 0.08))) * $popMul)),
         'energy' => (int)round(((($incomeBase * 0.22) + ($planetCount * 160) + ($techProd * 14) + ($techIncome * 10)) * (1 + ($levels['energy_reactor'] * 0.13))) * $energyMul),
+        'antimatter' => (int)round((($incomeBase * 0.025) + ($planetCount * 18) + ($techIncome * 2)) * (1 + ($levels['antimatter_refinery'] * 0.08)) * $prodMul),
+        'iridium' => (int)round((($incomeBase * 0.035) + ($planetCount * 26) + ($techProd * 2)) * (1 + ($levels['iridium_mine'] * 0.08)) * $prodMul),
+        'tritanium' => (int)round((($incomeBase * 0.045) + ($planetCount * 32) + ($techProd * 3)) * (1 + ($levels['tritanium_forge'] * 0.08)) * $prodMul),
+        'plasma' => (int)round((($incomeBase * 0.020) + ($planetCount * 14) + ($techIncome * 2)) * (1 + ($levels['plasma_harvester'] * 0.08)) * $energyMul),
+        'exotic_matter' => (int)round((($incomeBase * 0.010) + ($planetCount * 8) + $techIncome) * (1 + ($levels['exotic_matter_lab'] * 0.06)) * $prodMul),
+        'dark_matter' => 0,
     ];
 }
 
@@ -152,6 +158,8 @@ q($db, "CREATE TABLE IF NOT EXISTS resource_structures (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 )");
 q($db, "ALTER TABLE resource_structures ADD COLUMN IF NOT EXISTS energy_reactor INT NOT NULL DEFAULT 1");
+q($db, "ALTER TABLE resource_structures ADD COLUMN IF NOT EXISTS antimatter_refinery INT NOT NULL DEFAULT 1, ADD COLUMN IF NOT EXISTS iridium_mine INT NOT NULL DEFAULT 1, ADD COLUMN IF NOT EXISTS tritanium_forge INT NOT NULL DEFAULT 1, ADD COLUMN IF NOT EXISTS plasma_harvester INT NOT NULL DEFAULT 1, ADD COLUMN IF NOT EXISTS exotic_matter_lab INT NOT NULL DEFAULT 1");
+q($db, "ALTER TABLE player_resources ADD COLUMN IF NOT EXISTS antimatter BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS iridium BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS tritanium BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS plasma BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS exotic_matter BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS dark_matter BIGINT NOT NULL DEFAULT 0");
 
 q($db, "CREATE TABLE IF NOT EXISTS hyperspace_systems (
     uid INT NOT NULL PRIMARY KEY,
@@ -309,7 +317,7 @@ while ($u = $uidsRes->fetch_assoc()) {
         'planet_count' => max(1, $planetCount),
     ];
 
-    $sRow = one($db, "SELECT metal_mine,crystal_lab,deuterium_refinery,hydroponics,water_plant,habitat_dome,energy_reactor FROM resource_structures WHERE uid=" . $uid . " LIMIT 1");
+    $sRow = one($db, "SELECT metal_mine,crystal_lab,deuterium_refinery,hydroponics,water_plant,habitat_dome,energy_reactor,antimatter_refinery,iridium_mine,tritanium_forge,plasma_harvester,exotic_matter_lab FROM resource_structures WHERE uid=" . $uid . " LIMIT 1");
     $levels = [
         'metal_mine' => (int)($sRow['metal_mine'] ?? 1),
         'crystal_lab' => (int)($sRow['crystal_lab'] ?? 1),
@@ -318,12 +326,17 @@ while ($u = $uidsRes->fetch_assoc()) {
         'water_plant' => (int)($sRow['water_plant'] ?? 1),
         'habitat_dome' => (int)($sRow['habitat_dome'] ?? 1),
         'energy_reactor' => (int)($sRow['energy_reactor'] ?? 1),
+        'antimatter_refinery' => (int)($sRow['antimatter_refinery'] ?? 1),
+        'iridium_mine' => (int)($sRow['iridium_mine'] ?? 1),
+        'tritanium_forge' => (int)($sRow['tritanium_forge'] ?? 1),
+        'plasma_harvester' => (int)($sRow['plasma_harvester'] ?? 1),
+        'exotic_matter_lab' => (int)($sRow['exotic_matter_lab'] ?? 1),
     ];
 
     $sgBonus = stargateBonus($db, $uid);
     $rates = calcRates($ctx, $levels, $sgBonus);
 
-    $rRow = one($db, "SELECT metal,crystal,deuterium,food,water,population,energy,last_tick_at FROM player_resources WHERE uid=" . $uid . " LIMIT 1");
+    $rRow = one($db, "SELECT metal,crystal,deuterium,food,water,population,energy,antimatter,iridium,tritanium,plasma,exotic_matter,dark_matter,last_tick_at FROM player_resources WHERE uid=" . $uid . " LIMIT 1");
     if (!$rRow) {
         continue;
     }
@@ -342,6 +355,11 @@ while ($u = $uidsRes->fetch_assoc()) {
         $water = max(0, (int)$rRow['water'] + ($rates['water'] * $ticks));
         $population = max(0, (int)$rRow['population'] + ($rates['population'] * $ticks));
         $energy = max(0, (int)$rRow['energy'] + ($rates['energy'] * $ticks));
+        $antimatter = max(0, (int)$rRow['antimatter'] + ($rates['antimatter'] * $ticks));
+        $iridium = max(0, (int)$rRow['iridium'] + ($rates['iridium'] * $ticks));
+        $tritanium = max(0, (int)$rRow['tritanium'] + ($rates['tritanium'] * $ticks));
+        $plasma = max(0, (int)$rRow['plasma'] + ($rates['plasma'] * $ticks));
+        $exoticMatter = max(0, (int)$rRow['exotic_matter'] + ($rates['exotic_matter'] * $ticks));
 
         $foodUse = (int)round($population * 0.008 * $ticks);
         $waterUse = (int)round($population * 0.007 * $ticks);
@@ -364,6 +382,11 @@ while ($u = $uidsRes->fetch_assoc()) {
                 water=" . $water . ",
                 population=" . $population . ",
                 energy=" . $energy . ",
+                antimatter=" . $antimatter . ",
+                iridium=" . $iridium . ",
+                tritanium=" . $tritanium . ",
+                plasma=" . $plasma . ",
+                exotic_matter=" . $exoticMatter . ",
                 last_tick_at=NOW()
                 WHERE uid=" . $uid . " LIMIT 1");
         }

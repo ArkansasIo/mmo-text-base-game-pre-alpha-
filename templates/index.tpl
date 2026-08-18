@@ -118,6 +118,8 @@
         <a href="javascript:void(0)" onclick="sendData('blueprint_research','get','mainDisplay'); return false">Blueprint Research and Discovery</a>
         <a href="javascript:void(0)" onclick="sendData('fitting_simulator','get','mainDisplay'); return false">Visual Fitting Simulator</a>
         <a href="javascript:void(0)" onclick="sendData('corporation','get','mainDisplay'); return false">Corporation Fleet Network</a>
+        <a href="javascript:void(0)" onclick="sendData('corporation_market','get','mainDisplay'); return false">Corporation Rare Order Book</a>
+        <a href="javascript:void(0)" onclick="sendData('resources','get','mainDisplay'); return false">Strategic Resource Command</a>
         <a href="javascript:void(0)" onclick="sendData('player_market','get','mainDisplay'); return false">Blueprint &amp; Module Exchange</a>
         <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations Command</a>
         <a href="javascript:void(0)" onclick="sendData('powergrid','get','mainDisplay'); return false">Power Grid Control</a>
