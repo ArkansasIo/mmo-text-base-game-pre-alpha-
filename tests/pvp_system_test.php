@@ -17,6 +17,7 @@ pvp_check(PvPPolicy::lossPercent('attacker_victory', true) < PvPPolicy::lossPerc
 $loot = PvPPolicy::loot(1000, 500, 100);
 pvp_check($loot['metal'] === 200 && $loot['crystal'] === 100 && $loot['deuterium'] === 20, 'loot is capped at the configured rate');
 pvp_check(strpos($module, 'resolves_at') !== false && strpos($module, 'fleet_json') !== false, 'PvP launch stores timed fleet dispatch data');
+pvp_check(strpos($module, 'fitting_json') !== false && strpos($module, 'validateFitting') !== false, 'PvP launch validates and persists module fittings');
 pvp_check(strpos($resolver, 'ON DUPLICATE KEY UPDATE quantity=quantity+$survivors') !== false, 'surviving attacker ships return to the origin world');
 pvp_check(strpos($resolver, 'GREATEST(0,quantity-') !== false, 'defender fleet losses are settled atomically');
 pvp_check(strpos($migration, 'idx_pvp_due') !== false && strpos($migration, 'pvp_alerts') !== false, 'PvP schema includes due-battle and alert indexes');

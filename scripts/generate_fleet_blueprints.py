@@ -38,8 +38,11 @@ for ci,(code,cname,focus) in enumerate(classes):
         crystal = round(600 * scale * (1.5 if code in 'GIJQX' else 1.0))
         energy = round(100 * scale * (1.5 if code in 'JKNOQXZ' else 1.0))
         build = round(5 * scale * (1 + variant*0.65))
+        high_slots = max(1, min(8, 1 + tier // 2 + (1 if variant == 2 else 0) + (1 if code in 'AGSVWZ' else 0)))
+        medium_slots = max(1, min(8, 1 + tier // 3 + (1 if variant in (0, 3) else 0) + (1 if code in 'EJKNQRX' else 0)))
+        low_slots = max(1, min(8, 1 + tier // 3 + (1 if variant in (1, 3) else 0) + (1 if code in 'BHLMUY' else 0)))
         details = f'{display} is a {cname.lower()}-class hull configured for {focus}. Its primary profile emphasizes {"attack" if variant==2 else "survivability" if variant==1 else "mobility" if variant==0 else "command flexibility"}, while secondary systems provide a distinct fitting choice for fleet doctrine.'
-        entries.append(dict(key=key,name=display,class_code=code,class_name=cname,role=roles[variant],tier=tier,description=details,attack=attack,defense=defense,capacity=cargo,hull=hull,shield=shield,speed=speed,cargo=cargo,sensor=sensor,power_grid=power,crew=crew,armor=armor,capacitor=capacitor,signature=signature,warp=warp,evasion=evasion,drone_bandwidth=drone,salvage=salvage,metal=metal,crystal=crystal,energy=energy,build_minutes=build))
+        entries.append(dict(key=key,name=display,class_code=code,class_name=cname,role=roles[variant],tier=tier,description=details,attack=attack,defense=defense,capacity=cargo,high_slots=high_slots,medium_slots=medium_slots,low_slots=low_slots,hull=hull,shield=shield,speed=speed,cargo=cargo,sensor=sensor,power_grid=power,crew=crew,armor=armor,capacitor=capacitor,signature=signature,warp=warp,evasion=evasion,drone_bandwidth=drone,salvage=salvage,metal=metal,crystal=crystal,energy=energy,build_minutes=build))
 assert len(entries) == 90
 
 def php(v):
