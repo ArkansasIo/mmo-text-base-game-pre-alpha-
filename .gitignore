@@ -10,3 +10,5 @@ exports/excel/*
 !exports/sql/
 exports/sql/*
 !exports/sql/README.md
+var/log/cron/
+var/lock/
