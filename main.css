@@ -1193,3 +1193,17 @@ body{background:radial-gradient(circle at 50% -15%,#12436f 0%,var(--theme-bg) 52
 .audio-toggle{cursor:pointer;font:inherit!important;letter-spacing:.04em;box-shadow:0 0 14px rgba(64,201,255,.12)}
 .audio-toggle[aria-pressed="true"]{color:#9bb3c1!important;border-color:#456273!important;background:#0a2234!important}
 @media(max-width:800px){.audio-toggle{width:100%;margin-bottom:2px}}
+
+/* Fleet blueprint catalog */
+.blueprint-catalog .catalog-count { float: right; color: #8cecff; font-size: 12px; font-weight: normal; }
+.blueprint-catalog .admin-table-wrap { overflow-x: auto; }
+.blueprint-catalog table { min-width: 1320px; }
+.blueprint-catalog td { vertical-align: top; line-height: 1.35; }
+.blueprint-catalog td:first-child { min-width: 255px; max-width: 330px; white-space: normal; }
+.blueprint-catalog td:first-child small { display: block; color: #9fcbd5; margin-top: 5px; }
+.blueprint-catalog code { color: #6edfff; }
+.blueprint-catalog .inline-form label { display: inline-flex; align-items: center; gap: 5px; }
+@media (max-width: 720px) {
+  .blueprint-catalog .catalog-count { float: none; display: block; margin-top: 4px; }
+  .blueprint-catalog .inline-form label { width: 100%; justify-content: space-between; }
+}
