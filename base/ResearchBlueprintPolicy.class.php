@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/FleetPolicy.class.php';
+require_once __DIR__ . '/NotificationPolicy.class.php';
 final class ResearchBlueprintPolicy
 {
     public static function requirements(array $blueprint): array
@@ -42,7 +43,7 @@ final class ResearchBlueprintPolicy
             if (!$bank || !$res || (int)$bank['onHand'] < $cost['naquadah'] || (int)$res['metal'] < $cost['metal'] || (int)$res['crystal'] < $cost['crystal'] || (int)$res['deuterium'] < $cost['deuterium'] || (int)$res['energy'] < $cost['energy']) throw new RuntimeException('Insufficient research reserves.');
             $ok = $db->query("UPDATE bank SET onHand=onHand-{$cost['naquadah']} WHERE uid=".(int)$uid." AND onHand>={$cost['naquadah']} LIMIT 1");
             $ok = $ok && $db->query("UPDATE player_resources SET metal=metal-{$cost['metal']},crystal=crystal-{$cost['crystal']},deuterium=deuterium-{$cost['deuterium']},energy=energy-{$cost['energy']} WHERE uid=".(int)$uid." AND metal>={$cost['metal']} AND crystal>={$cost['crystal']} AND deuterium>={$cost['deuterium']} AND energy>={$cost['energy']} LIMIT 1");
-            $safe = $db->real_escape_string($key); $ok = $ok && $db->query("INSERT INTO player_blueprint_research(uid,blueprint_key,source,status,unlocked_at) VALUES(".(int)$uid.",'$safe','research','unlocked',NOW())"); $ok = $ok && $db->query("INSERT INTO player_blueprints(uid,blueprint_key,quantity) VALUES(".(int)$uid.",'$safe',1) ON DUPLICATE KEY UPDATE quantity=quantity");
+            $safe = $db->real_escape_string($key); $ok = $ok && $db->query("INSERT INTO player_blueprint_research(uid,blueprint_key,source,status,unlocked_at) VALUES(".(int)$uid.",'$safe','research','unlocked',NOW())"); $ok = $ok && $db->query("INSERT INTO player_blueprints(uid,blueprint_key,quantity) VALUES(".(int)$uid.",'$safe',1) ON DUPLICATE KEY UPDATE quantity=quantity"); $ok = $ok && NotificationPolicy::push($db,$uid,'research_complete','Blueprint research complete',$blueprint['name'].' is now unlocked for shipyard construction, PvP deployment, and player exchange.','blueprint_research:'.$key,['blueprint_key'=>$key,'tier'=>(int)$blueprint['tier']]);
             if (!$ok) throw new RuntimeException('Blueprint unlock could not be recorded.'); $db->commit(); return ['ok'=>true,'message'=>$blueprint['name'].' researched and added to your blueprint library.'];
         } catch (Throwable $e) { $db->rollback(); return ['ok'=>false,'message'=>$e->getMessage() ?: 'Blueprint research failed.']; }
     }
