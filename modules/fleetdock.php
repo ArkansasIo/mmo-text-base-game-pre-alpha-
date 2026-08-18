@@ -1,5 +1,6 @@
 <?php
 include("../config.php");
+require_once __DIR__ . '/../base/FleetDockMissionPolicy.class.php';
 
 $pagegen = new page_gen();
 $pagegen->round_to = 4;
@@ -225,11 +226,19 @@ $s->query("CREATE TABLE IF NOT EXISTS fleet_missions (
         return_at DATETIME NOT NULL,
         status VARCHAR(16) NOT NULL DEFAULT 'enroute',
         reward_naquadah INT NOT NULL DEFAULT 0,
+        outcome VARCHAR(32) NOT NULL DEFAULT 'pending',
+        outcome_text VARCHAR(255) NOT NULL DEFAULT '',
+        intel_json TEXT NOT NULL,
+        loot_metal BIGINT NOT NULL DEFAULT 0,
+        loot_crystal BIGINT NOT NULL DEFAULT 0,
+        loot_deuterium BIGINT NOT NULL DEFAULT 0,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_uid_status (uid, status),
         INDEX idx_uid_eta (uid, eta_at),
         INDEX idx_uid_return (uid, return_at)
-)");
+)" );
+$s->query("ALTER TABLE fleet_missions ADD COLUMN IF NOT EXISTS outcome VARCHAR(32) NOT NULL DEFAULT 'pending', ADD COLUMN IF NOT EXISTS outcome_text VARCHAR(255) NOT NULL DEFAULT '', ADD COLUMN IF NOT EXISTS intel_json TEXT NOT NULL, ADD COLUMN IF NOT EXISTS loot_metal BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS loot_crystal BIGINT NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS loot_deuterium BIGINT NOT NULL DEFAULT 0");
+$s->query("CREATE TABLE IF NOT EXISTS fleet_patrol_state (uid INT NOT NULL PRIMARY KEY, defense_bonus INT NOT NULL DEFAULT 0, expires_at DATETIME NULL, updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)");
 
 $s->query("CREATE TABLE IF NOT EXISTS player_resources (
         uid INT NOT NULL PRIMARY KEY,
@@ -270,37 +279,22 @@ if (!in_array($dockView, ['overview', 'catalog', 'classes', 'types', 'build'], t
 
 if ($dockBackendReady) {
         $arrivals = $s->query("SELECT mission_id,mission_type,ship_type,ship_count,target_uid,reward_naquadah FROM fleet_missions WHERE uid=" . $uid . " AND status='enroute' AND eta_at <= NOW() ORDER BY mission_id ASC");
-        if ($arrivals) {
-                while ($mission = $arrivals->fetch_object()) {
-                        $missionId = (int)$mission->mission_id;
-                        $reward = 0;
-                        if ($mission->mission_type === 'expedition') {
-                                $reward = rand(5000, 65000);
-                                $s->query("UPDATE bank SET onHand=onHand+" . $reward . " WHERE uid=" . $uid . " LIMIT 1");
-                                $s->query("UPDATE fleet_missions SET reward_naquadah=" . $reward . " WHERE mission_id=" . $missionId . " AND uid=" . $uid . " LIMIT 1");
-                        }
-                        $s->query("UPDATE fleet_missions SET status='arrived' WHERE mission_id=" . $missionId . " AND uid=" . $uid . " LIMIT 1");
-                        if ($status === '') {
-                                $status = fd_missionLabel((string)$mission->mission_type) . " reached target " . (int)$mission->target_uid . ".";
-                        }
-                }
+        if ($arrivals) while ($mission = $arrivals->fetch_object()) {
+                $missionId=(int)$mission->mission_id; $target=(int)$mission->target_uid; $ships=max(1,(int)$mission->ship_count); $targetPower=0; $metal=0; $crystal=0; $deut=0;
+                $targetFleet=$s->query("SELECT probe,light_fighter,heavy_fighter,cruiser,battleship,carrier,recycler,colony_ship,mothership FROM fleet WHERE uid=".$target." LIMIT 1");
+                if($targetFleet){$targetRow=$targetFleet->fetch_assoc();foreach($targetRow as $v)$targetPower+=(int)$v;}
+                $targetRes=$s->query("SELECT metal,crystal,deuterium FROM player_resources WHERE uid=".$target." LIMIT 1");
+                if($targetRes&&($rr=$targetRes->fetch_assoc())){$metal=(int)$rr['metal'];$crystal=(int)$rr['crystal'];$deut=(int)$rr['deuterium'];}
+                $result=FleetDockMissionPolicy::outcome((string)$mission->mission_type,$ships,$targetPower,$metal,$crystal,$deut);$intelJson=$s->real_escape_string(json_encode($result['intel'],JSON_THROW_ON_ERROR));$text=$s->real_escape_string((string)$result['text']);$outcome=$result['success']?'success':'failed';
+                $s->begin_transaction();$ok=true;
+                if((int)$result['reward_naquadah']>0)$ok=$ok&&$s->query("UPDATE bank SET onHand=onHand+".(int)$result['reward_naquadah']." WHERE uid=".$uid." LIMIT 1");
+                if(array_sum($result['loot'])>0&&$result['success']){$loot=$result['loot'];$ok=$ok&&$s->query("UPDATE player_resources SET metal=GREATEST(0,metal-".(int)$loot['metal'].") ,crystal=GREATEST(0,crystal-".(int)$loot['crystal']."),deuterium=GREATEST(0,deuterium-".(int)$loot['deuterium'].") WHERE uid=".$target." LIMIT 1");$ok=$ok&&$s->query("UPDATE player_resources SET metal=metal+".(int)$loot['metal'].",crystal=crystal+".(int)$loot['crystal'].",deuterium=deuterium+".(int)$loot['deuterium']." WHERE uid=".$uid." LIMIT 1");}
+                if((int)$result['patrol_bonus']>0)$ok=$ok&&$s->query("INSERT INTO fleet_patrol_state(uid,defense_bonus,expires_at) VALUES(".$uid.",".(int)$result['patrol_bonus'].",DATE_ADD(NOW(),INTERVAL ".max(15,(int)$mission->duration_minutes)." MINUTE)) ON DUPLICATE KEY UPDATE defense_bonus=GREATEST(defense_bonus,VALUES(defense_bonus)),expires_at=VALUES(expires_at)");
+                $ok=$ok&&$s->query("UPDATE fleet_missions SET status='arrived',outcome='".$outcome."',outcome_text='".$text."',intel_json='".$intelJson."',reward_naquadah=".(int)$result['reward_naquadah'].",loot_metal=".(int)$result['loot']['metal'].",loot_crystal=".(int)$result['loot']['crystal'].",loot_deuterium=".(int)$result['loot']['deuterium']." WHERE mission_id=".$missionId." AND uid=".$uid." AND status='enroute' LIMIT 1");
+                if($ok)$s->commit();else$s->rollback();if($status==='')$status=$result['text'];
         }
-
-        $returns = $s->query("SELECT mission_id,ship_type,ship_count,mission_type FROM fleet_missions WHERE uid=" . $uid . " AND status='arrived' AND return_at <= NOW() ORDER BY mission_id ASC");
-        if ($returns) {
-                while ($mission = $returns->fetch_object()) {
-                        $missionId = (int)$mission->mission_id;
-                        $shipType = (string)$mission->ship_type;
-                        $shipCount = max(0, (int)$mission->ship_count);
-                        if (isset($defs[$shipType]) && $shipCount > 0) {
-                                $s->query("UPDATE fleet SET " . $shipType . "=" . $shipType . "+" . $shipCount . " WHERE uid=" . $uid . " LIMIT 1");
-                        }
-                        $s->query("UPDATE fleet_missions SET status='completed' WHERE mission_id=" . $missionId . " AND uid=" . $uid . " LIMIT 1");
-                        if ($status === '') {
-                                $status = fd_missionLabel((string)$mission->mission_type) . " returned to dock.";
-                        }
-                }
-        }
+        $returns=$s->query("SELECT mission_id,ship_type,ship_count,mission_type FROM fleet_missions WHERE uid=".$uid." AND status='arrived' AND return_at<=NOW() ORDER BY mission_id ASC");
+        if($returns)while($mission=$returns->fetch_object()){$missionId=(int)$mission->mission_id;$shipType=(string)$mission->ship_type;$shipCount=max(0,(int)$mission->ship_count);$s->begin_transaction();$ok=true;if(isset($defs[$shipType])&&$shipCount>0)$ok=$s->query("UPDATE fleet SET ".$shipType."=".$shipType."+".$shipCount." WHERE uid=".$uid." LIMIT 1");$ok=$ok&&$s->query("UPDATE fleet_missions SET status='completed' WHERE mission_id=".$missionId." AND uid=".$uid." AND status='arrived' LIMIT 1");if($ok)$s->commit();else$s->rollback();if($status==='')$status=fd_missionLabel((string)$mission->mission_type)." returned to dock.";}
 }
 
 if (isset($_GET['id']) && $_GET['id'] === 'upgrade_shipyard') {
@@ -358,19 +352,19 @@ if (isset($_GET['id']) && $_GET['id'] === 'dispatch_mission') {
                                 $targetUid = max(1, $uid - 1);
                         }
 
-                        $fleetQ = $s->query("SELECT " . $shipType . " FROM fleet WHERE uid=" . $uid . " LIMIT 1");
+                        $s->begin_transaction();
+                        $fleetQ = $s->query("SELECT " . $shipType . " FROM fleet WHERE uid=" . $uid . " FOR UPDATE");
                         $fleetLine = $fleetQ ? $fleetQ->fetch_object() : (object)[$shipType => 0];
                         $ownedShips = (int)($fleetLine->$shipType ?? 0);
-
                         if ($ownedShips < $shipCount) {
+                                $s->rollback();
                                 $status = "Insufficient available " . $defs[$shipType]['name'] . " for dispatch.";
                         } else {
-                                $s->query("UPDATE fleet SET " . $shipType . "=" . $shipType . "-" . $shipCount . " WHERE uid=" . $uid . " LIMIT 1");
-                                $safeMissionType = fd_safeToken($missionType);
-                                $safeShipType = fd_safeToken($shipType);
-                                $s->query("INSERT INTO fleet_missions (uid, mission_type, ship_type, ship_count, target_uid, duration_minutes, eta_at, return_at, status)
-                                        VALUES (" . $uid . ", '" . $safeMissionType . "', '" . $safeShipType . "', " . $shipCount . ", " . $targetUid . ", " . $durationMinutes . ", DATE_ADD(NOW(), INTERVAL " . $durationMinutes . " MINUTE), DATE_ADD(NOW(), INTERVAL " . ($durationMinutes * 2) . " MINUTE), 'enroute')");
-                                $status = fd_missionLabel($missionType) . " launched with " . fd_num($shipCount) . " " . $defs[$shipType]['name'] . ".";
+                                $safeMissionType = fd_safeToken($missionType); $safeShipType = fd_safeToken($shipType);
+                                $reserved = $s->query("UPDATE fleet SET " . $shipType . "=" . $shipType . "-" . $shipCount . " WHERE uid=" . $uid . " AND " . $shipType . ">=" . $shipCount . " LIMIT 1");
+                                $inserted = $reserved && $s->affected_rows === 1 && $s->query("INSERT INTO fleet_missions (uid, mission_type, ship_type, ship_count, target_uid, duration_minutes, eta_at, return_at, status, outcome, intel_json)
+                                        VALUES (" . $uid . ", '" . $safeMissionType . "', '" . $safeShipType . "', " . $shipCount . ", " . $targetUid . ", " . $durationMinutes . ", DATE_ADD(NOW(), INTERVAL " . $durationMinutes . " MINUTE), DATE_ADD(NOW(), INTERVAL " . ($durationMinutes * 2) . " MINUTE), 'enroute', 'pending', '{}')");
+                                if ($inserted) { $s->commit(); $status = fd_missionLabel($missionType) . " launched with " . fd_num($shipCount) . " " . $defs[$shipType]['name'] . "."; } else { $s->rollback(); $status = 'Mission launch failed safely; no ships were lost.'; }
                         }
                 }
         }
@@ -604,7 +598,7 @@ foreach ($defs as $key => $meta) {
         }
 }
 
-$missionsQ = $s->query("SELECT mission_id,mission_type,ship_type,ship_count,target_uid,duration_minutes,status,reward_naquadah,DATE_FORMAT(eta_at, '%Y-%m-%d %H:%i:%s') AS eta_time,DATE_FORMAT(return_at, '%Y-%m-%d %H:%i:%s') AS return_time
+$missionsQ = $s->query("SELECT mission_id,mission_type,ship_type,ship_count,target_uid,duration_minutes,status,reward_naquadah,outcome,outcome_text,intel_json,loot_metal,loot_crystal,loot_deuterium,DATE_FORMAT(eta_at, '%Y-%m-%d %H:%i:%s') AS eta_time,DATE_FORMAT(return_at, '%Y-%m-%d %H:%i:%s') AS return_time
         FROM fleet_missions
         WHERE uid=" . $uid . " AND status IN ('enroute','arrived')
         ORDER BY mission_id DESC
@@ -986,7 +980,8 @@ $bayUpgradeCost = 250000 * ((int)$yard->mothership_bay + 1);
                                         <th align="left">ETA</th>
                                         <th align="left">Return</th>
                                         <th align="left">Status</th>
-                                        <th align="left">Reward</th>
+                                        <th align="left">Outcome</th>
+                                        <th align="left">Reward / Loot</th>
                                 </tr>
                                 <?php
                                 $hasRows = false;
@@ -1001,7 +996,8 @@ $bayUpgradeCost = 250000 * ((int)$yard->mothership_bay + 1);
                                         <td><?= fd_h((string)$m->eta_time); ?></td>
                                         <td><?= fd_h((string)$m->return_time); ?></td>
                                         <td><?= fd_h((string)$m->status); ?></td>
-                                        <td><?= fd_num((int)$m->reward_naquadah); ?></td>
+                                        <td><?= fd_h((string)($m->outcome_text ?: $m->outcome)); ?></td>
+                                        <td><?= fd_num((int)$m->reward_naquadah); ?> N · <?= fd_num((int)$m->loot_metal); ?> M / <?= fd_num((int)$m->loot_crystal); ?> C / <?= fd_num((int)$m->loot_deuterium); ?> D</td>
                                 </tr>
                                                                 <?php
                                                 }
@@ -1009,7 +1005,7 @@ $bayUpgradeCost = 250000 * ((int)$yard->mothership_bay + 1);
                                 if (!$hasRows) {
                                                 ?>
                                 <tr>
-                                        <td colspan="7">No active missions. Launch a preset dispatch above.</td>
+                                        <td colspan="8">No active missions. Launch a preset dispatch above.</td>
                                 </tr>
                                                 <?php
                                 }
