@@ -116,6 +116,8 @@
         <a href="javascript:void(0)" onclick="sendData('pvp','get','mainDisplay'); return false">PvP Battle Command</a>
         <a href="javascript:void(0)" onclick="sendData('blueprints','get','mainDisplay'); return false">90-Blueprint Catalog</a>
         <a href="javascript:void(0)" onclick="sendData('blueprint_research','get','mainDisplay'); return false">Blueprint Research and Discovery</a>
+        <a href="javascript:void(0)" onclick="sendData('fitting_simulator','get','mainDisplay'); return false">Visual Fitting Simulator</a>
+        <a href="javascript:void(0)" onclick="sendData('corporation','get','mainDisplay'); return false">Corporation Fleet Network</a>
         <a href="javascript:void(0)" onclick="sendData('player_market','get','mainDisplay'); return false">Blueprint &amp; Module Exchange</a>
         <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations Command</a>
         <a href="javascript:void(0)" onclick="sendData('powergrid','get','mainDisplay'); return false">Power Grid Control</a>
