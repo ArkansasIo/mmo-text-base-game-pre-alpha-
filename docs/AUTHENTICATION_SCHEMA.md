@@ -68,3 +68,34 @@ php scripts/backend/create_test_user.php
 The command defaults to the same values shown above, but the password can be replaced through `SGW_TEST_PASSWORD`. It refuses to run when `APP_ENV` is not `local` or `development`, unless `ALLOW_TEST_USER=1` is explicitly set. It invokes the normal `User::addUser()` path, so it initializes the bank, units, technology, power, rank, home planet, and userdata records consistently with player registration.
 
 > Do not use the local test-user password on a public deployment. Create a unique production account through the normal registration flow and keep administrator passwords outside the repository.
+
+## Web authentication API
+
+The JSON endpoint is available at `/api/auth.php` and accepts POST requests. Player login uses `mode=player`, while administrator login uses `mode=admin`.
+
+```bash
+curl -sS -X POST http://127.0.0.1:8080/api/auth.php \
+  -H 'Content-Type: application/json' \
+  -d '{"mode":"player","action":"login","username":"tessssssst","password":"TestPassword!123"}'
+```
+
+Administrator login uses the same endpoint with `mode=admin`. Successful responses contain only the authenticated account ID, username, access or role, and mode. Failed login responses are intentionally generic. Logout is available with `{"mode":"player","action":"logout"}` or the corresponding administrator mode.
+
+## Default administrator provisioning
+
+The existing administrator provisioner can be used with explicit environment values. A convenience wrapper supplies `admin`, `admin@example.local`, and `superadmin` as defaults while requiring the password from the environment:
+
+```bash
+SGW_ADMIN_PASSWORD='use-a-unique-12-character-password' \
+php scripts/backend/create_default_admin.php
+```
+
+The wrapper never contains a default administrator password. It delegates to the existing password-hashing and upsert logic in `scripts/backend/create_admin.php`.
+
+## Authentication tests
+
+Run the source-level authentication test suite with:
+
+```bash
+php tests/authentication_test.php
+```
