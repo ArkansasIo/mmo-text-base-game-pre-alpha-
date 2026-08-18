@@ -115,6 +115,7 @@
         <a href="javascript:void(0)" onclick="sendData('rtscombat','get','mainDisplay'); return false">RTS Combat Engine</a>
         <a href="javascript:void(0)" onclick="sendData('pvp','get','mainDisplay'); return false">PvP Battle Command</a>
         <a href="javascript:void(0)" onclick="sendData('blueprints','get','mainDisplay'); return false">90-Blueprint Catalog</a>
+        <a href="javascript:void(0)" onclick="sendData('player_market','get','mainDisplay'); return false">Blueprint &amp; Module Exchange</a>
         <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations Command</a>
         <a href="javascript:void(0)" onclick="sendData('powergrid','get','mainDisplay'); return false">Power Grid Control</a>
         <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false">Hyperspace Command</a>
