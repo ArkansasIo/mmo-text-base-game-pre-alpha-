@@ -57,6 +57,7 @@ Administrator credentials are deployment-specific and must not be committed to t
 | Document | Purpose |
 |---|---|
 | [`LOGIN_README.md`](LOGIN_README.md) | Player and administrator login, registration, settings, and access troubleshooting |
+| [`docs/AUTHENTICATION_SCHEMA.md`](docs/AUTHENTICATION_SCHEMA.md) | Authentication tables, account relationships, and local test-user provisioning |
 | [`GAME_DESIGN_DOCUMENT.md`](GAME_DESIGN_DOCUMENT.md) | Comprehensive game design, progression, systems, content, limits, and roadmap |
 | [`docs/PLAYER_GUIDE.md`](docs/PLAYER_GUIDE.md) | Player-facing guide to worlds, economy, power, fleets, combat, sabotage, and communications |
 | [`docs/SYSTEMS_REFERENCE.md`](docs/SYSTEMS_REFERENCE.md) | Technical reference for modules, database systems, game rules, and current limits |
