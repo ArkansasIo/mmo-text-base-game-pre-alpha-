@@ -1,6 +1,7 @@
 <?php
 // Base::User.class.php
 require_once __DIR__ . '/PopulationModel.class.php';
+require_once __DIR__ . '/RaceGovernmentPolicy.class.php';
 
 class User extends Chive
 {
@@ -152,7 +153,7 @@ class User extends Chive
 	 * @param string $ip
 	 * @return bool
 	 */
-	public function addUser(string $userName, string $password, int $access = 1, string $email, int $rid, string $hpname, string $ip): bool
+	public function addUser(string $userName, string $password, int $access = 1, string $email, int $rid, string $hpname, string $ip, int $governmentId = 1): bool
 	{
 		if(!$this->connected()) {
 			$this->connectToDB();
@@ -166,8 +167,9 @@ class User extends Chive
 		$email = trim($email);
 		$hpname = trim($hpname);
 		$passwordHash = $this->salt($password);
-		$rid = (int)$rid;
-		$access = (int)$access;
+			$rid = (int)$rid;
+			$access = (int)$access;
+			$governmentId = RaceGovernmentPolicy::validGovernment((int)$governmentId) ? (int)$governmentId : 1;
 		if($rid <= 0) {
 			$rid = 1;
 		}
@@ -286,9 +288,9 @@ class User extends Chive
 			$stmt->bind_param("is", $uid, $hpname);
 			$stmt->execute();
 
-			$query = "INSERT INTO ".$this->db_prefix."userdata (uid, link, actionTurns, rid, uname, cid, progress) VALUES (?, ?, 250, ?, ?, 0, 0)";
+			$query = "INSERT INTO ".$this->db_prefix."userdata (uid, link, actionTurns, rid, uname, cid, progress, government_id) VALUES (?, ?, 250, ?, ?, 0, 0, ?)";
 			$stmt = $this->db_link->prepare($query);
-			$stmt->bind_param("isis", $uid, $link, $rid, $userName);
+			$stmt->bind_param("isisi", $uid, $link, $rid, $userName, $governmentId);
 			$stmt->execute();
 
 			$this->db_link->commit();

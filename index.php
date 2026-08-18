@@ -96,7 +96,7 @@ if($loginRequired && (!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout'
 	}
 	else
 	{
-	$s->addUser($_POST['user'], $_POST['pass'], 1, $_POST['email'], $_POST['rid'], $_POST['hpname'],$_SERVER["REMOTE_ADDR"]);
+	$s->addUser($_POST['user'], $_POST['pass'], 1, $_POST['email'], $_POST['rid'], $_POST['hpname'], $_SERVER["REMOTE_ADDR"], (int)($_POST['government_id'] ?? 1));
 	}
 }
 ?>

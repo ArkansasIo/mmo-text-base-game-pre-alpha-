@@ -33,6 +33,13 @@ if (!$s->loggedIn)
 	?>
   </select>
 
+  <label for="government_id">Government</label>
+  <select name="government_id" id="government_id" required>
+    <?php foreach (RaceGovernmentPolicy::GOVERNMENTS as $governmentId => $governmentName): ?>
+      <option value="<?= (int)$governmentId ?>"><?= htmlspecialchars($governmentName, ENT_QUOTES, 'UTF-8') ?></option>
+    <?php endforeach; ?>
+  </select>
+
   <p class="auth-hint">Type the validation text shown in the image.</p>
   <input name="number" type="text" id="number" required />
   <p style="text-align:center; margin-top:8px;"><img src="image.php?mt=<?= microtime();?>" alt="Validation code"></p>

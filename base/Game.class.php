@@ -1,6 +1,7 @@
 <?php
 // Base::Game.class.php
 require_once __DIR__ . '/ProgressionCaps.class.php';
+require_once __DIR__ . '/RaceGovernmentPolicy.class.php';
 
 class Game extends User
 {
@@ -64,17 +65,15 @@ class Game extends User
 			`income_bonus` int(11) NOT NULL DEFAULT 0,
 			`up_bonus` int(11) NOT NULL DEFAULT 0,
 			`r_group` varchar(16) NOT NULL DEFAULT 'player',
+			`attack_bonus` int(11) NOT NULL DEFAULT 0,
+			`defense_bonus` int(11) NOT NULL DEFAULT 0,
+			`upkeep_bonus` int(11) NOT NULL DEFAULT 0,
 			PRIMARY KEY (`rid`)
 		) ENGINE=InnoDB DEFAULT CHARSET=latin1");
 		$this->query("ALTER TABLE `race` ADD COLUMN IF NOT EXISTS `r_group` varchar(16) NOT NULL DEFAULT 'player'");
+		$this->query("ALTER TABLE `race` ADD COLUMN IF NOT EXISTS `attack_bonus` int(11) NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS `defense_bonus` int(11) NOT NULL DEFAULT 0, ADD COLUMN IF NOT EXISTS `upkeep_bonus` int(11) NOT NULL DEFAULT 0");
 
-		$playerRaces = [
-			1 => 'Ancient',
-			2 => 'Nox',
-			3 => 'Tau\'ri',
-			4 => 'Asgard',
-			5 => 'Tok\'ra',
-		];
+$playerRaces = RaceGovernmentPolicy::RACES;
 		$npcRaces = [
 			6 => 'Goa\'uld',
 			7 => 'Replicator',
@@ -87,11 +86,10 @@ class Game extends User
 			14 => 'Vanir',
 		];
 
-		foreach ($playerRaces as $rid => $name) {
-			$safe = $this->db_link ? $this->db_link->real_escape_string($name) : addslashes($name);
-			$this->query("INSERT INTO `race` (`rid`,`r_name`,`income_bonus`,`up_bonus`,`r_group`) VALUES (" . (int)$rid . ", '" . $safe . "', 0, 0, 'player')
-				ON DUPLICATE KEY UPDATE `r_name`=VALUES(`r_name`), `r_group`='player'");
-		}
+foreach ($playerRaces as $rid => $race) {
+				$name = $race['name']; $safe = $this->db_link ? $this->db_link->real_escape_string($name) : addslashes($name);
+				$this->query("INSERT INTO `race` (`rid`,`r_name`,`income_bonus`,`up_bonus`,`attack_bonus`,`defense_bonus`,`upkeep_bonus`,`r_group`) VALUES (" . (int)$rid . ", '" . $safe . "', " . (int)$race['income'] . ", " . (int)$race['upkeep'] . ", " . (int)$race['attack'] . ", " . (int)$race['defense'] . ", " . (int)$race['upkeep'] . ", 'player') ON DUPLICATE KEY UPDATE `r_name`=VALUES(`r_name`), `income_bonus`=VALUES(`income_bonus`), `up_bonus`=VALUES(`up_bonus`), `attack_bonus`=VALUES(`attack_bonus`), `defense_bonus`=VALUES(`defense_bonus`), `upkeep_bonus`=VALUES(`upkeep_bonus`), `r_group`='player'");
+			}
 
 		foreach ($npcRaces as $rid => $name) {
 			$safe = $this->db_link ? $this->db_link->real_escape_string($name) : addslashes($name);
