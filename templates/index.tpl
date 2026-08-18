@@ -124,6 +124,7 @@
         <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false">Stations Command</a>
         <a href="javascript:void(0)" onclick="sendData('powergrid','get','mainDisplay'); return false">Power Grid Control</a>
         <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false">Hyperspace Command</a>
+        <a href="javascript:void(0)" onclick="sendData('wormholes','get','mainDisplay'); return false">Wormhole Scanner and Exploration</a>
         <a href="javascript:void(0)" onclick="sendData('universe_seed','get','mainDisplay'); return false">Procedural Universe Explorer</a>
         <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Mega Forge 90/90/90</a>
         <details>

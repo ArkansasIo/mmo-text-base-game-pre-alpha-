@@ -10,12 +10,13 @@ DRY_RUN=0
 for arg in "${@:2}"; do [[ "$arg" == "--dry-run" ]] && DRY_RUN=1; done
 mkdir -p "$LOG_DIR" "$LOCK_DIR"
 if [[ -z "$JOB" ]]; then
-  echo "Usage: $0 {game_tick|pvp_tick|healthcheck|backup|reports|migrate} [--dry-run]" >&2
+  echo "Usage: $0 {game_tick|pvp_tick|wormhole_tick|healthcheck|backup|reports|migrate} [--dry-run]" >&2
   exit 64
 fi
 case "$JOB" in
   game_tick) COMMAND=("$PHP_BIN" scripts/backend/game_tick.php) ;;
   pvp_tick) COMMAND=("$PHP_BIN" scripts/backend/pvp_tick.php) ;;
+  wormhole_tick) COMMAND=("$PHP_BIN" scripts/backend/wormhole_tick.php) ;;
   healthcheck) COMMAND=(bash scripts/backend/healthcheck.sh) ;;
   backup) COMMAND=(bash scripts/backend/db_backup.sh) ;;
   reports) COMMAND=(bash scripts/backend/export_reports.sh) ;;
