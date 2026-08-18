@@ -1,0 +1,11 @@
+ALTER TABLE wormhole_expeditions
+  ADD COLUMN IF NOT EXISTS stability_at_dispatch INT UNSIGNED NOT NULL DEFAULT 50,
+  ADD COLUMN IF NOT EXISTS elapsed_minutes INT UNSIGNED NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS collapse_risk INT UNSIGNED NOT NULL DEFAULT 0,
+  ADD COLUMN IF NOT EXISTS exotic_tier INT UNSIGNED NOT NULL DEFAULT 1;
+
+ALTER TABLE wormhole_signatures
+  ADD COLUMN IF NOT EXISTS stability_updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP;
+
+ALTER TABLE wormhole_expeditions
+  ADD KEY IF NOT EXISTS idx_wormhole_risk(status,collapse_risk,exotic_tier);

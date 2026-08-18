@@ -22,7 +22,9 @@ The available signature classes are:
 
 Launching a probe costs **50 Dark Matter plus three times the signature difficulty**. The probe’s scan strength is based on signature stability, Hyperspace Core, and Stargate levels. One active probe is permitted per player. The probe is resolved asynchronously by `scripts/backend/wormhole_tick.php`.
 
-The settlement chance is bounded between 10% and 95% and is calculated from scan strength minus signature difficulty. Successful probes return Dark Matter, Exotic Matter, and Tritanium. Failed probes consume the dispatch cost and record a failed outcome without granting a reward.
+During transit, stability degrades according to elapsed exploration time and the signature class. Stable signatures decay slowly; Unstable, Ancient, Null, and Quantum signatures decay progressively faster. At settlement, the worker persists elapsed minutes, degraded collapse risk, and the predicted exotic reward tier on the expedition record for auditability.
+
+The settlement chance is bounded between 10% and 95% and is calculated from scan strength minus signature difficulty after the collapse check. A collapse consumes the dispatch cost and returns no expedition reward. Successful probes return Dark Matter, Exotic Matter, and Tritanium; higher difficulty and risk can produce Exotic Matter reward tiers up to Tier 5. The console exposes predicted risk at dispatch and the resolved tier in expedition history.
 
 ## Notifications and safety
 
