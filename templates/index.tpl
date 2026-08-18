@@ -134,6 +134,8 @@
         <a href="javascript:void(0)" onclick="sendData('communications','get','mainDisplay','inbox'); return false">Communications</a>
         <a href="javascript:void(0)" onclick="sendData('guild','get','mainDisplay'); return false">Guild Command</a>
         <a href="javascript:void(0)" onclick="sendData('fleet','get','mainDisplay'); return false">Fleet Command</a>
+        <a href="javascript:void(0)" onclick="sendData('crafting','get','mainDisplay'); return false">Armory Crafting</a>
+        <a href="javascript:void(0)" onclick="sendData('notifications','get','mainDisplay'); return false">Alert Network</a>
         <a href="javascript:void(0)" onclick="sendData('leaderboards','get','mainDisplay'); return false">Leaderboards and Achievements</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Combat Logs</a>
         <details>
