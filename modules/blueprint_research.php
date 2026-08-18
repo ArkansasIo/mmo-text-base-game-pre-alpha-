@@ -1,0 +1,18 @@
+<?php
+include('../config.php');
+require_once __DIR__ . '/../base/ResearchBlueprintPolicy.class.php';
+$pagegen=new page_gen();$pagegen->round_to=4;$pagegen->start();$game=new Game();
+if(!$game->loggedIn||!isset($_GET['time'])){header('Location: ../index.php');exit;}
+$db=$game->db_link;$uid=(int)$_SESSION['userid'];ResearchBlueprintPolicy::ensureTable($db);
+if(empty($_SESSION['blueprint_research_csrf']))$_SESSION['blueprint_research_csrf']=bin2hex(random_bytes(24));$csrf=$_SESSION['blueprint_research_csrf'];$notice='';$error='';$h=static fn($v):string=>htmlspecialchars((string)$v,ENT_QUOTES,'UTF-8');
+if($_SERVER['REQUEST_METHOD']==='POST'){
+    if(!hash_equals($csrf,(string)($_POST['csrf']??'')))$error='Security validation failed.';
+    elseif(($_POST['research_action']??'')==='unlock'){$result=ResearchBlueprintPolicy::unlock($db,$uid,(string)($_POST['blueprint_key']??''));if($result['ok'])$notice=$result['message'];else$error=$result['message'];}
+}
+$levels=ResearchBlueprintPolicy::levels($db,$uid);$unlocked=[];$q=$db->query("SELECT blueprint_key FROM player_blueprint_research WHERE uid=$uid AND status='unlocked'");if($q)while($r=$q->fetch_assoc())$unlocked[$r['blueprint_key']]=true;
+echo '<div class="comm-shell blueprint-research"><div class="page-hub-head"><span class="rts-kicker">UNIVERSE CIVILIZATION // RESEARCH DIRECTORATE</span><h3>Blueprint Research and Discovery</h3><p>Research infrastructure unlocks the 90-design fleet catalog. Unlocked blueprints become available to the shipyard, PvP dispatch, and player exchange.</p></div>';if($notice)echo '<div class="comm-alert">'.$h($notice).'</div>';if($error)echo '<div class="comm-alert comm-error">'.$h($error).'</div>';
+echo '<section class="comm-card"><h4>Research Infrastructure</h4><p>Research Campus <strong>'.(int)$levels['research_campus'].'</strong> · Simulation Core <strong>'.(int)$levels['simulation_core'].'</strong> · Data Vault <strong>'.(int)$levels['data_vault'].'</strong></p><p>Upgrade research buildings from the <a href="/modules/techlib.php?time='.time().'">Tech Library</a> before attempting higher-tier designs.</p></section>';
+echo '<section class="comm-card"><h4>Research Blueprint Matrix</h4><div class="admin-table-wrap"><table><tr><th>Blueprint</th><th>Tier</th><th>Research Prerequisites</th><th>Discovery Cost</th><th>Status</th><th>Action</th></tr>';
+foreach(FleetPolicy::BLUEPRINTS as $key=>$blueprint){$req=ResearchBlueprintPolicy::requirements($blueprint);$cost=ResearchBlueprintPolicy::unlockCost($blueprint);$met=ResearchBlueprintPolicy::meetsResearch($levels,$blueprint);$isUnlocked=isset($unlocked[$key]);$reqText='Campus '.(int)$req['research_campus'].' · Sim '.(int)$req['simulation_core'].' · Vault '.(int)$req['data_vault'];$costText='NQ '.number_format($cost['naquadah']).' · M '.number_format($cost['metal']).' · C '.number_format($cost['crystal']).' · D '.number_format($cost['deuterium']).' · E '.number_format($cost['energy']);$action=$isUnlocked?'Researched':($met?'<form method="post" action="/modules/blueprint_research.php?time='.time().'"><input type="hidden" name="csrf" value="'.$h($csrf).'"/><input type="hidden" name="research_action" value="unlock"/><input type="hidden" name="blueprint_key" value="'.$h($key).'"/><button class="comm-btn">Research</button></form>':'Prerequisites Required');echo '<tr><td><strong>'.$h($blueprint['name']).'</strong><br><code>'.$h($key).'</code></td><td>T'.(int)$blueprint['tier'].'</td><td>'.$h($reqText).'</td><td>'.$h($costText).'</td><td>'.($isUnlocked?'<span class="research-ok">Unlocked</span>':'Locked').'</td><td>'.$action.'</td></tr>';}
+echo '</table></div></section></div>';$pagegen->stop();print('page generation time: '.$pagegen->gen());
+?>
