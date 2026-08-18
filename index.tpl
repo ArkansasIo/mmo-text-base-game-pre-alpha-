@@ -50,7 +50,7 @@
   <tr>
     <td background="../images/bar.jpg" colspan="2" align="center" valign="top">
       <a href="javascript:void(0)" onclick="sendData('base','get','mainDisplay'); return false">Base</a> | <a href="javascript:void(0)" onclick="sendData('rank','get','mainDisplay'); return false">Attack</a> | <a href="javascript:void(0)" onclick="sendData('armory','get','mainDisplay'); return false">Armory</a> | <a href="javascript:void(0)" onclick="sendData('train','get','mainDisplay'); return false">Train</a> | <a href="javascript:void(0)" onclick="sendData('technology','get','mainDisplay'); return false">Technology</a> | <a href="javascript:void(0)" onclick="sendData('logs','get','mainDisplay'); return false">Logs</a> | <a href="javascript:void(0)" onclick="sendData('market','get','mainDisplay'); return false">Market</a> | <a href="javascript:void(0)" onclick="sendData('faq','get','mainDisplay'); return false">F.A.Q.</a> | <a href="forums/" target="_blank">Forums</a> | Contact Us | Chat<br />
-      <span>&quot;Because it is so clear it takes a long time to realise it. If you immediately know the candlelight is fire, the meal was cooked a long time ago.&quot;</span>    </td>
+      <span>&quot;The clearest strategies turn uncertainty into victory. If you immediately know the candlelight is fire, the meal was cooked a long time ago.&quot;</span>    </td>
    <td rowspan="2"><img src="spacer.gif" width="1" height="27" border="0" alt="" /></td>
   </tr>
   <tr align="center">

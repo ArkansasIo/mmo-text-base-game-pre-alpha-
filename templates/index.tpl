@@ -293,7 +293,7 @@
       <strong>Universe Civilization: Empire At Wars</strong> tactical operations network
     </div>
     <div>
-      &quot;Because it is so clear it takes a long time to realise it.&quot;
+      &quot;The clearest strategies turn uncertainty into victory.&quot;
     </div>
   </footer>
 </div>
