@@ -19,6 +19,10 @@ foreach ($blueprints as $blueprint) {
 blueprint_check($complete, 'every blueprint contains primary, secondary, fitting, and industrial fields');
 blueprint_check($positive, 'all blueprint stats and costs are positive');
 blueprint_check(strpos($template, "sendData('blueprints','get','mainDisplay')") !== false, 'blueprint catalog is reachable from warfare navigation');
+$fleetModule=file_get_contents(__DIR__.'/../modules/fleet.php');$gameTick=file_get_contents(__DIR__.'/../scripts/backend/game_tick.php');
+blueprint_check(strpos($fleetModule,'SELECT pid FROM planets WHERE pid=$planet AND uid=$uid')!==false&&strpos($fleetModule,'SELECT pid FROM planets WHERE pid=$origin AND uid=$uid')!==false,'shipyard and deployment require owned planets');
+blueprint_check(strpos($fleetModule,'player_fleet_inventory SET quantity=quantity-$quantity')!==false&&strpos($fleetModule,'begin_transaction()')!==false,'deployment reserves source fleet inventory transactionally');
+blueprint_check(strpos($gameTick,'destination_planet_id')!==false&&strpos($gameTick,'ON DUPLICATE KEY UPDATE quantity=quantity+$qty')!==false,'arrived deployments transfer ships into destination inventory');
 if ($failed) { fwrite(STDERR, "$failed blueprint checks failed; $passed passed.\n"); exit(1); }
 echo "All $passed blueprint checks passed.\n";
 ?>

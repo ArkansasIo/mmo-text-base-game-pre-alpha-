@@ -83,7 +83,7 @@ $s->query("CREATE TABLE IF NOT EXISTS hyperspace_transits (
     INDEX idx_uid_eta (uid, eta_at)
 )");
 
-$s->query("INSERT IGNORE INTO player_resources (uid) VALUES (" . $uid . ")");
+$s->query("ALTER TABLE hyperspace_transits ADD COLUMN IF NOT EXISTS outcome VARCHAR(32) NOT NULL DEFAULT 'pending', ADD COLUMN IF NOT EXISTS outcome_text VARCHAR(255) NOT NULL DEFAULT ''");$s->query("CREATE TABLE IF NOT EXISTS hyperspace_colonies (colony_id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,uid INT NOT NULL,route_id INT NOT NULL,transit_id INT NOT NULL,world_name VARCHAR(80) NOT NULL,population BIGINT UNSIGNED NOT NULL DEFAULT 0,status VARCHAR(16) NOT NULL DEFAULT 'founded',founded_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,PRIMARY KEY(colony_id),UNIQUE KEY uq_colony_transit(transit_id),KEY idx_colony_uid(uid,status)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");$s->query("INSERT IGNORE INTO player_resources (uid) VALUES (" . $uid . ")");
 $s->query("INSERT IGNORE INTO hyperspace_systems (uid) VALUES (" . $uid . ")");
 
 $sysQ = $s->query("SELECT jump_gate_level,stargate_level,hyperspace_core_level,lane_stability,range_bonus,cooldown_reduction FROM hyperspace_systems WHERE uid=" . $uid . " LIMIT 1");
@@ -109,19 +109,35 @@ $res = $resQ ? $resQ->fetch_object() : (object)[
 $etaQ = $s->query("SELECT transit_id,transit_type,route_id,fleet_tonnage FROM hyperspace_transits WHERE uid=" . $uid . " AND status='enroute' AND eta_at <= NOW() ORDER BY transit_id ASC");
 if ($etaQ) {
     while ($t = $etaQ->fetch_object()) {
-        $rewardMetal = 0;
-        $rewardCrystal = 0;
-        $rewardDeut = 0;
-        if ($t->transit_type === 'expedition') {
-            $rewardMetal = hs_random(2500, 12000) + ((int)$sys->hyperspace_core_level * 240);
-            $rewardCrystal = hs_random(1800, 9000) + ((int)$sys->stargate_level * 180);
-            $rewardDeut = hs_random(1200, 7600) + ((int)$sys->jump_gate_level * 140);
+        $rewardMetal = 0; $rewardCrystal = 0; $rewardDeut = 0; $outcome = 'arrived'; $outcomeText = 'Transit completed.';
+        $transitId = (int)$t->transit_id; $tonnage = max(50, (int)$t->fleet_tonnage);
+        $s->begin_transaction();
+        try {
+            if ($t->transit_type === 'expedition') {
+                $rewardMetal = hs_random(2500, 12000) + ((int)$sys->hyperspace_core_level * 240);
+                $rewardCrystal = hs_random(1800, 9000) + ((int)$sys->stargate_level * 180);
+                $rewardDeut = hs_random(1200, 7600) + ((int)$sys->jump_gate_level * 140);
+                $outcome = 'expedition_success'; $outcomeText = 'Deep-space survey returned with recovered industrial resources.';
+            } elseif ($t->transit_type === 'transfer') {
+                $rewardMetal = (int)round($tonnage * (8 + (int)$sys->jump_gate_level));
+                $rewardCrystal = (int)round($tonnage * (5 + (int)$sys->stargate_level));
+                $rewardDeut = (int)round($tonnage * 2);
+                $outcome = 'transfer_delivered'; $outcomeText = 'Supply convoy delivered its cargo through the hyperspace lane.';
+            } elseif ($t->transit_type === 'colonize') {
+                $worldName = preg_replace('/[^A-Za-z0-9 _-]/', '', (string)$t->route_id . ' ' . (string)$t->transit_id) ?: ('Colony ' . $transitId);
+                $colonyPopulation = max(1000, $tonnage * 12);
+                $st = $s->prepare('INSERT INTO hyperspace_colonies(uid,route_id,transit_id,world_name,population) VALUES (?,?,?,?,?)');
+                $st->bind_param('iiisi', $uid, $t->route_id, $transitId, $worldName, $colonyPopulation);
+                if (!$st->execute()) throw new RuntimeException('Colonization settlement failed.');
+                $outcome = 'colony_founded'; $outcomeText = 'A frontier colony was founded with ' . number_format($colonyPopulation) . ' settlers.';
+            }
             $s->query("UPDATE player_resources SET metal=metal+" . $rewardMetal . ", crystal=crystal+" . $rewardCrystal . ", deuterium=deuterium+" . $rewardDeut . " WHERE uid=" . $uid . " LIMIT 1");
-        }
-        $s->query("UPDATE hyperspace_transits SET status='arrived', reward_metal=" . $rewardMetal . ", reward_crystal=" . $rewardCrystal . ", reward_deuterium=" . $rewardDeut . " WHERE transit_id=" . (int)$t->transit_id . " AND uid=" . $uid . " LIMIT 1");
-        if ($status === '') {
-            $status = 'Transit arrived on route #' . (int)$t->route_id . '.';
-        }
+            $safeOutcome = $s->real_escape_string($outcome); $safeText = $s->real_escape_string($outcomeText);
+            $updated = $s->query("UPDATE hyperspace_transits SET status='arrived', outcome='" . $safeOutcome . "', outcome_text='" . $safeText . "', reward_metal=" . $rewardMetal . ", reward_crystal=" . $rewardCrystal . ", reward_deuterium=" . $rewardDeut . " WHERE transit_id=" . $transitId . " AND uid=" . $uid . " AND status='enroute' LIMIT 1");
+            if (!$updated || $s->affected_rows !== 1) throw new RuntimeException('Transit state update failed.');
+            $s->commit();
+            if ($status === '') $status = $outcomeText;
+        } catch (Throwable $e) { $s->rollback(); if ($status === '') $status = 'Transit resolution failed safely; retry processing on the next tick.'; }
     }
 }
 
@@ -316,7 +332,7 @@ if ($routeListQ) {
 
 $transitsQ = $s->query("SELECT t.transit_id,t.route_id,t.transit_type,t.fleet_tonnage,t.status,t.reward_metal,t.reward_crystal,t.reward_deuterium,
 DATE_FORMAT(t.eta_at, '%Y-%m-%d %H:%i:%s') AS eta_time,
-DATE_FORMAT(t.return_at, '%Y-%m-%d %H:%i:%s') AS return_time,
+DATE_FORMAT(t.return_at, '%Y-%m-%d %H:%i:%s') AS return_time, t.outcome, t.outcome_text,
 IFNULL(r.route_name,'Route') AS route_name, IFNULL(r.destination,'Unknown') AS destination
 FROM hyperspace_transits t
 LEFT JOIN hyperspace_routes r ON r.route_id=t.route_id AND r.uid=t.uid
@@ -415,6 +431,7 @@ $laneCapacity = 200 + ($jumpLv * 160) + ($starLv * 220) + ($coreLv * 260);
                     <th align="left">ETA</th>
                     <th align="left">Return</th>
                     <th align="left">Status</th>
+                    <th align="left">Outcome</th>
                     <th align="left">Reward (M/C/D)</th>
                 </tr>
                 <?php
@@ -431,6 +448,7 @@ $laneCapacity = 200 + ($jumpLv * 160) + ($starLv * 220) + ($coreLv * 260);
                     <td><?= hs_h((string)$t->eta_time); ?></td>
                     <td><?= hs_h((string)$t->return_time); ?></td>
                     <td><?= hs_h((string)$t->status); ?></td>
+                    <td><?= hs_h((string)($t->outcome_text ?: $t->outcome)); ?></td>
                     <td><?= hs_num((int)$t->reward_metal); ?>/<?= hs_num((int)$t->reward_crystal); ?>/<?= hs_num((int)$t->reward_deuterium); ?></td>
                 </tr>
                 <?php
@@ -439,7 +457,7 @@ $laneCapacity = 200 + ($jumpLv * 160) + ($starLv * 220) + ($coreLv * 260);
                 if (!$rows) {
                 ?>
                 <tr>
-                    <td colspan="8">No active hyperspace transits.</td>
+                    <td colspan="9">No active hyperspace transits.</td>
                 </tr>
                 <?php } ?>
             </table>
