@@ -41,7 +41,7 @@ The player login accepts either username or email. Player passwords follow the e
 | `power` | `uid`, `overall`, `mil_atk`, `mil_def`, `mil_cov`, `mil_anti`, `mil_total` | Calculated power aggregates |
 | `rank` | `uid`, `overall`, military category totals | Calculated ranking aggregates |
 | `planets` | `uid`, `plnt_name`, `isHome`, `pid`, `population`, `pop_cap`, world fields | Player home worlds and planetary population state |
-| `player_account_settings` | `uid`, `theme`, `density`, `timezone`, notification flags | Account interface and notification preferences |
+| `player_account_settings` | `uid`, `theme`, `density`, `timezone`, `landing_page`, audio flags, notification flags, `profile_visibility`, `session_timeout_minutes` | Account interface, sound, alert routing, privacy, and session preferences |
 | `player_security_events` | `event_id`, `uid`, `event_type`, `details`, `created_at` | Login, logout, password, profile, and preference security history |
 
 ## Authentication flow
@@ -51,6 +51,12 @@ The player login accepts either username or email. Player passwords follow the e
 3. The server creates the authenticated player session with the user ID, username, access level, race, and game-state values.
 4. Protected modules require the authenticated session and validate CSRF tokens for state-changing operations.
 5. Account changes update the relevant companion table and write a security-event record.
+
+## Player account settings
+
+The in-game **Account Settings** panel is available from the player navigation after authentication. It provides profile editing for email and home-world name; interface controls for theme, density, timezone, default command view, interface sounds, ambient music, and reduced motion; alert routing for messages, battles, guild communications, celestial events, market activity, and raids; privacy controls for profile visibility and online status; session timeout selection; and password changes.
+
+All state-changing forms require the per-session account CSRF token. Theme, density, landing-page, timezone, visibility, and timeout values are checked against server-side allowlists. The settings table is created by migration `19_player_accounts.sql`, while the runtime module contains compatibility DDL for older local databases that already have the original settings table.
 
 ## Local test-user provisioning
 
@@ -98,4 +104,5 @@ Run the source-level authentication test suite with:
 
 ```bash
 php tests/authentication_test.php
+php tests/account_settings_test.php
 ```
