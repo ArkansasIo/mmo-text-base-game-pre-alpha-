@@ -24,6 +24,10 @@ account_check(strpos($module, 'landing_page') !== false && strpos($module, 'soun
 account_check(strpos($module, 'notify_guild') !== false && strpos($module, 'notify_raids') !== false, 'guild and raid alert options are persisted');
 account_check(strpos($module, 'profile_visibility') !== false && strpos($module, 'session_timeout_minutes') !== false, 'privacy and session controls are persisted');
 account_check(strpos($module, 'password_change') !== false && strpos($module, 'acct_event') !== false, 'password changes are recorded in security history');
+account_check(substr_count($module, 'action="/modules/account.php"') >= 5, 'all account settings forms use the root-relative endpoint');
+account_check(strpos($module, 'name="email"') !== false && strpos($module, 'name="hpname"') !== false, 'profile email and home-world fields are present');
+account_check(strpos($module, '$operation === \'profile\'') !== false, 'profile form has a server-side persistence action');
+account_check(strpos($module, '$operation === \'preferences\'') !== false, 'interface and alert forms share the preferences persistence action');
 account_check(strpos($migration, 'landing_page') !== false && strpos($migration, 'notify_raids') !== false, 'migration defines expanded account settings');
 account_check(strpos($template, "sendData('account','get','mainDisplay')") !== false, 'main navigation exposes Account Settings');
 if ($failed) {
