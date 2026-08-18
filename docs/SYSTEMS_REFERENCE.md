@@ -92,3 +92,11 @@ Guild permissions are rank-based and server-enforced. Members can view the conso
 The guild research tree contains Industrial Logistics, Military Doctrine, Fortress Networks, and Diplomatic Protocols. Each technology has a maximum level of 10, a credit cost that increases by level, a research duration, and prerequisite rules. Industrial Logistics increases territory production, Military Doctrine increases raid power, Fortress Networks increases territory defense, and Diplomatic Protocols expands diplomacy capability.
 
 Guilds can establish alliances through normalized diplomacy pairs and declare seven-day wars against rival guilds. Active wars permit scheduled raids against enemy claimed territories. Raid resolution compares attacker power with territory defense, transfers a capped portion of metal and crystal on victory, reduces control points, and may mark a territory contested. Weaker raids are repelled. Research, rank, guild ownership, claimed status, CSRF, and authentication checks are evaluated on the server.
+
+## Shipyards, fleet deployment, leaderboards, and achievements
+
+Fleet construction is server-authoritative. Players use a resource wallet to queue Scout Corvettes, Frontier Frigates, Siege Destroyers, and Fleet Carriers. Each blueprint has metal, crystal, energy, construction-time, attack, defense, and cargo-capacity values. A player may maintain up to eight active construction jobs, and completed jobs are converted into fleet inventory by the game tick.
+
+Fleet deployments validate blueprint keys, fleet power, total capacity, origin and destination identifiers, and travel timing before recording an interplanetary route. En-route deployments become arrived through an idempotent game-tick update and are available for future combat integration.
+
+Leaderboard snapshots track territory power, guild power, member contribution, and member fleet performance. Snapshot records preserve score, rank position, subject type, subject identifier, and capture time. Achievement definitions include Territory Pioneer, Industrial Magnate, Fleet Commander, and War Hero; progress and unlock timestamps are stored per player.

@@ -17,6 +17,8 @@ require_once $root . "/base/TerritoryEconomy.class.php";
 require_once $root . "/base/GuildResearchPolicy.class.php";
 require_once $root . "/base/GuildWarfarePolicy.class.php";
 require_once $root . "/base/GuildEventPolicy.class.php";
+require_once $root . "/base/FleetPolicy.class.php";
+require_once $root . "/base/LeaderboardPolicy.class.php";
 
 $uidFilter = null;
 $dryRun = false;
@@ -214,6 +216,14 @@ function settleTerritoryEconomy(mysqli $db, bool $dryRun): int {
     $rows->free(); return $settled;
 }
 
+function processShipyardQueues(mysqli $db, bool $dryRun): int { $res=$db->query("SELECT queue_id,uid,planet_id,ship_type,quantity FROM shipyard_queue WHERE status='building' AND completes_at<=NOW()");$count=0;if(!$res)return 0;while($row=$res->fetch_assoc()){if(!$dryRun){$uid=(int)$row['uid'];$planet=(int)$row['planet_id'];$type=$db->real_escape_string((string)$row['ship_type']);$qty=(int)$row['quantity'];$db->begin_transaction();$ok=$db->query("INSERT INTO player_fleet_inventory(uid,planet_id,ship_type,quantity) VALUES($uid,$planet,'$type',$qty) ON DUPLICATE KEY UPDATE quantity=quantity+$qty");$ok=$ok&&$db->query("UPDATE shipyard_queue SET status='completed' WHERE queue_id=".(int)$row['queue_id']." AND status='building' LIMIT 1");if($ok)$db->commit();else{$db->rollback();continue;}}$count++;}return $count; }
+function processFleetDeployments(mysqli $db, bool $dryRun): int { if($dryRun)return 0;$res=$db->query("SELECT deployment_id FROM fleet_deployments WHERE status='enroute' AND arrive_at<=NOW()");$count=0;if($res)while($row=$res->fetch_assoc()){if($db->query("UPDATE fleet_deployments SET status='arrived' WHERE deployment_id=".(int)$row['deployment_id']." AND status='enroute' LIMIT 1"))$count++;}return $count; }
+function refreshLeaderboards(mysqli $db, bool $dryRun): int { if($dryRun)return 0;$db->query("DELETE FROM leaderboard_snapshots WHERE captured_at < DATE_SUB(NOW(),INTERVAL 7 DAY)");$count=0;$r=$db->query("SELECT guild_id,SUM(control_points)+SUM(production_metal+production_crystal+production_energy) score FROM guild_territories WHERE status IN ('claimed','contested') GROUP BY guild_id ORDER BY score DESC LIMIT 100");$rank=0;if($r)while($row=$r->fetch_assoc()){$rank++;$st=$db->prepare("INSERT INTO leaderboard_snapshots(board_key,subject_type,subject_id,score,rank_position) VALUES('territory_power','guild',?,?,?)");$st->bind_param('iii',$row['guild_id'],$row['score'],$rank);$st->execute();$count++;}return $count; }
+function updateAchievements(mysqli $db, bool $dryRun): int { if($dryRun)return 0;$count=0;$res=$db->query("SELECT uid,COUNT(*) total FROM shipyard_queue WHERE status='completed' GROUP BY uid");if($res)while($row=$res->fetch_assoc()){$uid=(int)$row['uid'];$value=(int)$row['total'];$db->query("INSERT INTO achievement_progress(uid,achievement_key,progress_value) VALUES($uid,'fleet_commander',$value) ON DUPLICATE KEY UPDATE progress_value=GREATEST(progress_value,$value),unlocked_at=IF(progress_value>=100,COALESCE(unlocked_at,NOW()),unlocked_at)");$count++;}return $count; }
+$shipyardCompleted=processShipyardQueues($db,$dryRun);
+$deploymentsArrived=processFleetDeployments($db,$dryRun);
+$leaderboardsRefreshed=refreshLeaderboards($db,$dryRun);
+$achievementsUpdated=updateAchievements($db,$dryRun);
 $researchCompleted = completeGuildResearch($db, $dryRun);
 $dynamicEventsProcessed = processTerritoryEvents($db, $dryRun);
 $territoryTicks = settleTerritoryEconomy($db, $dryRun);
@@ -405,6 +415,10 @@ echo "Users processed: " . $processedUsers . "\n";
 echo "Resource updates: " . $resourceUpdates . "\n";
 echo "Research projects completed: " . $researchCompleted . "\n";
 echo "Dynamic events processed: " . $dynamicEventsProcessed . "\n";
+echo "Shipyard queues completed: " . $shipyardCompleted . "\n";
+echo "Fleet deployments arrived: " . $deploymentsArrived . "\n";
+echo "Leaderboard rows refreshed: " . $leaderboardsRefreshed . "\n";
+echo "Achievements updated: " . $achievementsUpdated . "\n";
 echo "Territory production ticks settled: " . $territoryTicks . "\n";
 echo "Trade routes delivered: " . $tradeRoutesDelivered . "\n";
 echo "Guild raids resolved: " . $raidsResolved . "\n";
