@@ -64,6 +64,9 @@ function toggle_visible (elName) {
     el.style.display = isVisible ? "inline" : "none";
 }
 function sendData(page,type,id,atype,subject,message){
+    if (window.UCGameAudio && typeof window.UCGameAudio.route === 'function') {
+        try { window.UCGameAudio.route(page, id, atype); } catch (e) {}
+    }
     if (typeof bb_save_state === 'function') {
         try {
             bb_save_state();
@@ -91,6 +94,9 @@ function sendData(page,type,id,atype,subject,message){
 
 function mainUpdate(page,text)
 {
+    if (window.UCGameAudio && typeof window.UCGameAudio.play === 'function') {
+        try { window.UCGameAudio.play('click', 0.24); } catch (e) {}
+    }
 	var date = new Date();
     var url = "indexpages/" + encodeURIComponent(page) + ".php?time=" + date.getTime();
     httpRequest("GET",url,true);
