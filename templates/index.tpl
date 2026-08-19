@@ -63,6 +63,7 @@
       <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','messages'); return false"><span class="footer-icon-link"><img src="images/ui/diplomacy.svg" alt="Messages" /><span>Messages</span></span></a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Logs</a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','help','newplayer'); return false"><span class="footer-icon-link"><img src="images/ui/help.svg" alt="Help" /><span>Help</span></span></a>
+      <a href="javascript:void(0)" onclick="sendData('strategy_codex','get','mainDisplay'); return false">Strategy Codex</a>
       <a href="forums/" target="_blank">Forums</a>
     </div>
   </div>
@@ -237,6 +238,7 @@
         <summary><span class="menu-summary"><img src="images/ui/help.svg" alt="Help" /><span>Help</span></span></summary>
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','newplayer'); return false">New Player Guide</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','mechanics'); return false">Game Mechanics</a>
+        <a href="javascript:void(0)" onclick="sendData('strategy_codex','get','mainDisplay'); return false">Strategy Codex</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','glossary'); return false">Glossary</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','support'); return false">Support</a>
         <details>

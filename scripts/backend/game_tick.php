@@ -19,6 +19,7 @@ require_once $root . "/base/GuildWarfarePolicy.class.php";
 require_once $root . "/base/GuildEventPolicy.class.php";
 require_once $root . "/base/FleetPolicy.class.php";
 require_once $root . "/base/LeaderboardPolicy.class.php";
+require_once $root . "/base/HistoricalSystemsPolicy.class.php";
 
 $uidFilter = null;
 $dryRun = false;
@@ -129,6 +130,16 @@ function calcRates(array $ctx, array $levels, array $sgBonus): array {
         'exotic_matter' => (int)round((($incomeBase * 0.010) + ($planetCount * 8) + $techIncome) * (1 + ($levels['exotic_matter_lab'] * 0.06)) * $prodMul),
         'dark_matter' => 0,
     ];
+}
+
+function processHistoricalState(mysqli $db, int $uid, int $ticks, bool $dryRun): void {
+    if ($ticks <= 0) return;
+    q($db, "INSERT IGNORE INTO player_historical_state(uid,covert_capacity_max) VALUES ($uid,100)");
+    if (!$dryRun) {
+        q($db, "UPDATE player_historical_state SET covert_capacity=LEAST(covert_capacity_max,covert_capacity+" . ($ticks * 10) . "), updated_at=NOW() WHERE uid=$uid LIMIT 1");
+        $payload = $db->real_escape_string(json_encode(['ticks'=>$ticks,'turn_interval_minutes'=>HistoricalSystemsPolicy::TURN_INTERVAL_MINUTES], JSON_UNESCAPED_SLASHES));
+        q($db, "INSERT INTO historical_strategy_events(uid,event_type,aggregate_key,payload_json) VALUES ($uid,'TURN_PROCESSED','player:$uid','$payload')");
+    }
 }
 
 // Schema safety for shared systems.
@@ -391,6 +402,7 @@ while ($u = $uidsRes->fetch_assoc()) {
                 WHERE uid=" . $uid . " LIMIT 1");
         }
         $resourceUpdates++;
+        processHistoricalState($db, $uid, $ticks, $dryRun);
     }
 
     $sys = one($db, "SELECT jump_gate_level,stargate_level,hyperspace_core_level FROM hyperspace_systems WHERE uid=" . $uid . " LIMIT 1");
