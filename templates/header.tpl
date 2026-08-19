@@ -3,6 +3,7 @@
 			<head>
 					<script type="text/javascript" src="js/search.js"></script>
 			<script type="text/javascript" src="js/game-audio.js"></script>
+					<script type="text/javascript" src="js/mail-alerts.js"></script>
 			<script type="text/javascript" src="js/main.js"></script>
 		<script type="text/javascript" src="js/auto.js"></script>
 		<script type="text/javascript" src="js/train.js"></script>
@@ -23,4 +24,4 @@
     <center>
 	<div id="divBBDebug"></div>
 		<div id="divBody">
-		<div class="game-audio-console" role="region" aria-label="Game audio controls"><button type="button" id="game-audio-toggle" class="game-audio-toggle" aria-pressed="false">Audio: On</button><label for="game-audio-volume">Volume</label><input id="game-audio-volume" type="range" min="0" max="100" value="55" aria-label="Game audio volume"></div>
+		<div class="game-audio-console" role="region" aria-label="Game audio controls"><button type="button" id="game-audio-toggle" class="game-audio-toggle" aria-pressed="false">Audio: On</button><label for="game-audio-volume">Volume</label><input id="game-audio-volume" type="range" min="0" max="100" value="55" aria-label="Game audio volume"></div><button type="button" id="mail-alert-badge" class="mail-alert-badge" aria-label="Open unread game mail">✉</button>
