@@ -1,0 +1,11 @@
+# Condensed Menu Browser QA Notes
+
+The local PHP server responded successfully on `http://127.0.0.1:8080/`. The public title page rendered the login and game-system briefing correctly. A local-only `tessssssst` account was provisioned from the documented test-user command and authenticated successfully through a browser fetch using the documented development password.
+
+At the authenticated desktop viewport, the condensed quick-access rail displayed Home, Universe, Combat, Hyperspace, Research, Resource HQ, Bank, Messages, Logs, Help, Strategy Codex, and Forums. The left navigation displayed the command domains and retained existing feature routes. The Empire Subsystems summary opened correctly. The page hub rendered the new domain header, active route, function/logic status row, condensed subsystem rail, and three-column Functions / Features / Game Logic panel.
+
+The initial authenticated screenshot showed the command shell fitting within the viewport width without horizontal clipping at the tested desktop size. The next QA pass adds mobile media rules for full-width stacked layout, two-column then one-column quick access, 44px minimum touch targets, two-column then one-column page subnavigation, and compact top stats.
+
+The refreshed authenticated shell rendered 12 quick-access links, 11 top-level left-menu details groups, and the active `.system-detail-panel`. At the browser’s 1280x1100 viewport, desktop styles correctly reported 30px quick-access link height, 8px summary padding, and 7px/10px left-link padding. The mobile media query is present but not active at this desktop viewport; the new max-width 700px rules set 44px minimum heights, stacked layout, and two-column-to-one-column responsive grids for narrow screens.
+
+The browser tool did not permit programmatic window resizing; `window.resizeTo(390,844)` remained at 1280x1100, so the mobile breakpoint was validated through CSS inspection and static declarations rather than a resized screenshot. A rapid-route browser test dispatched Universe/Galaxies followed immediately by Economy/Resources. The final active request token matched the latest route token (`3`), completed with readyState 4, and the rendered heading was `Economic Network / Resource Hub`, confirming stale responses do not replace newer route content.

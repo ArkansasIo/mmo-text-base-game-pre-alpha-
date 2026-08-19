@@ -1,6 +1,8 @@
 var request;
 var queryString;   //will hold the POSTed data
 var a;
+var activeRequest = null;
+var routeRequestToken = 0;
 function autocomplete(sender,ev) {
 if (( ev.keyCode >= 48 && ev.keyCode <= 57 ) 
   ||  ( ev.keyCode >= 65 && ev.keyCode <= 90 )) {
@@ -115,6 +117,7 @@ function autoclear()
 
 //event handler for XMLHttpRequest
 function handleResponse(){
+    if (request !== activeRequest || request._routeToken !== routeRequestToken) return;
     if(request.readyState == 4){
         if(request.status >= 200 && request.status < 300){
             var target = document.getElementById("mainDisplay");
@@ -140,6 +143,11 @@ function initReq(reqType,url,bool){
 }
 
 function httpRequest(reqType,url,asynch){
+    // Abort an older page request when the commander changes routes quickly.
+    if (activeRequest && activeRequest.readyState !== 4) {
+        try { activeRequest.abort(); } catch (e) {}
+    }
+    var nextToken = ++routeRequestToken;
     //Mozilla-based browsers
     if(window.XMLHttpRequest){
         request = new XMLHttpRequest();
@@ -152,6 +160,8 @@ function httpRequest(reqType,url,asynch){
     //the request could still be null if neither ActiveXObject
     //initializations succeeded
     if(request){
+       request._routeToken = nextToken;
+       activeRequest = request;
        initReq(reqType,url,asynch);
     }  else {
         alert("Your browser does not permit the use of all "+
