@@ -2,6 +2,8 @@
 include_once("config.php");
 $s = new Game();
 $loginRequired = true;
+$publicStatus = $s->connected() ? 'COMMAND NETWORK ONLINE' : 'BACKEND LINK STANDBY';
+$publicStatusDetail = $s->connected() ? 'Authentication and universe services responding' : 'Database link requires operator attention';
 $loginSetting = $s->query("SELECT setting_value FROM app_settings WHERE setting_key='game_login_required' LIMIT 1");
 if ($loginSetting && ($settingRow = $loginSetting->fetch_assoc())) {
     $loginRequired = (string)$settingRow['setting_value'] !== '0';
@@ -77,6 +79,41 @@ if($loginRequired && (!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout'
     </div>
   </section>
 
+  <section class="title-briefing" id="briefing">
+    <div class="briefing-head">
+      <div>
+        <span class="public-eyebrow">MISSION BRIEFING // PRE-ALPHA NETWORK</span>
+        <h2>Build a civilization that survives the frontier.</h2>
+        <p>Universe Civilization: Empire at Wars is a persistent browser MMO where every planet, fleet, corporation, market decision, and wormhole expedition contributes to a living strategic universe.</p>
+      </div>
+      <div class="network-status"><span class="status-dot"></span><strong><?= htmlspecialchars($publicStatus, ENT_QUOTES, 'UTF-8'); ?></strong><small><?= htmlspecialchars($publicStatusDetail, ENT_QUOTES, 'UTF-8'); ?></small></div>
+    </div>
+    <div class="briefing-actions">
+      <a class="public-btn secondary" href="javascript:void(0)" onClick="mainUpdate('register','Register To Play'); return false">Create a civilization</a>
+      <a class="public-btn" href="javascript:void(0)" onClick="mainUpdate('login','Login'); return false">Open command login</a>
+      <a class="brief-link" href="#systems">Review game systems</a>
+      <a class="brief-link" href="#roadmap">View pre-alpha status</a>
+    </div>
+  </section>
+
+  <section class="title-system-grid" id="systems">
+    <article class="title-system-card"><span class="system-index">01 // GENESIS</span><h3>Procedural universes</h3><p>Generate worlds, moons, biomes, governments, races, and starbases from a seeded universe model. Explore a galaxy where each frontier sector has its own strategic identity.</p><span class="system-tags">SEEDS · WORLDS · MOONS</span></article>
+    <article class="title-system-card"><span class="system-index">02 // FLEET COMMAND</span><h3>90 ship blueprints</h3><p>Research a full A–Z blueprint catalog, fit high, medium, and low modules, manage CPU and power, then deploy fleets for defense, combat, trade, and exploration.</p><span class="system-tags">FITTING · SHIPYARDS · FLEETS</span></article>
+    <article class="title-system-card"><span class="system-index">03 // ECONOMY</span><h3>Industrial production</h3><p>Produce and trade ten resources, including strategic materials and premium Dark Matter. Build a corporation-led economy through markets, research, and rare-item orders.</p><span class="system-tags">10 RESOURCES · MARKETS · RESEARCH</span></article>
+    <article class="title-system-card"><span class="system-index">04 // DIPLOMACY</span><h3>Corporations and warfare</h3><p>Organize members, share research pools, coordinate fleet operations, form alliances, manage warfronts, raid territory, and defend the interests of your civilization.</p><span class="system-tags">ALLIANCES · WARFRONTS · ROLES</span></article>
+    <article class="title-system-card"><span class="system-index">05 // DARK MATTER</span><h3>Wormhole expeditions</h3><p>Scan unstable signatures, launch timed probes, push deeper for exotic rewards, and decide when the rising collapse risk is no longer worth the potential gain.</p><span class="system-tags">SCANNING · RISK · EXOTICS</span></article>
+    <article class="title-system-card"><span class="system-index">06 // OPERATIONS</span><h3>Persistent command loop</h3><p>Production ticks, PvP resolution, expedition settlement, notifications, achievements, and account security keep the command network active between sessions.</p><span class="system-tags">TICKS · ALERTS · PROGRESSION</span></article>
+  </section>
+
+  <section class="title-roadmap" id="roadmap">
+    <div><span class="public-eyebrow">PRE-ALPHA OPERATIONS STATUS</span><h2>Choose your first strategic objective.</h2></div>
+    <div class="roadmap-columns">
+      <div><strong>FOUND</strong><p>Register an account, choose your race and government, name your homeworld, and establish your first production base.</p></div>
+      <div><strong>EXPAND</strong><p>Research blueprints, fit ships, claim territory, build orbital infrastructure, and grow your population and resource network.</p></div>
+      <div><strong>COMMAND</strong><p>Join a corporation, trade rare modules, coordinate missions, defend your alliance, and explore the unknown through Dark Matter.</p></div>
+    </div>
+  </section>
+
   <section class="public-content-grid">
     <aside class="public-panel public-news">
       <span class="public-eyebrow">COMMAND NETWORK ONLINE</span>
@@ -102,7 +139,7 @@ if($loginRequired && (!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout'
 ?>
       <div id="mainDisplay"></div>
       <div class="public-footnote">
-        <span>Graphics and systems by <a href="https://github.com/ArkansasIo" target="_blank" rel="noopener noreferrer">github.com/ArkansasIo</a></span>
+        <span>Version 0.9 pre-alpha · Industrial Blue Command Network</span><span>Graphics and systems by <a href="https://github.com/ArkansasIo" target="_blank" rel="noopener noreferrer">github.com/ArkansasIo</a></span>
       </div>
     </main>
   </section>
