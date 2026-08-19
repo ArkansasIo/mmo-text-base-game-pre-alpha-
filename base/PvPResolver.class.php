@@ -1,9 +1,32 @@
 <?php
 require_once __DIR__ . '/FleetPolicy.class.php';
 require_once __DIR__ . '/PvPPolicy.class.php';
+require_once __DIR__ . '/PvPRankingPolicy.class.php';
 
 final class PvPResolver
 {
+    private static function settleRanking(mysqli $db, array $battle, string $outcome, int $battleId): void
+    {
+        $season = PvPRankingPolicy::SEASON_CODE;
+        $attacker = (int)$battle['attacker_uid']; $defender = (int)$battle['defender_uid'];
+        $db->query("INSERT IGNORE INTO pvp_rankings(season_code,uid) VALUES ('$season',$attacker),('$season',$defender)");
+        $rows = $db->query("SELECT uid,rating,wins,losses,draws FROM pvp_rankings WHERE season_code='$season' AND uid IN ($attacker,$defender) FOR UPDATE");
+        $ratings = [];
+        if ($rows) while ($row = $rows->fetch_assoc()) $ratings[(int)$row['uid']] = $row;
+        foreach ([[$attacker, true], [$defender, false]] as [$uid, $isAttacker]) {
+            $before = (int)($ratings[$uid]['rating'] ?? PvPRankingPolicy::STARTING_RATING);
+            $opponent = $isAttacker ? $defender : $attacker;
+            $opponentRating = (int)($ratings[$opponent]['rating'] ?? PvPRankingPolicy::STARTING_RATING);
+            $result = PvPRankingPolicy::outcomeForPlayer($outcome, $isAttacker);
+            $delta = PvPRankingPolicy::delta($before, $opponentRating, $result);
+            $after = max(PvPRankingPolicy::MIN_RATING, min(PvPRankingPolicy::MAX_RATING, $before + $delta));
+            $wins = $result === 'win' ? 1 : 0; $losses = $result === 'loss' ? 1 : 0; $draws = $result === 'draw' ? 1 : 0;
+            $db->query("UPDATE pvp_rankings SET rating=$after,wins=wins+$wins,losses=losses+$losses,draws=draws+$draws,points_for=points_for+".(int)($isAttacker ? $battle['attack_power'] : $battle['defense_power']).",points_against=points_against+".(int)($isAttacker ? $battle['defense_power'] : $battle['attack_power']).",last_battle_at=NOW() WHERE season_code='$season' AND uid=$uid LIMIT 1");
+            $db->query("INSERT IGNORE INTO pvp_rating_history(season_code,battle_id,uid,result,rating_before,rating_delta,rating_after) VALUES ('$season',$battleId,$uid,'$result',$before,$delta,$after)");
+        }
+        $db->query("UPDATE pvp_battles SET ranking_settled=1 WHERE battle_id=$battleId LIMIT 1");
+    }
+
     public static function resolveDue(mysqli $db, int $limit = 50): int
     {
         $limit = max(1, min(500, $limit));
@@ -94,6 +117,7 @@ final class PvPResolver
             }
             $safeReport = $db->real_escape_string($report);
             $db->query("INSERT INTO pvp_alerts(uid,battle_id,alert_type,title,body) VALUES (" . (int)$battle['attacker_uid'] . ",$battleId,'battle_result','PvP battle resolved','$safeReport'),(" . (int)$battle['defender_uid'] . ",$battleId,'battle_result','Your world was attacked','$safeReport')");
+            self::settleRanking($db, $battle, $outcome, $battleId);
             $db->commit();
             return true;
         } catch (Throwable $exception) {
