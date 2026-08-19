@@ -141,6 +141,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','spy'); return false">Spy Network</a>
         <a href="javascript:void(0)" onclick="sendData('sabotage','get','mainDisplay'); return false">Sabotage Operations</a>
         <a href="javascript:void(0)" onclick="sendData('communications','get','mainDisplay','inbox'); return false">Communications</a>
+        <a href="javascript:void(0)" onclick="sendData('email','get','mainDisplay','inbox'); return false">Email Network</a>
         <a href="javascript:void(0)" onclick="sendData('guild','get','mainDisplay'); return false">Guild Command</a>
         <a href="javascript:void(0)" onclick="sendData('fleet','get','mainDisplay'); return false">Fleet Command</a>
         <a href="javascript:void(0)" onclick="sendData('crafting','get','mainDisplay'); return false">Armory Crafting</a>

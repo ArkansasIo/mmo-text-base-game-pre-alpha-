@@ -138,7 +138,7 @@ if($loginRequired && (!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout'
 ?>
       <div id="mainDisplay"></div>
       <div class="public-footnote">
-        <span>Version 0.9 pre-alpha · Industrial Blue Command Network</span><span>Graphics and systems by <a href="https://github.com/ArkansasIo" target="_blank" rel="noopener noreferrer">github.com/ArkansasIo</a></span>
+        <span>Version 0.9 pre-alpha · Industrial Blue Command Network</span>
       </div>
     </main>
   </section>
