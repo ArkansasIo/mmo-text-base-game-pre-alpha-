@@ -676,25 +676,22 @@ function renderTreeBoard(array $branches, int $level, string $boardId, string $n
 }
 
 function renderInfoBlock(array $detail): void {
-    echo '<div class="card full"><h4>Operational Brief</h4><p>' . h($detail['brief']) . '</p></div>';
-
-    echo '<div class="card"><h4>Functions</h4><ul>';
-    foreach (($detail['functions'] ?? []) as $item) {
-        echo '<li>' . h($item) . '</li>';
+    echo '<section class="system-detail-panel">';
+    echo '<div class="system-detail-brief"><span class="rts-kicker">SYSTEM BRIEF</span><h4>Operational Brief</h4><p>' . h($detail['brief']) . '</p></div>';
+    echo '<div class="system-detail-grid">';
+    $blocks = [
+        ['functions', 'Functions', 'What the commander can do', 'system-function-list'],
+        ['features', 'Features', 'What the page exposes', 'system-feature-list'],
+        ['logic', 'Game Logic', 'How the server resolves it', 'system-logic-list'],
+    ];
+    foreach ($blocks as [$key, $label, $caption, $class]) {
+        echo '<article class="system-detail-card ' . h($class) . '"><span class="system-detail-label">' . h($label) . '</span><h5>' . h($caption) . '</h5><ul>';
+        foreach (($detail[$key] ?? []) as $index => $item) {
+            echo '<li><span class="system-index">' . ((int)$index + 1) . '</span><span>' . h($item) . '</span></li>';
+        }
+        echo '</ul></article>';
     }
-    echo '</ul></div>';
-
-    echo '<div class="card"><h4>Features</h4><ul>';
-    foreach (($detail['features'] ?? []) as $item) {
-        echo '<li>' . h($item) . '</li>';
-    }
-    echo '</ul></div>';
-
-    echo '<div class="card full"><h4>Logic & Rules</h4><ol>';
-    foreach (($detail['logic'] ?? []) as $item) {
-        echo '<li>' . h($item) . '</li>';
-    }
-    echo '</ol></div>';
+    echo '</div></section>';
 }
 
 function renderMechanicsMatrix(string $main, string $sub): void {
@@ -1349,6 +1346,19 @@ $mainTitles = [
     'help' => 'Guides & Help Desk',
     'universe' => 'Universe Observatory',
     'research' => 'Research Directorate',
+];
+
+$mainBriefs = [
+    'empire' => ['role' => 'Command Bridge', 'brief' => 'Coordinate the realm’s identity, readiness, planets, chain of command, logistics, and growth priorities.'],
+    'military' => ['role' => 'Conflict and Fleet', 'brief' => 'Convert population, technology, equipment, and fleet capacity into force projection and defense.'],
+    'operations' => ['role' => 'Mission Control', 'brief' => 'Plan attacks, raids, covert actions, communications, queues, and post-operation recovery.'],
+    'economy' => ['role' => 'Resource Network', 'brief' => 'Manage Naquadah, strategic resources, production structures, markets, infrastructure, and treasury policy.'],
+    'diplomacy' => ['role' => 'Political Network', 'brief' => 'Build alliances, commander chains, treaties, councils, relations, and secure communications.'],
+    'intel' => ['role' => 'Threat Intelligence', 'brief' => 'Turn rankings, battle reports, signals, dossiers, and sector visibility into informed decisions.'],
+    'community' => ['role' => 'Civilian Network', 'brief' => 'Connect commanders through forums, events, updates, contact channels, and academy guidance.'],
+    'help' => ['role' => 'Operations Manual', 'brief' => 'Explain the game loop, formulas, protection rules, terminology, commands, and recovery procedures.'],
+    'universe' => ['role' => 'Exploration Grid', 'brief' => 'Discover galaxies, planets, moons, stations, lanes, anomalies, expeditions, and seeded universe data.'],
+    'research' => ['role' => 'Innovation Directorate', 'brief' => 'Advance technology, talents, stargate systems, laboratories, projects, and blueprint access.'],
 ];
 
 $subDefaults = [
@@ -2249,9 +2259,13 @@ $title = $mainTitles[$main];
 $subTitle = $subLabels[$main][$sub];
 
 echo '<div class="page-hub">';
-echo '<div class="page-hub-head">';
-echo '<h3>' . h($title) . ' - ' . h($subTitle) . '</h3>';
-echo '<p>Page: ' . h($main) . ' / ' . h($sub) . ' | Player: ' . h($_SESSION['username']) . '</p>';
+$domain = $mainBriefs[$main] ?? ['role' => 'Command Module', 'brief' => 'Server-authoritative command interface.'];
+$activeDetail = $systemDetails[$main][$sub] ?? ['brief' => $domain['brief'], 'functions' => [], 'features' => [], 'logic' => []];
+echo '<div class="page-hub-head redesigned-page-head">';
+echo '<div class="page-head-kicker"><span class="rts-kicker">UNIVERSE CIVILIZATION // ' . h(strtoupper($domain['role'])) . '</span><span class="page-route">' . h($main) . ' / ' . h($sub) . '</span></div>';
+echo '<h3>' . h($title) . ' <span class="page-title-divider">/</span> ' . h($subTitle) . '</h3>';
+echo '<p>' . h($domain['brief']) . '</p>';
+echo '<div class="page-head-status"><span><strong>Function:</strong> ' . h($activeDetail['functions'][0] ?? 'Review the active command module') . '</span><span><strong>Logic:</strong> ' . h($activeDetail['logic'][0] ?? 'All actions are validated and resolved on the server') . '</span></div>';
 echo '</div>';
 if ($universeActionStatus !== '') {
     echo '<div class="card full"><strong>' . h($universeActionStatus) . '</strong></div>';
@@ -2260,7 +2274,7 @@ if ($pageActionStatus !== '') {
     echo '<div class="card full"><strong>' . h($pageActionStatus) . '</strong></div>';
 }
 
-echo '<div class="page-subnav-title">Sub Pages</div>';
+echo '<div class="page-subnav-title">' . h($domain['role']) . ' // Subsystems and Page Routes</div>';
 echo '<div class="page-subnav">';
 foreach ($subLabels[$main] as $subKey => $subName) {
     $activeClass = ($subKey === $sub) ? ' class="active"' : '';
@@ -2453,6 +2467,7 @@ if (isset($subPageGroups[$main])) {
     echo '</div>';
 }
 
+renderInfoBlock($activeDetail);
 echo '<div class="page-grid">';
 
 if ($main === 'empire' && $sub === 'home') {
@@ -3510,10 +3525,6 @@ if ($main === 'help') {
     if ($sub === 'hotkeys') {
         echo '<div class="card"><h4>Quick Commands</h4><p>Use the left command tree and feature action buttons for rapid sub-page switching.</p></div>';
     }
-}
-
-if (isset($systemDetails[$main][$sub])) {
-    renderInfoBlock($systemDetails[$main][$sub]);
 }
 
 renderMechanicsMatrix($main, $sub);

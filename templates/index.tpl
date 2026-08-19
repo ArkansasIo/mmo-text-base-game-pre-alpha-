@@ -73,7 +73,7 @@
       <div class="window-bar"><span class="window-lights"><i></i><i></i><i></i></span><strong>COMMAND MODULES</strong><span class="window-status">NAV</span></div>
       <h3>Main Navigation</h3>
 
-      <div class="menu-section-title"><img src="images/ui/core-command.svg" alt="Core" /><span>Core Command</span></div>
+      <div class="menu-section-title"><img src="images/ui/core-command.svg" alt="Core" /><span>COMMAND BRIDGE // EMPIRE CONTROL</span></div>
       <details open>
         <summary><span class="menu-summary"><img src="images/ui/empire.svg" alt="Empire" /><span>Empire</span></span></summary>
         <a href="javascript:void(0)" onclick="sendData('pages','get','empire','home'); return false">Empire Home</a>
@@ -83,7 +83,7 @@
         <a href="javascript:void(0)" onclick="sendData('account','get','mainDisplay'); return false">Account Settings</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','empire','progress'); return false">Empire Progress</a>
         <details>
-          <summary><span class="menu-summary"><span>Empire Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Empire Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','empire','logistics'); return false">Logistics Hub</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','empire','doctrine'); return false">Doctrine Board</a>
         </details>
@@ -98,14 +98,14 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','universe','bases'); return false">Stations &amp; Bases</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','universe','travel'); return false">Jumpgate &amp; Hyperspace</a>
         <details>
-          <summary><span class="menu-summary"><span>Universe Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Universe Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','universe','lanes'); return false">Transit Lanes</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','universe','anomalies'); return false">Anomaly Index</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','universe','seeds'); return false">Universe Seeds</a>
         </details>
       </details>
 
-      <div class="menu-section-title"><img src="images/ui/warfare-systems.svg" alt="Warfare" /><span>Warfare Systems</span></div>
+      <div class="menu-section-title"><img src="images/ui/warfare-systems.svg" alt="Warfare" /><span>CONFLICT GRID // FLEET &amp; COMBAT</span></div>
 
       <details>
         <summary><span class="menu-summary"><img src="images/ui/military.svg" alt="Military" /><span>Military</span></span></summary>
@@ -129,7 +129,7 @@
         <a href="javascript:void(0)" onclick="sendData('universe_seed','get','mainDisplay'); return false">Procedural Universe Explorer</a>
         <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Mega Forge 90/90/90</a>
         <details>
-          <summary><span class="menu-summary"><span>Military Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Military Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','military','navy'); return false">Navy Ops</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','military','defensegrid'); return false">Defense Grid</a>
         </details>
@@ -151,7 +151,7 @@
         <a href="javascript:void(0)" onclick="sendData('leaderboards','get','mainDisplay'); return false">Leaderboards and Achievements</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Combat Logs</a>
         <details>
-          <summary><span class="menu-summary"><span>Operations Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Operations Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','operations','commandqueue'); return false">Command Queue</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','operations','diplomacyops'); return false">Diplomatic Ops</a>
         </details>
@@ -164,13 +164,13 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','intel','threats'); return false">Threat Matrix</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','intel','map'); return false">Sector Map</a>
         <details>
-          <summary><span class="menu-summary"><span>Intel Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Intel Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','intel','signals'); return false">Signal Watch</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','intel','dossiers'); return false">Target Dossiers</a>
         </details>
       </details>
 
-      <div class="menu-section-title"><img src="images/ui/economy-research.svg" alt="Economy" /><span>Economy and Research</span></div>
+      <div class="menu-section-title"><img src="images/ui/economy-research.svg" alt="Economy" /><span>RESOURCE GRID // ECONOMY &amp; RESEARCH</span></div>
 
       <details>
         <summary><span class="menu-summary"><img src="images/ui/economy.svg" alt="Economy" /><span>Economy</span></span></summary>
@@ -183,7 +183,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','economy','buildings'); return false">Infrastructure Systems</a>
         <a href="javascript:void(0)" onclick="sendData('infrastructure','get','mainDisplay'); return false">Infrastructure Command</a>
         <details>
-          <summary><span class="menu-summary"><span>Economy Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Economy Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','economy','logistics'); return false">Supply Logistics</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','economy','treasury'); return false">Treasury Policy</a>
         </details>
@@ -198,14 +198,14 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','research','stargate'); return false">Stargate Tech</a>
         <a href="javascript:void(0)" onclick="sendData('stargatetech','get','mainDisplay'); return false">Stargate Tech Command</a>
         <details>
-          <summary><span class="menu-summary"><span>Research Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Research Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','research','projects'); return false">Research Projects</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','research','labs'); return false">Lab Network</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','research','blueprints'); return false">Blueprint Systems</a>
         </details>
       </details>
 
-      <div class="menu-section-title"><img src="images/ui/diplomacy-help.svg" alt="Diplomacy" /><span>Diplomacy and Help</span></div>
+      <div class="menu-section-title"><img src="images/ui/diplomacy-help.svg" alt="Diplomacy" /><span>POLITICAL NETWORK // COMMUNITY &amp; HELP</span></div>
 
       <details>
         <summary><span class="menu-summary"><img src="images/ui/diplomacy.svg" alt="Diplomacy" /><span>Diplomacy</span></span></summary>
@@ -215,7 +215,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','commander'); return false">Commander Chain</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','governance'); return false">Commander Governance</a>
         <details>
-          <summary><span class="menu-summary"><span>Diplomacy Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Diplomacy Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','treaties'); return false">Treaties</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','councils'); return false">Councils</a>
         </details>
@@ -228,7 +228,7 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','community','contact'); return false">Contact</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','community','faq'); return false">FAQ</a>
         <details>
-          <summary><span class="menu-summary"><span>Community Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Community Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','community','events'); return false">Events</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','community','academy'); return false">Academy</a>
         </details>
@@ -242,13 +242,13 @@
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','glossary'); return false">Glossary</a>
         <a href="javascript:void(0)" onclick="sendData('pages','get','help','support'); return false">Support</a>
         <details>
-          <summary><span class="menu-summary"><span>Help Suites</span></span></summary>
+          <summary><span class="menu-summary"><span>Help Subsystems</span></span></summary>
           <a href="javascript:void(0)" onclick="sendData('pages','get','help','troubleshooting'); return false">Troubleshooting</a>
           <a href="javascript:void(0)" onclick="sendData('pages','get','help','hotkeys'); return false">Quick Commands</a>
         </details>
       </details>
 
-      <div class="menu-section-title"><img src="images/ui/universe.svg" alt="Command Trees" /><span>Command Trees</span></div>
+      <div class="menu-section-title"><img src="images/ui/universe.svg" alt="Command Trees" /><span>DEEP ROUTES // COMMAND TREES</span></div>
 
       <details>
         <summary><span class="menu-summary"><img src="images/ui/empire.svg" alt="Empire Tree" /><span>Empire Tree</span></span></summary>
@@ -269,7 +269,7 @@
         </details>
       </details>
 
-      <div class="menu-section-title"><img src="images/ui/core-command.svg" alt="Direct Tools" /><span>Direct Tools</span></div>
+      <div class="menu-section-title"><img src="images/ui/core-command.svg" alt="Direct Tools" /><span>DIRECT ACTIONS // QUICK TOOLS</span></div>
 
       <details>
         <summary><span class="menu-summary"><img src="images/ui/diplomacy.svg" alt="Diplomacy Tools" /><span>Diplomacy Tools</span></span></summary>
