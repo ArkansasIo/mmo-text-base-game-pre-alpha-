@@ -16,5 +16,11 @@ $admin->bind_param('sss',$username,$email,$hash); if (!$admin->execute()) { fwri
 $user = $db->prepare("INSERT INTO users(uname,email,allyid,lastLogin,arank,ip,password,alevel) VALUES(?,?,0,0,0,0,?,1) ON DUPLICATE KEY UPDATE email=VALUES(email),password=VALUES(password),alevel=1");
 if (!$user) { fwrite(STDERR, "Root shared-user preparation failed.\n"); exit(1); }
 $user->bind_param('sss',$username,$email,$legacy); if (!$user->execute()) { fwrite(STDERR, "Root shared-user creation failed.\n"); exit(1); }
+// Older local databases may contain duplicate legacy rows for the root username.
+// Synchronize every matching row so username and email login resolve consistently.
+$sync = $db->prepare("UPDATE users SET email=?, password=?, alevel=1 WHERE uname=? OR email=?");
+if (!$sync) { fwrite(STDERR, "Root shared-user synchronization failed.\n"); exit(1); }
+$sync->bind_param('ssss', $email, $legacy, $username, $email);
+if (!$sync->execute()) { fwrite(STDERR, "Root shared-user synchronization failed.\n"); exit(1); }
 echo "Root administrator '$username' unified with $email.\n";
 ?>
