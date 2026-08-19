@@ -49,17 +49,11 @@
     <div class="quick-access-links">
       <a href="javascript:void(0)" onclick="sendData('pages','get','empire','home'); return false"><span class="footer-icon-link"><img src="images/ui/empire.svg" alt="Home" /><span>Home</span></span></a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','universe','galaxies'); return false"><span class="footer-icon-link"><img src="images/ui/universe.svg" alt="Universe" /><span>Universe</span></span></a>
-      <a href="javascript:void(0)" onclick="sendData('stations','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/military.svg" alt="Stations" /><span>Stations</span></span></a>
-      <a href="javascript:void(0)" onclick="sendData('rtscombat','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/military.svg" alt="Combat" /><span>RTS Combat</span></span></a>
-      <a href="javascript:void(0)" onclick="sendData('powergrid','get','mainDisplay'); return false">Power Grid</a>
+      <a href="javascript:void(0)" onclick="sendData('rtscombat','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/military.svg" alt="Combat" /><span>Combat</span></span></a>
       <a href="javascript:void(0)" onclick="sendData('hyperspace','get','mainDisplay'); return false"><span class="footer-icon-link"><img src="images/ui/universe.svg" alt="Hyperspace" /><span>Hyperspace</span></span></a>
-      <a href="javascript:void(0)" onclick="sendData('universe_seed','get','mainDisplay'); return false">Universe Seed</a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','research','tree'); return false"><span class="footer-icon-link"><img src="images/ui/research.svg" alt="Research" /><span>Research</span></span></a>
-      <a href="javascript:void(0)" onclick="sendData('pages','get','research','stargate'); return false">Stargate</a>
-      <a href="javascript:void(0)" onclick="sendData('megaforge','get','mainDisplay'); return false">Forge</a>
       <a href="javascript:void(0)" onclick="sendData('resourcehq','get','mainDisplay'); return false">Resource HQ</a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','economy','banking'); return false"><span class="footer-icon-link"><img src="images/ui/economy.svg" alt="Bank" /><span>Bank</span></span></a>
-      <a href="javascript:void(0)" onclick="sendData('stargatetech','get','mainDisplay'); return false">Stargate Tech</a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','diplomacy','messages'); return false"><span class="footer-icon-link"><img src="images/ui/diplomacy.svg" alt="Messages" /><span>Messages</span></span></a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','operations','logs'); return false">Logs</a>
       <a href="javascript:void(0)" onclick="sendData('pages','get','help','newplayer'); return false"><span class="footer-icon-link"><img src="images/ui/help.svg" alt="Help" /><span>Help</span></span></a>
@@ -248,43 +242,14 @@
         </details>
       </details>
 
-      <div class="menu-section-title"><img src="images/ui/universe.svg" alt="Command Trees" /><span>DEEP ROUTES // COMMAND TREES</span></div>
-
-      <details>
-        <summary><span class="menu-summary"><img src="images/ui/empire.svg" alt="Empire Tree" /><span>Empire Tree</span></span></summary>
-        <details>
-          <summary><span class="menu-summary"><span>Empire Sub Pages</span></span></summary>
-          <a href="javascript:void(0)" onclick="sendData('pages','get','empire','logistics'); return false">Logistics Hub</a>
-          <a href="javascript:void(0)" onclick="sendData('pages','get','empire','doctrine'); return false">Doctrine Board</a>
-          <details>
-            <summary><span class="menu-summary"><span>Deep Empire Menus</span></span></summary>
-            <a href="javascript:void(0)" onclick="sendData('pages','get','economy','treasury'); return false">Treasury Policy</a>
-            <a href="javascript:void(0)" onclick="sendData('pages','get','operations','commandqueue'); return false">Command Queue</a>
-          </details>
-        </details>
-        <details>
-          <summary><span class="menu-summary"><span>Universe Sub Pages</span></span></summary>
-          <a href="javascript:void(0)" onclick="sendData('pages','get','universe','lanes'); return false">Transit Lanes</a>
-          <a href="javascript:void(0)" onclick="sendData('pages','get','universe','anomalies'); return false">Anomaly Index</a>
-        </details>
-      </details>
-
       <div class="menu-section-title"><img src="images/ui/core-command.svg" alt="Direct Tools" /><span>DIRECT ACTIONS // QUICK TOOLS</span></div>
 
       <details>
-        <summary><span class="menu-summary"><img src="images/ui/diplomacy.svg" alt="Diplomacy Tools" /><span>Diplomacy Tools</span></span></summary>
-        <a href="javascript:void(0)" onclick="sendData('communications','get','mainDisplay','compose'); return false">Communications</a>
-        <a href="javascript:void(0)" onclick="sendData('sendmessage','get','mainDisplay'); return false">Send Message</a>
-        <a href="javascript:void(0)" onclick="sendData('c_ally','get','mainDisplay'); return false">Create Alliance</a>
-        <a href="javascript:void(0)" onclick="sendData('ally_mlist','get','mainDisplay'); return false">Alliance Member List</a>
-        <a href="javascript:void(0)" onclick="sendData('recruit','get','mainDisplay'); return false">Recruit Commander</a>
-      </details>
-
-      <details>
-        <summary><span class="menu-summary"><img src="images/ui/community.svg" alt="Legacy Tools" /><span>Legacy Tools</span></span></summary>
-        <a href="javascript:void(0)" onclick="sendData('actionLogs','get','mainDisplay'); return false">Action Logs</a>
-        <a href="javascript:void(0)" onclick="sendData('progressinfo','get','mainDisplay'); return false">Progress Info</a>
-        <a href="javascript:void(0)" onclick="sendData('action','get','mainDisplay'); return false">Actions</a>
+        <summary><span class="menu-summary"><img src="images/ui/core-command.svg" alt="Command Tools" /><span>Command Tools</span></span></summary>
+        <a href="javascript:void(0)" onclick="sendData('account','get','mainDisplay'); return false">Account Settings</a>
+        <a href="javascript:void(0)" onclick="sendData('strategy_codex','get','mainDisplay'); return false">Strategy Codex</a>
+        <a href="javascript:void(0)" onclick="sendData('notifications','get','mainDisplay'); return false">Alert Network</a>
+        <a href="javascript:void(0)" onclick="sendData('pages','get','help','hotkeys'); return false">Quick Commands</a>
       </details>
     </aside>
 

@@ -1387,6 +1387,20 @@ $subLabels = [
     'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology Tree', 'infrastructure' => 'Tech Library Buildings', 'classes' => 'Class Library', 'talents' => 'Talent Library', 'stargate' => 'Stargate Tech', 'projects' => 'Projects', 'labs' => 'Lab Network', 'blueprints' => 'Blueprint Systems'],
 ];
 
+// The full registry above keeps every legacy route valid. This smaller map is the visible command rail.
+$visibleSubLabels = [
+    'empire' => ['home' => 'Home', 'overview' => 'Overview', 'planets' => 'Planets', 'command' => 'Command', 'progress' => 'Progression'],
+    'military' => ['personnel' => 'Personnel', 'troops' => 'Troop Catalog', 'training' => 'Training', 'fleet' => 'Fleet', 'defensegrid' => 'Defense Grid'],
+    'operations' => ['attack' => 'Attack', 'raid' => 'Raid', 'spy' => 'Spy', 'logs' => 'Combat Logs', 'commandqueue' => 'Command Queue'],
+    'economy' => ['banking' => 'Banking', 'market' => 'Market', 'production' => 'Production', 'resources' => 'Resource Hub', 'buildings' => 'Infrastructure'],
+    'diplomacy' => ['alliance' => 'Alliance', 'relations' => 'Relations', 'messages' => 'Messages', 'commander' => 'Command Chain', 'governance' => 'Governance'],
+    'intel' => ['rankings' => 'Rankings', 'reports' => 'Battle Reports', 'threats' => 'Threat Matrix', 'map' => 'Sector Map'],
+    'community' => ['forums' => 'Forums', 'updates' => 'Updates', 'events' => 'Events', 'academy' => 'Academy'],
+    'help' => ['newplayer' => 'New Player', 'mechanics' => 'Mechanics', 'glossary' => 'Glossary', 'support' => 'Support', 'troubleshooting' => 'Troubleshooting'],
+    'universe' => ['galaxies' => 'Galaxies', 'planets' => 'Planets & Moons', 'expedition' => 'Expedition', 'bases' => 'Stations & Bases', 'travel' => 'Jumpgate'],
+    'research' => ['tree' => 'Research Tree', 'techlib' => 'Technology', 'classes' => 'Class Library', 'talents' => 'Talents', 'blueprints' => 'Blueprints'],
+];
+
 $systemDetails = [
     'empire' => [
         'home' => [
@@ -2276,7 +2290,7 @@ if ($pageActionStatus !== '') {
 
 echo '<div class="page-subnav-title">' . h($domain['role']) . ' // Subsystems and Page Routes</div>';
 echo '<div class="page-subnav">';
-foreach ($subLabels[$main] as $subKey => $subName) {
+foreach (($visibleSubLabels[$main] ?? $subLabels[$main]) as $subKey => $subName) {
     $activeClass = ($subKey === $sub) ? ' class="active"' : '';
     echo '<a' . $activeClass . ' href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'' . h($main) . '\',\'' . h($subKey) . '\'); return false">' . h($subName) . '</a>';
 }
@@ -2454,19 +2468,7 @@ $subPageGroups = [
     ],
 ];
 
-if (isset($subPageGroups[$main])) {
-    echo '<div class="card full"><h4>Sub Menu Groups</h4>';
-    foreach ($subPageGroups[$main] as $groupTitle => $groupItems) {
-        echo '<p><strong>' . h($groupTitle) . ':</strong></p>';
-        echo '<div class="page-subnav feature-subnav">';
-        foreach ($groupItems as $item) {
-            echo '<a href="javascript:void(0)" onclick="sendData(\'pages\',\'get\',\'' . h($main) . '\',\'' . h($item[0]) . '\'); return false">' . h($item[1]) . '</a>';
-        }
-        echo '</div>';
-    }
-    echo '</div>';
-}
-
+// The condensed visibleSubLabels rail replaces the older duplicated grouped-submenu card.
 renderInfoBlock($activeDetail);
 echo '<div class="page-grid">';
 
