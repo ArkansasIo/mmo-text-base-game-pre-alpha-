@@ -59,7 +59,6 @@ if($loginRequired && (!$s->loggedIn || (isset($_GET['logout']) && $_GET['logout'
       <button type="button" class="public-btn audio-toggle" id="audio-toggle" aria-pressed="false">Audio On</button>
       <a class="public-btn" href="javascript:void(0)" onClick="mainUpdate('login','Login'); return false" onMouseOver="rollUpDate('Login'); return false" onMouseOut="autoclear(); return false">Civilization Login</a>
       <a class="public-btn secondary" href="javascript:void(0)" onClick="mainUpdate('register','Register To Play'); return false" onMouseOver="rollUpDate('Register To Play'); return false" onMouseOut="autoclear(); return false">Found Your Civilization</a>
-      <a class="public-btn admin-btn" href="/admin/">Administrator Console</a>
     </div>
   </header>
 

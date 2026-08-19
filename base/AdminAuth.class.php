@@ -8,6 +8,16 @@ class AdminAuth
     {
         $this->db = $db;
         if (!isset($_SESSION['admin_session_token'])) {
+            $uid = (int)($_SESSION['userid'] ?? 0);
+            $username = (string)($_SESSION['username'] ?? '');
+            if ($uid > 0 && $username !== '') {
+                $shared = $this->db->prepare("SELECT a.admin_id,a.username,a.email,a.role,a.is_active FROM users u INNER JOIN admin_users a ON (a.username=u.uname OR (a.email<>'' AND a.email=u.email)) WHERE u.uid=? AND a.is_active=1 LIMIT 1");
+                if ($shared) {
+                    $shared->bind_param('i', $uid); $shared->execute();
+                    $row = $shared->get_result()->fetch_assoc();
+                    if ($row) $this->admin = $row;
+                }
+            }
             return;
         }
         $token = (string)$_SESSION['admin_session_token'];

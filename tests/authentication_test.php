@@ -6,6 +6,8 @@ $a=file_get_contents(__DIR__.'/../base/AdminAuth.class.php');
 $api=file_get_contents(__DIR__.'/../api/auth.php');
 $test=file_get_contents(__DIR__.'/../scripts/backend/create_test_user.php');
 $admin=file_get_contents(__DIR__.'/../scripts/backend/create_default_admin.php');
+$provisioner=file_get_contents(__DIR__.'/../scripts/backend/create_admin.php');
+$index=file_get_contents(__DIR__.'/../index.php');
 auth_check(strpos($u,'strlen($password) < 8')!==false,'player password minimum is enforced');
 auth_check(strpos($u,'filter_var($email, FILTER_VALIDATE_EMAIL)')!==false,'player email validation is enforced');
 auth_check(strpos($u,'INSERT INTO')!==false&&strpos($u,'users')!==false,'registration creates player identity');
@@ -18,5 +20,8 @@ auth_check(strpos($api,'session_regenerate_id(true)')!==false,'player API login 
 auth_check(strpos($api,'Credentials were not accepted')!==false,'authentication errors are generic');
 auth_check(strpos($test,'APP_ENV')!==false&&strpos($test,'ALLOW_TEST_USER')!==false,'test-user command has environment safety guard');
 auth_check(strpos($admin,'SGW_ADMIN_PASSWORD')!==false&&strpos($admin,'create_admin.php')!==false,'default admin wrapper requires environment password');
+auth_check(strpos($provisioner,'INSERT INTO users')!==false&&strpos($provisioner,'legacyPassword')!==false,'administrator provisioning synchronizes the shared player account');
+auth_check(strpos($a,'$_SESSION[\'userid\']')!==false&&strpos($a,'admin_users')!==false,'admin control plane recognizes authenticated shared player sessions');
+auth_check(strpos($index,'Administrator Console')===false&&strpos($index,'Civilization Login')!==false,'public title page exposes only the unified login entry');
 if($failed){fwrite(STDERR,"$failed authentication checks failed; $passed passed.\n");exit(1);}echo "All $passed authentication checks passed.\n";
 ?>

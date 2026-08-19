@@ -2,6 +2,7 @@
 require_once __DIR__ . '/FleetPolicy.class.php';
 require_once __DIR__ . '/PvPPolicy.class.php';
 require_once __DIR__ . '/PvPRankingPolicy.class.php';
+require_once __DIR__ . '/PvPExpansionPolicy.class.php';
 
 final class PvPResolver
 {
@@ -117,6 +118,11 @@ final class PvPResolver
             }
             $safeReport = $db->real_escape_string($report);
             $db->query("INSERT INTO pvp_alerts(uid,battle_id,alert_type,title,body) VALUES (" . (int)$battle['attacker_uid'] . ",$battleId,'battle_result','PvP battle resolved','$safeReport'),(" . (int)$battle['defender_uid'] . ",$battleId,'battle_result','Your world was attacked','$safeReport')");
+            $events = PvPExpansionPolicy::replayEvents($battle, $outcome, $attackerLosses, $defenderLosses);
+            foreach ($events as $sequence => $event) {
+                $phase=$db->real_escape_string((string)$event['phase']); $label=$db->real_escape_string((string)$event['label']); $json=$db->real_escape_string(json_encode($event,JSON_THROW_ON_ERROR));
+                $db->query("INSERT IGNORE INTO pvp_replay_events(battle_id,sequence_no,phase,event_at_seconds,label,event_json) VALUES ($battleId,".(int)$sequence.",'$phase',".(int)$event['at'].",'$label','$json')");
+            }
             self::settleRanking($db, $battle, $outcome, $battleId);
             $db->commit();
             return true;
