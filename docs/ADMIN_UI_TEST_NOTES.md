@@ -51,3 +51,19 @@ The exact audit verification returned actor ID `4`, action `rename_player_userna
 `admintest` was provisioned as a dedicated active `superadmin` in `admin_users` alongside the existing active `root` and `admin` superadmins. The shared `/admin/` control plane recognizes the admintest administrator session and renders the full dashboard. The provisioner was corrected to update existing shared player identities by username instead of creating duplicate legacy users. The duplicate admintest row with no dependent game-state records was removed safely; canonical UID 6 remains with the preserved game state and legacy access flag.
 
 The refreshed browser dashboard showed `Signed in as admintest · superadmin`, Players 9, Admins 4, and the complete game logic, economy, governance, operations, administrator, directory, queue, and audit sections. Authentication, admin/email, email-system, PHP syntax, and backend healthcheck validations all passed.
+
+## Unified session and queue simulation update
+
+Clean cookie-based tests passed for both `root` and `admintest` control-plane logins. The corrected queue binding stored `recalculate_power` as a string for job ID 2 targeting UID 6, and the admintest session recorded a new `admin_login` actor ID 6 audit event. The earlier malformed job ID 1 remains queued with legacy type `0` from the pre-fix test and is not used by the corrected simulation.
+
+The corrected queue simulation now contains job ID 2 `recalculate_power` and job ID 3 `refresh_economy_metrics`, both targeting UID 6 and both stored with the correct string operation names. Admintest actor ID 6 generated audit events for both queue submissions.
+
+The third corrected queue operation, `rebuild_universe_index`, was accepted as job ID 4 for target UID 6 and recorded by admintest actor ID 6 in the operations audit trail.
+
+The fourth corrected queue operation, `repair_combat_integrity`, was accepted as job ID 5 for target UID 6 and recorded by admintest actor ID 6. All four supported operation types have now been exercised through the control plane. The only remaining anomaly is job ID 1 with type `0`, created before the prepared-statement binding fix.
+
+## Complete control-plane verification
+
+Clean session tests passed for `root` and `admintest`, each following the protected admin login redirect and rendering its expected dashboard identity. The four supported queue operations were exercised against local UID 6: `recalculate_power`, `refresh_economy_metrics`, `rebuild_universe_index`, and `repair_combat_integrity`. All four were stored with valid string operation names and status `queued`. The pre-fix job ID 1 was corrected from operation type `0` to `refresh_economy_metrics` and recorded as `repair_admin_job` by actor ID 6.
+
+The final audit review contains root and admintest login events, the `update_player_access` event, the `rename_player_username` event, all four corrected queue submissions, and the legacy queue repair. PHP syntax, authentication, admin/email, and backend healthcheck validations passed.
