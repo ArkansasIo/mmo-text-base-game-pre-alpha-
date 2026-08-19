@@ -13,6 +13,6 @@ php scripts/backend/create_root_email_admin.php
 
 The player-facing Email Network supports inbox, sent mail, compose, read, delete, and player-to-player delivery. The protected administrator center at `/admin/email.php` lets operator-level administrators queue system messages to player UIDs. All administrative sends are CSRF-protected and audited.
 
-Queued system messages are processed by `scripts/backend/email_tick.php`. The default `GAME_MAIL_TRANSPORT=log` mode records the delivery attempt without contacting an external mail server. To use the host’s PHP mail transport, set `GAME_MAIL_TRANSPORT=mail` only after configuring a verified sender and domain with the hosting provider. Delivery attempts are recorded in `game_email_delivery_log`.
+Queued system messages are processed by `scripts/backend/email_tick.php`. The deployment template now selects `GAME_MAIL_TRANSPORT=smtp` and reads `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, `SMTP_FROM`, `SMTP_ENCRYPTION`, and `SMTP_TIMEOUT` from the environment. The SMTP client supports TLS on port 587, implicit SSL when configured, and authenticated SMTP delivery. Use `GAME_MAIL_TRANSPORT=log` only for local testing or when external delivery is intentionally disabled. Delivery attempts are recorded in `game_email_delivery_log`.
 
 Migration 46 creates `game_email_messages`, `game_email_delivery_log`, and the root email settings. The locked cron dispatcher exposes the `email_tick` job. External SMTP credentials are intentionally not stored in the repository.
